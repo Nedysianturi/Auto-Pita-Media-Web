@@ -1229,6 +1229,11 @@
               <option value="CANCELLED">Dibatalkan (CANCELLED)</option>
               <option value="ATTENTION">Gagal / Perlu Perhatian</option>
             </select>
+            <select id="sortJobOrder" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; border-color: var(--primary); background: #f5f3ff;" onchange="renderJobs()">
+              <option value="DATE_ASC" selected>📅 Urut: Jadwal Terdekat (Mulai Tayang)</option>
+              <option value="DATE_DESC">📅 Urut: Jadwal Terjauh</option>
+              <option value="CREATED_DESC">🕒 Urut: Baru Dibuat</option>
+            </select>
           </div>
           <div id="publishedQueueFilterWrap" style="display: none;">
             <select id="filterPublishedPlatform" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onchange="renderPublishedJobs()">
@@ -1248,7 +1253,9 @@
                   <th style="width: 14%;">Job ID</th>
                   <th style="width: 20%;">Video / Media</th>
                   <th style="width: 13%; text-align: center;">Platform</th>
-                  <th style="width: 15%;">Jadwal Kirim</th>
+                  <th style="width: 15%; cursor: pointer; user-select: none;" onclick="toggleQueueDateSort()" title="Klik untuk membalik urutan tanggal">
+                    Jadwal Kirim <span id="queueSortIcon" style="font-size: 0.8rem; color: var(--primary); font-weight: 800;">▲</span>
+                  </th>
                   <th style="width: 15%; text-align: center;">Status & Progress</th>
                   <th style="width: 13%;">Keterangan / Error</th>
                   <th style="width: 10%; text-align: center;">Aksi</th>
@@ -2707,6 +2714,19 @@
         jobs = [...activeJobs];
       }
 
+      // === URUTKAN BERDASARKAN TANGGAL / JADWAL TAYANG ===
+      const sortOrder = (document.getElementById('sortJobOrder') || {}).value || 'DATE_ASC';
+      const sortIcon = document.getElementById('queueSortIcon');
+      if (sortOrder === 'DATE_ASC') {
+        jobs.sort((a, b) => new Date(a.scheduled_at || 0).getTime() - new Date(b.scheduled_at || 0).getTime());
+        if (sortIcon) sortIcon.textContent = '▲';
+      } else if (sortOrder === 'DATE_DESC') {
+        jobs.sort((a, b) => new Date(b.scheduled_at || 0).getTime() - new Date(a.scheduled_at || 0).getTime());
+        if (sortIcon) sortIcon.textContent = '▼';
+      } else if (sortOrder === 'CREATED_DESC') {
+        if (sortIcon) sortIcon.textContent = '⬍';
+      }
+
       if (!tbody) return;
 
       if (!jobs.length) {
@@ -2829,11 +2849,25 @@
       }).join('');
     }
 
+    function toggleQueueDateSort() {
+      const sel = document.getElementById('sortJobOrder');
+      if (!sel) return;
+      if (sel.value === 'DATE_ASC') {
+        sel.value = 'DATE_DESC';
+      } else {
+        sel.value = 'DATE_ASC';
+      }
+      renderJobs();
+    }
+
     function renderPublishedJobs() {
       const tbody = document.getElementById('publishedJobTableBody');
       const filterPlatform = (document.getElementById('filterPublishedPlatform') || {}).value || 'ALL';
       const allJobs = appData.jobs || [];
       let publishedJobs = allJobs.filter(j => j.status === 'PUBLISHED');
+
+      // Urutkan riwayat terbit: yang paling baru terbit di atas
+      publishedJobs.sort((a, b) => new Date(b.updated_at || b.scheduled_at || 0).getTime() - new Date(a.updated_at || a.scheduled_at || 0).getTime());
 
       if (filterPlatform !== 'ALL') {
         publishedJobs = publishedJobs.filter(j => j.platform === filterPlatform);

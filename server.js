@@ -808,7 +808,7 @@ function getDashboardData() {
   });
   const posts = db.prepare('SELECT * FROM posts ORDER BY rowid DESC LIMIT 500').all();
   const schedules = db.prepare('SELECT * FROM schedules ORDER BY rowid DESC LIMIT 500').all();
-  const jobs = db.prepare('SELECT * FROM jobs ORDER BY rowid DESC LIMIT 500').all();
+  const jobs = db.prepare('SELECT * FROM jobs ORDER BY scheduled_at ASC, rowid DESC LIMIT 500').all();
   // Ensure no duplicate technical VID- rows exist in performance table
   try {
     db.prepare("DELETE FROM performance WHERE nama_video LIKE 'VID-%'").run();
