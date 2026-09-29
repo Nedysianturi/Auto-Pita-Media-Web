@@ -1542,6 +1542,38 @@
             <input type="number" id="editNicheBatasHarian" class="form-control" placeholder="20" min="1" />
           </div>
         </div>
+
+        <!-- Default Audio Enhancement untuk Niche Ini -->
+        <div style="background: rgba(99, 102, 241, 0.04); border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 8px; padding: 12px; margin-top: 14px;">
+          <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-main); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <span>🎧 Pengaturan Audio Otomatis Niche</span>
+            <span class="badge badge-info" style="font-size: 0.68rem;">Dipakai saat Auto-Jadwal</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+              <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;">Default Musik Latar (BGM)</label>
+              <select id="editNicheDefaultBgm" class="form-control" style="font-size: 0.8rem; padding: 6px 10px;">
+                <option value="AUTO">✨ Auto Sesuai Video</option>
+                <option value="misteri">👻 Misteri / Horor</option>
+                <option value="podcast">🎙️ Podcast / LoFi</option>
+                <option value="inspiratif">🥺 Inspiratif / Haru</option>
+                <option value="ceria">🎉 Ceria / Komedi</option>
+                <option value="OFF">🚫 Nonaktifkan BGM</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;">Default SFX Hook 3 Detik</label>
+              <select id="editNicheDefaultSfx" class="form-control" style="font-size: 0.8rem; padding: 6px 10px;">
+                <option value="AUTO">✨ Auto Sesuai Video</option>
+                <option value="podcast">💥 Cinematic Deep Impact</option>
+                <option value="misteri">💓 Heartbeat / Horror Rise</option>
+                <option value="inspiratif">🔔 Crystal Clean Ding</option>
+                <option value="ceria">🎉 Cartoon Boing / Pop</option>
+                <option value="OFF">🚫 Nonaktifkan SFX</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('modalEditNiche')">Batal</button>
@@ -2280,6 +2312,8 @@
       document.getElementById('editNicheJamAkhir').value = niche.jam_akhir || '23:00';
       document.getElementById('editNicheInterval').value = niche.interval_menit || 90;
       document.getElementById('editNicheBatasHarian').value = niche.batas_harian || 20;
+      document.getElementById('editNicheDefaultBgm').value = niche.default_bgm_enabled === 'FALSE' ? 'OFF' : (niche.default_bgm_category || 'AUTO');
+      document.getElementById('editNicheDefaultSfx').value = niche.default_sfx_enabled === 'FALSE' ? 'OFF' : (niche.default_sfx_category || 'AUTO');
       openModal('modalEditNiche');
     }
 
@@ -2294,10 +2328,32 @@
       const intervalMenit = parseInt(document.getElementById('editNicheInterval').value, 10) || 90;
       const batasHarian = parseInt(document.getElementById('editNicheBatasHarian').value, 10) || 20;
 
+      const rawBgm = document.getElementById('editNicheDefaultBgm').value;
+      const defaultBgmEnabled = rawBgm === 'OFF' ? 'FALSE' : 'TRUE';
+      const defaultBgmCategory = rawBgm === 'OFF' ? 'AUTO' : rawBgm;
+
+      const rawSfx = document.getElementById('editNicheDefaultSfx').value;
+      const defaultSfxEnabled = rawSfx === 'OFF' ? 'FALSE' : 'TRUE';
+      const defaultSfxCategory = rawSfx === 'OFF' ? 'AUTO' : rawSfx;
+
       if (!name) return showToast('Nama niche tidak boleh kosong', 'error');
 
       showToast('Menyimpan perubahan niche...', 'info');
-      callBackend('updateNiche', { id, name, folderId, captionTemplate: caption, modeJadwal, jamAwal, jamAkhir, intervalMenit, batasHarian })
+      callBackend('updateNiche', { 
+        id, 
+        name, 
+        folderId, 
+        captionTemplate: caption, 
+        modeJadwal, 
+        jamAwal, 
+        jamAkhir, 
+        intervalMenit, 
+        batasHarian,
+        defaultBgmEnabled,
+        defaultBgmCategory,
+        defaultSfxEnabled,
+        defaultSfxCategory
+      })
         .then(res => {
           appData = res;
           renderAll();
@@ -2846,9 +2902,13 @@
         return `
           <tr>
             <td class="font-mono" style="font-size: 0.75rem;">${escapeHtml(j.job_id)}</td>
-            <td style="max-width: 220px;">
+            <td style="max-width: 240px;">
               <div style="font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(j.media_id)}</div>
-              <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(j.niche_id)}</div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 3px;">
+                <span>${escapeHtml(j.niche_id)}</span>
+                ${(j.bgm_enabled === 'TRUE' || j.bgm_enabled === true) ? `<span style="background: rgba(99, 102, 241, 0.1); color: var(--primary); padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 0.68rem;" title="Musik Latar BGM (${Math.round((j.bgm_volume||0.15)*100)}%)">🎵 BGM ${Math.round((j.bgm_volume||0.15)*100)}%</span>` : ''}
+                ${(j.sfx_enabled === 'TRUE' || j.sfx_enabled === true) ? `<span style="background: rgba(245, 158, 11, 0.12); color: #d97706; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 0.68rem;" title="SFX Hook 3 Detik (${Math.round((j.sfx_volume||0.60)*100)}%)">⚡ Hook ${Math.round((j.sfx_volume||0.60)*100)}%</span>` : ''}
+              </div>
             </td>
             <td style="text-align: center;">
               <span class="badge ${j.platform === 'FACEBOOK' ? 'badge-info' : 'badge-warning'}">

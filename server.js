@@ -735,7 +735,7 @@ function autoScheduleUnscheduledMedia() {
             db.prepare(`
               INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, 'TRUE', 'AUTO', 0.15, 'TRUE', 'AUTO', 0.60);
+            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60);
           }
 
           db.prepare("UPDATE media SET status = 'TERJADWAL' WHERE media_id = ?").run(media.media_id);
@@ -836,7 +836,7 @@ function autoScheduleUnscheduledMedia() {
             INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
-            jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, 'TRUE', 'AUTO', 0.15, 'TRUE', 'AUTO', 0.60
+            jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60
           );
         }
 
@@ -2344,6 +2344,11 @@ app.post('/api/action', async (req, res) => {
         const batasHarian = Math.max(1, parseInt(p.batas_harian || p.batasHarian, 10) || 20);
         const modeJadwal = (p.mode_jadwal || p.modeJadwal || 'GOLDEN_SLOTS').toUpperCase();
 
+        const defaultBgmEnabled = (p.default_bgm_enabled === 'FALSE' || p.defaultBgmEnabled === 'FALSE' || p.defaultBgmEnabled === false) ? 'FALSE' : 'TRUE';
+        const defaultBgmCategory = p.default_bgm_category || p.defaultBgmCategory || 'AUTO';
+        const defaultSfxEnabled = (p.default_sfx_enabled === 'FALSE' || p.defaultSfxEnabled === 'FALSE' || p.defaultSfxEnabled === false) ? 'FALSE' : 'TRUE';
+        const defaultSfxCategory = p.default_sfx_category || p.defaultSfxCategory || 'AUTO';
+
         db.prepare(`
           UPDATE niches SET
             nama = ?,
@@ -2353,9 +2358,13 @@ app.post('/api/action', async (req, res) => {
             jam_akhir = ?,
             interval_menit = ?,
             batas_harian = ?,
-            mode_jadwal = ?
+            mode_jadwal = ?,
+            default_bgm_enabled = ?,
+            default_bgm_category = ?,
+            default_sfx_enabled = ?,
+            default_sfx_category = ?
           WHERE niche_id = ?
-        `).run(p.name, folderPath, p.captionTemplate || '', jamAwal, jamAkhir, intervalMenit, batasHarian, modeJadwal, nicheId);
+        `).run(p.name, folderPath, p.captionTemplate || '', jamAwal, jamAkhir, intervalMenit, batasHarian, modeJadwal, defaultBgmEnabled, defaultBgmCategory, defaultSfxEnabled, defaultSfxCategory, nicheId);
 
         if (folderPath && fs.existsSync(folderPath)) {
           try { scanDrive(nicheId); } catch(e){}
