@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Local SQLite Database & WAL files (Protects tokens & private account configs)
+data.sqlite*
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+
+# Sensitive credentials & Token files
+*token*.txt
+*.env
+*.env.local
+all_recovered_captions.json
+recovered_captions.json
+
+# Local scripts containing historical hardcoded credentials & scratch scripts
+find_all_tokens.py
+get_page_tokens.py
+migrate_to_sqlite.py
+update_accounts.py
+update_tokens.py
+restore_and_lock_captions.py
+update_all_sidebrothers_captions.py
+extract_all_captions.py
+find_snippets.py
+fix_local_media_and_jobs.py
+inspect_actions.py
+list_calls.py
+patch_standalone_ui.py
+recover_captions.py
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db

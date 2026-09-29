@@ -1,0 +1,4067 @@
+<!DOCTYPE html>
+<!-- PITAMEDIA STUDIO v2.3 - FIXED COLUMN ALIGNMENT (5 KOLOM PRESISI) -->
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto PitaMedia Studio</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --border-color: #e2e8f0;
+      --border-focus: #6366f1;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --success: #059669;
+      --success-light: #ecfdf5;
+      --danger: #e11d48;
+      --danger-light: #fff1f2;
+      --warning: #d97706;
+      --warning-light: #fffbeb;
+      --info: #0284c7;
+      --info-light: #f0f9ff;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-dim: #94a3b8;
+      --sidebar-width: 270px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      min-height: 100vh;
+      line-height: 1.5;
+      display: flex;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Left Sidebar */
+    aside.app-sidebar {
+      width: var(--sidebar-width);
+      background: #ffffff;
+      border-right: 1px solid var(--border-color);
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 18px;
+      z-index: 100;
+      box-shadow: 2px 0 12px rgba(0, 0, 0, 0.02);
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 20px;
+    }
+
+    .brand-icon-box {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+    }
+    .brand-icon-box svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .brand-title-wrap {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .brand-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--success);
+      margin-top: 3px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px rgba(5, 150, 105, 0.6);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(0.85); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Navigation Links */
+    .sidebar-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .menu-section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      padding: 10px 12px 4px;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+    }
+
+    .nav-btn-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+      color: var(--text-dim);
+      transition: color 0.15s;
+    }
+
+    .nav-btn:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+    }
+    .nav-btn:hover svg {
+      color: var(--primary);
+    }
+
+    .nav-btn.active {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: rgba(79, 70, 229, 0.2);
+    }
+    .nav-btn.active svg {
+      color: var(--primary);
+    }
+
+    .nav-badge {
+      font-size: 0.72rem;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      background: #e2e8f0;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+    .nav-btn.active .nav-badge {
+      background: #c7d2fe;
+      color: #3730a3;
+    }
+
+    /* Sidebar Footer */
+    .sidebar-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    /* Main Content Area */
+    main.app-main {
+      flex: 1;
+      min-width: 0;
+      padding: 32px 36px 80px;
+      overflow-y: auto;
+    }
+
+    /* Top Page Header */
+    .main-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .page-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.03em;
+    }
+
+    .page-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 16px;
+      font-size: 0.825rem;
+      font-weight: 600;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+    .btn svg {
+      width: 16px;
+      height: 16px;
+      stroke-width: 2.2;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.35);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+    }
+    .btn-success:hover {
+      background: #047857;
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--text-main);
+      border-color: var(--border-color);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    .btn-secondary:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .btn-danger {
+      background: var(--danger-light);
+      color: var(--danger);
+      border-color: #fecdd3;
+    }
+    .btn-danger:hover {
+      background: #ffe4e6;
+    }
+
+    .btn-sm {
+      padding: 6px 11px;
+      font-size: 0.75rem;
+      border-radius: 8px;
+    }
+    .btn-sm svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Metric Cards Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .metric-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      transition: all 0.2s ease;
+    }
+    .metric-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      border-color: #cbd5e1;
+    }
+
+    .metric-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .metric-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .metric-value {
+      font-size: 1.85rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+      letter-spacing: -0.02em;
+    }
+
+    /* Content Cards */
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      margin-bottom: 24px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title svg {
+      width: 20px;
+      height: 20px;
+      color: var(--primary);
+    }
+
+    /* Views */
+    .view-content {
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+    .view-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Table Styles */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: #ffffff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    th {
+      background: #f8fafc;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+      color: var(--text-main);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: #f8fafc;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 0.725rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-success { background: var(--success-light); color: var(--success); border: 1px solid #a7f3d0; }
+    .badge-danger { background: var(--danger-light); color: var(--danger); border: 1px solid #fecdd3; }
+    .badge-warning { background: var(--warning-light); color: var(--warning); border: 1px solid #fde68a; }
+    .badge-info { background: var(--info-light); color: var(--info); border: 1px solid #bae6fd; }
+    .badge-neutral { background: #f1f5f9; color: var(--text-muted); border: 1px solid #cbd5e1; }
+
+    /* Niche Card Grid */
+    .niche-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 18px;
+    }
+
+    .niche-card-item {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .niche-card-item:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .niche-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .niche-name {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .niche-id {
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+    }
+
+    .niche-meta-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .niche-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.825rem;
+      padding: 5px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .niche-row:last-child {
+      border-bottom: none;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .modal-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    .modal-dialog {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      width: 100%;
+      max-width: 540px;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      transform: scale(0.96);
+      transition: transform 0.2s ease;
+    }
+    .modal-overlay.active .modal-dialog {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border-color);
+      background: #f8fafc;
+    }
+
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-close:hover {
+      color: var(--text-main);
+    }
+    .modal-close svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .modal-body {
+      padding: 22px 24px;
+      max-height: 75vh;
+      overflow-y: auto;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-color);
+      background: #f8fafc;
+    }
+
+    /* Form Controls */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 9px 12px;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    textarea.form-control {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .form-help {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* Toast */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #ffffff;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.25s ease forwards;
+      max-width: 400px;
+    }
+
+    .toast-success { background: var(--success); }
+    .toast-error { background: var(--danger); }
+    .toast-info { background: var(--info); }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .truncate-cell {
+      max-width: 220px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  
+    /* Strict Column Alignment for Perpustakaan Video */
+    #view-media table {
+      width: 100% !important;
+      table-layout: fixed !important;
+      border-collapse: collapse !important;
+    }
+    #view-media th:nth-child(1), #view-media td:nth-child(1) {
+      width: 32% !important;
+      text-align: left !important;
+      vertical-align: middle !important;
+    }
+    #view-media th:nth-child(2), #view-media td:nth-child(2) {
+      width: 13% !important;
+      text-align: center !important;
+      vertical-align: middle !important;
+    }
+    #view-media th:nth-child(3), #view-media td:nth-child(3) {
+      width: 13% !important;
+      text-align: center !important;
+      vertical-align: middle !important;
+    }
+    #view-media th:nth-child(4), #view-media td:nth-child(4) {
+      width: 22% !important;
+      text-align: left !important;
+      vertical-align: middle !important;
+    }
+    #view-media th:nth-child(5), #view-media td:nth-child(5) {
+      width: 20% !important;
+      text-align: center !important;
+      vertical-align: middle !important;
+    }
+
+  
+    /* =========================================================
+     * PERPUSTAKAAN VIDEO STUDIO VIEW (MODERN & GORGEOUS)
+     * ========================================================= */
+    .video-studio-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      transition: all 0.2s ease;
+    }
+    .video-studio-card:hover {
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+      border-color: #cbd5e1;
+    }
+    .vsc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .vsc-title-wrap {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      flex: 1;
+      min-width: 260px;
+    }
+    .vsc-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+    }
+    .vsc-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.35;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+    .vsc-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .vsc-id {
+      background: #f1f5f9;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 600;
+      color: #475569;
+    }
+    .vsc-drive-link {
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .vsc-drive-link:hover {
+      text-decoration: underline;
+    }
+    .btn-local-folder {
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      padding: 3px 7px;
+      border-radius: 6px;
+      font-size: 0.73rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+    .btn-local-folder:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+      border-color: #94a3b8;
+    }
+    .vsc-badges {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .vsc-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding-top: 14px;
+      border-top: 1px solid #f1f5f9;
+      flex-wrap: wrap;
+    }
+    .vsc-caption-box {
+      flex: 1;
+      min-width: 280px;
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-left: 3px solid var(--primary);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .vsc-caption-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 3px;
+    }
+    .vsc-caption-text {
+      font-size: 0.825rem;
+      color: var(--text-main);
+      line-height: 1.45;
+      max-height: 52px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .vsc-hashtags {
+      font-size: 0.725rem;
+      color: var(--primary);
+      font-weight: 600;
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .vsc-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .btn-ai {
+      background: #f5f3ff;
+      color: #6d28d9;
+      border: 1px solid #ddd6fe;
+      font-weight: 700;
+    }
+    .btn-ai:hover {
+      background: #ede9fe;
+      border-color: #c4b5fd;
+    }
+
+    /* Strict Column Alignment for Perpustakaan Video Table View */
+    #view-media table {
+      width: 100% !important;
+      table-layout: fixed !important;
+      border-collapse: collapse !important;
+    }
+    #view-media th:nth-child(1), #view-media td:nth-child(1) {
+      width: 32% !important;
+      text-align: left !important;
+      vertical-align: middle !important;
+    }
+    #view-media th:nth-child(2), #view-media td:nth-child(2) {
+      width: 13% !important;
+      text-align: center !important;
+      vertical-align: middle !important;
+    }
+    #view-media th:nth-child(3), #view-media td:nth-child(3) {
+      width: 13% !important;
+      text-align: center !important;
+      vertical-align: middle !important;
+    }
+    #view-media th:nth-child(4), #view-media td:nth-child(4) {
+      width: 22% !important;
+      text-align: left !important;
+      vertical-align: middle !important;
+    }
+    #view-media th:nth-child(5), #view-media td:nth-child(5) {
+      width: 20% !important;
+      text-align: center !important;
+      vertical-align: middle !important;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- LEFT SIDEBAR -->
+  <aside class="app-sidebar">
+    <div>
+      <div class="sidebar-brand">
+        <img src="/logo.png" alt="Auto PitaMedia Logo" style="width: 46px; height: 46px; object-fit: contain; border-radius: 10px; background: #ffffff; padding: 2px; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.15); flex-shrink: 0;" />
+        <div class="brand-title-wrap">
+          <span class="brand-title" style="display: flex; align-items: center; gap: 3px; font-weight: 800; letter-spacing: -0.02em;">
+            <span style="color: var(--primary);">Auto</span> Pita<span style="color: #dc2626;">Media</span>
+          </span>
+          <span class="brand-status-pill"><span class="status-dot"></span> Studio Mandiri (SQLite)</span>
+        </div>
+      </div>
+
+      <!-- Navigation Menu Items -->
+      <nav class="sidebar-menu">
+        <div class="menu-section-label">Menu Utama</div>
+
+        <button class="nav-btn active" onclick="switchNav('view-niche')">
+          <div class="nav-btn-inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+            <span>Manajemen Niche</span>
+          </div>
+          <span class="nav-badge" id="navBadgeNiche">0</span>
+        </button>
+
+        <button class="nav-btn" onclick="switchNav('view-drive')">
+          <div class="nav-btn-inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            <span>Folder Video Komputer</span>
+          </div>
+          <span class="nav-badge" id="navBadgeDrive">0</span>
+        </button>
+
+        <button class="nav-btn" onclick="switchNav('view-account')">
+          <div class="nav-btn-inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            <span>Akun Sosial Media</span>
+          </div>
+          <span class="nav-badge" id="navBadgeAccount">0</span>
+        </button>
+
+        <button class="nav-btn" onclick="switchNav('view-queue')">
+          <div class="nav-btn-inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>Antrean & Jadwal</span>
+          </div>
+          <span class="nav-badge" id="navBadgeJob">0</span>
+        </button>
+
+        <button class="nav-btn" onclick="switchNav('view-media')">
+          <div class="nav-btn-inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+            <span>Perpustakaan Video</span>
+          </div>
+          <span class="nav-badge" id="navBadgeMedia">0</span>
+        </button>
+
+        <button class="nav-btn" onclick="switchNav('view-performance')">
+          <div class="nav-btn-inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <span>Performa Konten</span>
+          </div>
+          <span class="nav-badge" id="navBadgePerf">0</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Sidebar Bottom Actions -->
+    <div class="sidebar-footer">
+      <button id="btnRunQueue" class="btn btn-success" style="width: 100%;" onclick="runQueueWeb()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        Jalankan Antrean
+      </button>
+
+      <button id="btnRefresh" class="btn btn-secondary" style="width: 100%;" onclick="loadData()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+        </svg>
+        Sinkronkan Data
+      </button>
+
+      <button id="btnSyncSheet" class="btn btn-secondary" style="width: 100%; border-color: rgba(34, 197, 94, 0.4);" onclick="syncGoogleSheetAction()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        Selaraskan Google Sheet
+      </button>
+
+      <button class="btn btn-secondary" style="width: 100%;" onclick="showToast('Database aktif: data.sqlite (SQLite Mandiri)', 'info')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+        </svg>
+        Database SQLite Aktif
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN VIEW CONTENT -->
+  <main class="app-main">
+
+    <!-- Top Bar -->
+    <div class="main-topbar">
+      <div>
+        <h1 class="page-title" id="pageTitleText">Manajemen Niche</h1>
+        <div class="page-subtitle" id="pageSubtitleText">Kelola saluran publikasi, jadwal otomatis, dan folder video komputer per niche.</div>
+      </div>
+      <div class="top-actions">
+        <span class="badge badge-info" id="lastSyncText">Terakhir Sinkron: Memuat...</span>
+      </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-top">
+          <span class="metric-label">Total Video Komputer</span>
+          <div class="metric-icon" style="background: #eef2ff; color: #4f46e5;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect></svg>
+          </div>
+        </div>
+        <div class="metric-value" id="statVideos">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-top">
+          <span class="metric-label">Antrean Siap (Ready)</span>
+          <div class="metric-icon" style="background: #e0e7ff; color: #4338ca;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </div>
+        </div>
+        <div class="metric-value" style="color: #4f46e5;" id="statQueued">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-top">
+          <span class="metric-label">Sedang Upload</span>
+          <div class="metric-icon" style="background: #f0f9ff; color: #0284c7;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          </div>
+        </div>
+        <div class="metric-value" style="color: #0284c7;" id="statUploading">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-top">
+          <span class="metric-label">Berhasil Terbit</span>
+          <div class="metric-icon" style="background: #ecfdf5; color: #059669;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          </div>
+        </div>
+        <div class="metric-value" style="color: #059669;" id="statPublished">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-top">
+          <span class="metric-label">Perlu Perhatian</span>
+          <div class="metric-icon" style="background: #fff1f2; color: #e11d48;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon></svg>
+          </div>
+        </div>
+        <div class="metric-value" style="color: #e11d48;" id="statAttention">0</div>
+      </div>
+    </div>
+
+    <!-- VIEW 1: MANAJEMEN NICHE -->
+    <div id="view-niche" class="view-content active">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg>
+            Daftar Saluran Niche
+          </div>
+          <button class="btn btn-primary" onclick="openModalAddNiche()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Tambah Niche Baru
+          </button>
+        </div>
+        <div class="niche-grid" id="nicheListContainer">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: FOLDER GOOGLE DRIVE -->
+    <div id="view-drive" class="view-content">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            Folder Sumber Video Komputer
+          </div>
+          <button class="btn btn-primary" onclick="openModalAddDriveFolder()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Atur Folder Komputer
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Niche Terkait</th>
+                <th>Path Folder Komputer</th>
+                <th>Status</th>
+                <th>Terakhir Dipindai</th>
+                <th style="text-align: right;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="driveSourceTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: AKUN SOSIAL MEDIA -->
+    <div id="view-account" class="view-content">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>
+            Akun Media Sosial Terhubung (Meta API)
+          </div>
+          <button class="btn btn-primary" onclick="openModalAddAccount()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Tambah Akun Baru
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Platform</th>
+                <th>Nama Akun</th>
+                <th>Platform ID</th>
+                <th>Niche</th>
+                <th>Status Token</th>
+                <th>Status Aktif</th>
+                <th style="text-align: right;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="accountTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 4: ANTREAN & JADWAL -->
+    <div id="view-queue" class="view-content">
+      <div class="card">
+        <!-- Sub-tab Navigation Header -->
+        <div style="display: flex; gap: 8px; padding: 16px 20px; border-bottom: 1px solid var(--border-color); background: #f8fafc; border-top-left-radius: 16px; border-top-right-radius: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button id="subtabBtnAppQueue" class="btn btn-sm btn-primary" onclick="switchQueueSubTab('pending')" style="border-radius: 8px; font-weight: 700;">
+              ⏳ Antrean Tayang (<span id="countPendingQueue">0</span>)
+            </button>
+            <button id="subtabBtnPublishedQueue" class="btn btn-sm btn-secondary" onclick="switchQueueSubTab('published')" style="border-radius: 8px; font-weight: 600;">
+              ✅ Riwayat Terposting (<span id="countPublishedQueue">0</span>)
+            </button>
+            <button id="subtabBtnMetaQueue" class="btn btn-sm btn-secondary" onclick="switchQueueSubTab('meta')" style="border-radius: 8px; font-weight: 600;">
+              🌐 Jadwal Meta Creator Studio (<span id="countMetaQueue">0</span>)
+            </button>
+          </div>
+          <div id="appQueueFilterWrap" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="cleanupCancelledJobsAction()" style="border-radius: 8px; color: #dc2626; border-color: #fca5a5; background: #fef2f2; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Bersihkan dan hapus semua antrean yang dibatalkan / gagal">
+              🧹 Bersihkan yang Dibatalkan
+            </button>
+            <select id="filterJobStatus" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem; font-weight: 600;" onchange="renderJobs()">
+              <option value="ACTIVE" selected>⚡ Antrean Aktif (Menunggu)</option>
+              <option value="ALL">Semua (Termasuk Dibatalkan)</option>
+              <option value="READY">Siap Dikirim (READY)</option>
+              <option value="UPLOADING">Sedang Upload</option>
+              <option value="CANCELLED">Dibatalkan (CANCELLED)</option>
+              <option value="ATTENTION">Gagal / Perlu Perhatian</option>
+            </select>
+          </div>
+          <div id="publishedQueueFilterWrap" style="display: none;">
+            <select id="filterPublishedPlatform" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onchange="renderPublishedJobs()">
+              <option value="ALL">Semua Platform</option>
+              <option value="FACEBOOK">Facebook Page</option>
+              <option value="INSTAGRAM">Instagram Pro</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- SUBTAB 1: ANTREAN MENUNGGU TAYANG -->
+        <div id="wrapAppQueue">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 14%;">Job ID</th>
+                  <th style="width: 20%;">Video / Media</th>
+                  <th style="width: 13%; text-align: center;">Platform</th>
+                  <th style="width: 15%;">Jadwal Kirim</th>
+                  <th style="width: 15%; text-align: center;">Status & Progress</th>
+                  <th style="width: 13%;">Keterangan / Error</th>
+                  <th style="width: 10%; text-align: center;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="jobTableBody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SUBTAB 2: RIWAYAT VIDEO YANG SUDAH TERPOSTING -->
+        <div id="wrapPublishedQueue" style="display: none;">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Video / Media</th>
+                  <th style="width: 15%; text-align: center;">Platform & Akun</th>
+                  <th style="width: 15%;">Waktu Berhasil Terbit</th>
+                  <th style="width: 15%; text-align: center;">ID Publikasi Meta</th>
+                  <th style="width: 15%; text-align: center;">Tautan Postingan</th>
+                  <th style="width: 15%; text-align: center;">Aksi Cepat</th>
+                </tr>
+              </thead>
+              <tbody id="publishedJobTableBody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SUBTAB 2: JADWAL LANGSUNG DARI META CREATOR STUDIO -->
+        <div id="wrapMetaQueue" style="display: none;">
+          <div style="padding: 12px 20px; background: #ffffff; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-muted); flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span>Terakhir Sinkronisasi Meta: <b id="metaSyncTime" style="color: var(--text-main);">-</b></span>
+              <button class="btn btn-sm btn-secondary" onclick="syncMetaCalendarWeb()" id="btnSyncMetaCalendar" style="font-size: 0.76rem; padding: 4px 10px;">
+                🔄 Tarik Jadwal Meta
+              </button>
+            </div>
+            <div id="metaSyncError" style="color: var(--danger); font-size: 0.75rem;"></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 20%;">Platform & Akun</th>
+                  <th style="width: 20%;">Jadwal Tayang Meta (WIB)</th>
+                  <th style="width: 42%;">Pesan / Caption Post</th>
+                  <th style="width: 18%; text-align: center;">Meta Post ID & Sumber</th>
+                </tr>
+              </thead>
+              <tbody id="metaScheduleTableBody">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+        <!-- VIEW 5: PERPUSTAKAAN VIDEO (MODERN STUDIO VIEW) -->
+    <div id="view-media" class="view-content">
+      <div class="card">
+        <!-- Sub-tab & Controls Header -->
+        <div style="display: flex; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--border-color); background: #f8fafc; border-top-left-radius: 16px; border-top-right-radius: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn btn-sm btn-primary" style="border-radius: 8px; font-weight: 700; cursor: default;">
+              🎬 Koleksi Video Drive (<span id="countVideoTotal">0</span>)
+            </button>
+            <div style="display: inline-flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: #ffffff;">
+              <button id="btnMediaViewCards" class="btn btn-sm" onclick="setMediaViewMode('cards')" style="border-radius: 0; font-weight: 700; background: var(--primary); color: #fff; padding: 5px 10px;" title="Tampilan Kartu Studio">
+                🗂️ Kartu Studio
+              </button>
+              <button id="btnMediaViewTable" class="btn btn-sm" onclick="setMediaViewMode('table')" style="border-radius: 0; font-weight: 600; background: #ffffff; color: var(--text-muted); padding: 5px 10px;" title="Tampilan Tabel Klasik">
+                📑 Tabel
+              </button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <select id="filterMediaNiche" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onchange="renderMedia()">
+              <option value="ALL">Semua Niche</option>
+            </select>
+            <select id="filterMediaStatus" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onchange="renderMedia()">
+              <option value="ALL">Semua Status</option>
+              <option value="TERJADWAL">⏰ Terjadwal</option>
+              <option value="SELESAI">✓ Selesai Terbit</option>
+              <option value="SIAP">Belum Dijadwalkan (Siap)</option>
+            </select>
+            <input type="text" id="searchVideoInput" class="form-control" style="width: 180px; padding: 6px 12px; font-size: 0.8rem;" placeholder="Cari judul video..." oninput="onSearchVideoDebounce()" />
+            <button id="btnSyncFolderVideos" class="btn btn-sm btn-primary" onclick="syncFolderVideosAction()" style="display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);" title="Pindai langsung folder komputer untuk menghapus video yang telah Anda buang dan memuat video baru">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+              <span>Sinkronkan Folder Video</span>
+            </button>
+          </div>
+        </div>
+
+        <div style="padding: 20px;">
+          <!-- MODE 1: STUDIO CARDS CONTAINER (DEFAULT) -->
+          <div id="videoStudioCardsWrap">
+            <div id="videoStudioCardsContainer">
+              <!-- Rendered as Studio Cards by JS -->
+            </div>
+          </div>
+
+          <!-- MODE 2: TABLE CONTAINER -->
+          <div id="videoTableWrap" style="display: none;" class="table-wrap">
+            <table style="width: 100%; table-layout: fixed;">
+              <thead>
+                <tr>
+                  <th style="width: 32%; text-align: left;">📁 Video & File Drive</th>
+                  <th style="width: 13%; text-align: center;">⚙️ Mode Caption</th>
+                  <th style="width: 13%; text-align: center;">📌 Status</th>
+                  <th style="width: 22%; text-align: left;">📝 Pratinjau Caption</th>
+                  <th style="width: 20%; text-align: center;">⚡ Aksi Cepat</th>
+                </tr>
+              </thead>
+              <tbody id="videoTableBody">
+                <!-- Rendered as table list rows by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 6: PERFORMA KONTEN (VIEWS, LIKES, SHARES) -->
+    <div id="view-performance" class="view-content">
+      <!-- Metric Cards Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div class="card" style="padding: 18px 20px; border-left: 4px solid var(--primary);">
+          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Total Tayangan (Live)</div>
+          <div style="font-size: 1.8rem; font-weight: 800; color: var(--primary); margin: 6px 0 2px 0;" id="perfStatViewsTotal">0</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);">Akumulasi penonton semua video</div>
+        </div>
+        <div class="card" style="padding: 18px 20px;">
+          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Views 24 Jam Pertama</div>
+          <div style="font-size: 1.7rem; font-weight: 800; color: var(--info); margin: 6px 0 2px 0;" id="perfStatViews24">0</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);">Penonton hari pertama tayang</div>
+        </div>
+        <div class="card" style="padding: 18px 20px;">
+          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Total Likes & Reaksi</div>
+          <div style="font-size: 1.7rem; font-weight: 800; color: var(--danger); margin: 6px 0 2px 0;" id="perfStatLikes">0</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);">Apresiasi & suka dari audiens</div>
+        </div>
+        <div class="card" style="padding: 18px 20px;">
+          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Komentar & Shares</div>
+          <div style="font-size: 1.7rem; font-weight: 800; color: var(--success); margin: 6px 0 2px 0;" id="perfStatEngage">0</div>
+          <div style="font-size: 0.72rem; color: var(--text-dim);">Interaksi dan sebaran video</div>
+        </div>
+      </div>
+
+      <!-- Performance Table Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            Tabel Analisis Performa Konten Terpublikasi
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="btnSyncPerf" class="btn btn-sm btn-primary" onclick="syncPerformaWeb()" style="box-shadow: 0 1px 3px rgba(79, 70, 229, 0.25);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+              Tarik Insight Meta
+            </button>
+            <select id="filterPerfPlatform" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onchange="renderPerformance()">
+              <option value="ALL">Semua Platform</option>
+              <option value="FACEBOOK">Facebook Page</option>
+              <option value="INSTAGRAM">Instagram Professional</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 24%;">Video / Judul Konten</th>
+                <th style="width: 11%; text-align: center;">Platform</th>
+                <th style="width: 13%;">Waktu Tayang</th>
+                <th style="width: 13%; text-align: center;">Total Views 🔥</th>
+                <th style="width: 10%; text-align: center;">Views 24h</th>
+                <th style="width: 10%; text-align: center;">Views 3d</th>
+                <th style="width: 9%; text-align: center;">Likes 👍</th>
+                <th style="width: 10%; text-align: center;">Komen / Share 💬</th>
+              </tr>
+            </thead>
+            <tbody id="performanceTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Modal Tambah Niche -->
+  <div class="modal-overlay" id="modalAddNiche">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Tambah Niche Baru</div>
+        <button class="modal-close" onclick="closeModal('modalAddNiche')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Nama Niche *</label>
+          <input type="text" id="addNicheName" class="form-control" placeholder="Contoh: PitaMisteri.tv" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Path Folder Komputer (Lokal) *</label>
+          <input type="text" id="addNicheFolderId" class="form-control" placeholder="Contoh: D:\Video Konten\PitaMisteri atau C:\Video" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Template Instruksi AI / Caption (Opsional)</label>
+          <textarea id="addNicheCaption" class="form-control" placeholder="Panduan gaya bahasa atau hashtag khusus niche ini..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalAddNiche')">Batal</button>
+        <button class="btn btn-primary" onclick="submitAddNiche()">Simpan Niche</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Niche -->
+  <div class="modal-overlay" id="modalEditNiche">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Edit Niche</div>
+        <button class="modal-close" onclick="closeModal('modalEditNiche')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editNicheId" />
+        <div class="form-group">
+          <label class="form-label">ID Niche</label>
+          <input type="text" id="editNicheIdDisplay" class="form-control font-mono" readonly disabled />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nama Niche *</label>
+          <input type="text" id="editNicheName" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Path Folder Komputer (Lokal)</label>
+          <input type="text" id="editNicheFolderId" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Template Instruksi AI / Caption</label>
+          <textarea id="editNicheCaption" class="form-control"></textarea>
+        </div>
+        <div class="form-group" style="margin-top: 14px;">
+          <label class="form-label">Strategi Jadwal Posting</label>
+          <select id="editNicheModeJadwal" class="form-control" style="font-weight: 600;">
+            <option value="GOLDEN_SLOTS">🌟 Slot Jam Emas Khusus (07:15, 11:30, 16:30, 19:00, 21:15 WIB)</option>
+            <option value="INTERVAL">⏱️ Jeda Interval Menit (Custom Jam & Interval)</option>
+          </select>
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
+            Slot Jam Emas membagi video ke 5 waktu puncak audiens Indonesia (pagi, makan siang, sore pulang kerja, prime time malam, dan late night).
+          </div>
+        </div>
+        <div id="wrapCustomIntervalSettings" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+          <div class="form-group">
+            <label class="form-label">Jam Awal Tayang (WIB)</label>
+            <input type="text" id="editNicheJamAwal" class="form-control" placeholder="08:00" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Jam Akhir Tayang (WIB)</label>
+            <input type="text" id="editNicheJamAkhir" class="form-control" placeholder="23:00" />
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label">Jeda / Interval (Menit)</label>
+            <input type="number" id="editNicheInterval" class="form-control" placeholder="90" min="15" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Batas Maks. / Hari</label>
+            <input type="number" id="editNicheBatasHarian" class="form-control" placeholder="20" min="1" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalEditNiche')">Batal</button>
+        <button class="btn btn-primary" onclick="submitEditNiche()">Simpan Perubahan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Tambah Akun -->
+  <div class="modal-overlay" id="modalAddAccount">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Tambah Akun Media Sosial</div>
+        <button class="modal-close" onclick="closeModal('modalAddAccount')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Pilih Niche *</label>
+          <select id="addAccountNicheId" class="form-control"></select>
+        </div>
+        <div style="margin-bottom: 18px; padding: 14px; background: rgba(254, 44, 85, 0.08); border: 1px solid rgba(254, 44, 85, 0.35); border-radius: 8px;">
+          <div style="font-weight: 700; font-size: 0.88rem; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 10px; height: 10px; background: #fe2c55; border-radius: 50%;"></span>
+            Hubungkan Cepat Akun TikTok (OAuth 2.0):
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px;">
+            Login & izinkan aplikasi langsung untuk niche yang dipilih. Pilih App Developer:
+          </div>
+          <div style="margin-bottom: 10px;">
+            <select id="tiktokOAuthAppSelect" class="form-control" style="font-size: 0.82rem; padding: 6px 10px;">
+              <option value="0">TikTok App-1 (sbaw4rectma8d8iefp - Utama)</option>
+              <option value="1">TikTok App-2 (sbaw70fqk3n60cnoxe - Cadangan 1)</option>
+              <option value="2">TikTok App-3 (sbawfqgcpq8a1k6fwe - Cadangan 2)</option>
+            </select>
+          </div>
+          <button type="button" class="btn" style="width: 100%; background: #000; border: 1px solid #fe2c55; color: #00f2fe; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 9px;" onclick="connectTikTokOAuth()">
+            <span>Otorisasi & Hubungkan Akun TikTok ➔</span>
+          </button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Platform *</label>
+          <select id="addAccountPlatform" class="form-control">
+            <option value="FACEBOOK">Facebook Page</option>
+            <option value="INSTAGRAM">Instagram Professional</option>
+            <option value="TIKTOK">TikTok Creator (Manual Token)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nama Akun / Halaman *</label>
+          <input type="text" id="addAccountName" class="form-control" placeholder="Contoh: PitaMisteri.tv TikTok / Facebook" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Platform User ID (Page ID / IG User ID) *</label>
+          <input type="text" id="addAccountPlatformId" class="form-control font-mono" placeholder="ID numerik akun Meta" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Access Token Meta (User / Page Token) *</label>
+          <textarea id="addAccountToken" class="form-control font-mono" placeholder="EAAG... (Tempel token Meta langsung di sini)"></textarea>
+          <div class="form-help">Token akan otomatis diverifikasi ke Graph API dan disimpan aman di Script Properties.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalAddAccount')">Batal</button>
+        <button class="btn btn-primary" onclick="submitAddAccount()">Simpan & Hubungkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Akun -->
+  <div class="modal-overlay" id="modalEditAccount">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Edit Akun Media Sosial</div>
+        <button class="modal-close" onclick="closeModal('modalEditAccount')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editAccountId" />
+        <div class="form-group">
+          <label class="form-label">Nama Akun *</label>
+          <input type="text" id="editAccountName" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Platform User ID *</label>
+          <input type="text" id="editAccountPlatformId" class="form-control font-mono" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Perbarui Access Token (Kosongkan jika token masih aktif)</label>
+          <textarea id="editAccountToken" class="form-control font-mono" placeholder="Tempel token baru jika token lama sudah kedaluwarsa..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalEditAccount')">Batal</button>
+        <button class="btn btn-primary" onclick="submitEditAccount()">Perbarui Akun</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Tambah / Atur Folder Komputer -->
+  <div class="modal-overlay" id="modalAddDriveFolder">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Hubungkan Folder Video Komputer</div>
+        <button class="modal-close" onclick="closeModal('modalAddDriveFolder')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Pilih Niche *</label>
+          <select id="addDriveNicheId" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Path Folder Komputer (Lokal) *</label>
+          <input type="text" id="addDriveFolderId" class="form-control" placeholder="Contoh: D:\Konten\PitaMisteri atau C:\Video" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalAddDriveFolder')">Batal</button>
+        <button class="btn btn-primary" onclick="submitAddDriveFolder()">Hubungkan Folder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Folder Drive -->
+  <div class="modal-overlay" id="modalEditDriveFolder">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Ganti Folder Video Komputer Niche</div>
+        <button class="modal-close" onclick="closeModal('modalEditDriveFolder')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editDriveNicheId" />
+        <div class="form-group">
+          <label class="form-label">Niche</label>
+          <input type="text" id="editDriveNicheName" class="form-control" readonly disabled />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Path Folder Komputer Baru *</label>
+          <input type="text" id="editDriveFolderId" class="form-control" placeholder="Contoh: D:\Konten\PitaMisteri atau C:\Video baru" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalEditDriveFolder')">Batal</button>
+        <button class="btn btn-primary" onclick="submitEditDriveFolder()">Simpan Perubahan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Caption -->
+  <div class="modal-overlay" id="modalCaption">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">Edit Caption Konten</div>
+        <button class="modal-close" onclick="closeModal('modalCaption')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="captionMediaId" />
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 0.8rem; color: #065f46; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.1rem;">🔒</span>
+          <span><strong>Kunci Permanen Aktif:</strong> Caption yang Anda simpan akan otomatis dikunci dan dilindungi agar tidak pernah hilang, terhapus, atau tertimpa saat folder di-scan ulang.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mode Caption</label>
+          <select id="captionMode" class="form-control">
+            <option value="MANUAL">MANUAL (Caption Terkunci Aman)</option>
+            <option value="AI">AI (Dibuat otomatis oleh Gemini)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Isi Caption Lengkap *</label>
+          <textarea id="captionText" class="form-control" style="min-height: 150px;" placeholder="Tulis caption lengkap..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hashtags</label>
+          <input type="text" id="captionHashtags" class="form-control" placeholder="#Bisnis #Musik #Inspirasi" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalCaption')">Batal</button>
+        <button class="btn btn-primary" onclick="submitSaveCaption()">Simpan Caption</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Masukkan Video ke Antrean Upload / Jadwal -->
+  <div class="modal-overlay" id="modalScheduleVideo">
+    <div class="modal-dialog" style="max-width: 580px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: var(--primary);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line></svg>
+          Masukkan Video ke Antrean Upload
+        </div>
+        <button class="modal-close" onclick="closeModal('modalScheduleVideo')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="scheduleMediaId" />
+        
+        <!-- Video info card -->
+        <div style="background: var(--bg-page); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;">
+          <div style="font-weight: 700; color: var(--text-main); font-size: 0.92rem; margin-bottom: 5px; word-break: break-word;" id="scheduleVideoTitle">-</div>
+          <div style="display: flex; gap: 14px; font-size: 0.75rem; color: var(--text-muted); align-items: center;">
+            <div>ID: <span class="font-mono" id="scheduleVideoId" style="color: var(--text-main); font-weight: 600;">-</span></div>
+            <div>Niche: <span class="badge badge-info" id="scheduleNicheName">-</span></div>
+          </div>
+        </div>
+
+        <!-- Thumbnail / Cover Frame Video (Otomatis & Manual) -->
+        <div class="form-group" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label class="form-label" style="margin-bottom: 0; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+              <span>🖼️ Sampul / Thumbnail (Reels & TikTok)</span>
+              <span class="badge" id="scheduleThumbBadge" style="background: #e0e7ff; color: #4338ca; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px;">
+                ✨ Auto Menjual (1.8s)
+              </span>
+            </label>
+            <span id="scheduleThumbTimeText" style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 700; color: var(--primary);">
+              1.8s (1800 ms)
+            </span>
+          </div>
+
+          <div style="display: flex; gap: 14px; align-items: center;">
+            <!-- Canvas Preview Box (9:16 vertical) -->
+            <div style="position: relative; width: 75px; height: 115px; border-radius: 8px; overflow: hidden; background: #0f172a; flex-shrink: 0; box-shadow: 0 3px 10px rgba(0,0,0,0.15); border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center;">
+              <canvas id="scheduleThumbCanvas" width="180" height="280" style="width: 100%; height: 100%; object-fit: cover;"></canvas>
+              <div id="scheduleThumbLoading" style="position: absolute; inset: 0; background: rgba(15,23,42,0.75); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.68rem; font-weight: 600; text-align: center; padding: 4px;">
+                Memuat frame...
+              </div>
+            </div>
+
+            <!-- Controls & Presets -->
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--text-muted); margin-bottom: 4px;">
+                <span>Pilih detik frame terbaik:</span>
+                <span style="font-weight: 600; color: var(--text-main);">0.5s – 5.0s</span>
+              </div>
+              <input type="range" id="scheduleThumbSlider" min="0.5" max="5.0" step="0.1" value="1.8" 
+                     oninput="onScheduleThumbSliderChange(this.value)" 
+                     style="width: 100%; accent-color: var(--primary); cursor: pointer; margin-bottom: 8px;" />
+              
+              <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-sm btn-secondary" onclick="setThumbPreset(1.8, '✨ Auto Menjual (1.8s)')" style="font-size: 0.72rem; padding: 2px 7px; font-weight: 700; background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+                  ✨ Auto Menjual (1.8s)
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="setThumbPreset(1.0, '⏱️ Detik 1.0s')" style="font-size: 0.72rem; padding: 2px 7px;">
+                  1.0s
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="setThumbPreset(2.5, '⏱️ Detik 2.5s')" style="font-size: 0.72rem; padding: 2px 7px;">
+                  2.5s
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="setThumbPreset(3.5, '⏱️ Detik 3.5s')" style="font-size: 0.72rem; padding: 2px 7px;">
+                  3.5s
+                </button>
+              </div>
+
+              <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 6px; line-height: 1.35;">
+                💡 Frame ini otomatis dijadikan cover resmi di <b>Facebook Reels</b>, <b>Instagram Reels</b>, dan <b>TikTok</b>.
+              </div>
+            </div>
+          </div>
+          <input type="hidden" id="scheduleCoverOffsetMs" value="1800" />
+        </div>
+
+        <!-- Akun Tujuan -->
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="margin-bottom: 0;">Pilih Akun Sosial Media Tujuan *</label>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleSelectAllAccounts()" style="padding: 2px 8px; font-size: 0.72rem;">
+              Pilih Semua / Batal
+            </button>
+          </div>
+          <div id="scheduleAccountList" style="max-height: 180px; overflow-y: auto; padding-right: 4px;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Caption & Hashtags -->
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="margin-bottom: 0;">Caption Konten *</label>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="generateAiCaptionInScheduleModal()" style="font-size: 0.72rem; padding: 2px 8px;">
+              ✨ Buat dengan Gemini AI
+            </button>
+          </div>
+          <textarea id="scheduleCaption" class="form-control" style="min-height: 90px; font-size: 0.85rem;" placeholder="Tulis caption untuk video ini atau klik Buat dengan Gemini AI..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Hashtags</label>
+          <input type="text" id="scheduleHashtags" class="form-control" placeholder="#Bisnis #Musik #Viral" />
+        </div>
+
+        <!-- Jadwal Waktu -->
+        <div class="form-group">
+          <label class="form-label">Waktu Upload / Publikasi *</label>
+          <input type="datetime-local" id="scheduleWhenInput" class="form-control" style="font-weight: 600; font-family: 'JetBrains Mono', monospace;" />
+          
+          <!-- Shortcut buttons -->
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setScheduleTimeOffset(5)">+5 Menit</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setScheduleTimeOffset(30)">+30 Menit</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setScheduleTimeOffset(60)">+1 Jam</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setScheduleTomorrow(9)">Besok 09:00</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setScheduleTomorrow(17)">Besok 17:00</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalScheduleVideo')">Batal</button>
+        <button class="btn btn-primary" onclick="submitScheduleVideo()" style="font-weight: 700; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);">
+          🚀 Masukkan ke Antrean Upload
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Pratinjau Video Pemutar Internal -->
+  <div class="modal-overlay" id="modalVideoPlayer" onclick="handleModalOverlayClick(event, 'modalVideoPlayer')">
+    <div class="modal-dialog" style="max-width: 720px; background: #0f172a; color: #fff;" onclick="event.stopPropagation()">
+      <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px; color: #fff;">
+          <span>🎬</span>
+          <span id="videoPlayerTitle" style="font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 500px;">Pratinjau Video</span>
+        </div>
+        <button class="modal-close" onclick="closeVideoPlayerModal()" style="color: #94a3b8;" title="Tutup Pemutar (ESC)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="videoPlayerContainer" style="padding: 16px; text-align: center; background: #000; min-height: 260px; display: flex; align-items: center; justify-content: center;">
+        <!-- Injected and destroyed dynamically on open/close for clean audio termination -->
+      </div>
+      <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <button class="btn btn-sm btn-secondary" onclick="openCurrentVideoFolder()" style="background: #1e293b; color: #f8fafc; border: 1px solid #334155;">
+            📂 Buka Lokasi Folder (Explorer)
+          </button>
+        </div>
+        <button class="btn btn-secondary" onclick="closeVideoPlayerModal()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <script>
+    let appData = {
+      niches: [],
+      accounts: [],
+      driveSources: [],
+      jobs: [],
+      media: [],
+      summary: {},
+      sheetUrl: '#'
+    };
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `<span>${escapeHtml(msg)}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 250);
+      }, 4000);
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function switchNav(viewId) {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+
+      const target = document.getElementById(viewId);
+      if (target) target.classList.add('active');
+
+      const btn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.getAttribute('onclick') && b.getAttribute('onclick').includes(viewId));
+      if (btn) btn.classList.add('active');
+
+      // Update titles
+      const titles = {
+        'view-niche': ['Manajemen Niche', 'Kelola saluran publikasi, jadwal otomatis, dan folder video komputer per niche.'],
+        'view-drive': ['Folder Video Komputer', 'Daftar folder sumber video lokal di komputer per niche.'],
+        'view-account': ['Akun Sosial Media', 'Kelola akun Facebook Page dan Instagram Professional (Meta API).'],
+        'view-queue': ['Antrean & Jadwal', 'Status pengiriman video terjadwal, progress upload, dan sinkronisasi Meta Creator Studio.'],
+        'view-media': ['Perpustakaan Video (List Detail)', 'Daftar lengkap video Drive dengan caption detail, mode AI/Manual, dan aksi cepat.'],
+        'view-performance': ['Performa Konten Video', 'Analisis penonton (views 24 jam & 3 hari), likes, komentar, dan interaksi audiens.']
+      };
+
+      if (titles[viewId]) {
+        document.getElementById('pageTitleText').textContent = titles[viewId][0];
+        document.getElementById('pageSubtitleText').textContent = titles[viewId][1];
+      }
+    }
+
+    function openModal(id) {
+      const m = document.getElementById(id);
+      if (m) m.classList.add('active');
+    }
+
+    function closeModal(id) {
+      if (id === 'modalVideoPlayer') {
+        closeVideoPlayerModal();
+        return;
+      }
+      const m = document.getElementById(id);
+      if (m) m.classList.remove('active');
+    }
+
+    function handleModalOverlayClick(event, id) {
+      if (event.target === event.currentTarget) {
+        closeModal(id);
+      }
+    }
+
+    async function callBackend(funcName, ...args) {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(res => resolve(res))
+            .withFailureHandler(err => reject(err))[funcName](...args);
+        });
+      }
+
+      // Local Standalone API Backend (Support direct file:// and localhost:3000)
+      const baseUrl = (window.location.protocol === 'file:' || !window.location.port) ? 'http://localhost:3000' : '';
+      const resp = await fetch(baseUrl + '/api/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: funcName, args: args })
+      });
+      const json = await resp.json();
+      if (!resp.ok || json.error) throw new Error(json.error || 'Server error');
+      return json.result;
+    }
+
+    function loadData(silent = false) {
+      const btn = document.getElementById('btnRefresh');
+      if (btn && !silent) btn.innerHTML = 'Memuat...';
+      
+      callBackend('dashboard')
+        .then(data => {
+          appData = data;
+          renderAll();
+          if (!silent) showToast('Data berhasil disinkronkan', 'success');
+        })
+        .catch(err => {
+          if (!silent) showToast('Gagal memuat data: ' + err.message, 'error');
+        })
+        .finally(() => {
+          if (btn && !silent) btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg> Sinkronkan Data';
+        });
+    }
+
+    // Auto-refresh data every 15 seconds so dashboard always updates
+    setInterval(() => {
+      loadData(true);
+    }, 15000);
+
+    function runQueueWeb() {
+      const btn = document.getElementById('btnRunQueue');
+      btn.innerHTML = 'Memproses...';
+      btn.disabled = true;
+
+      callBackend('jalankanAntreanWeb')
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('Antrean berhasil diproses!', 'success');
+        })
+        .catch(err => {
+          showToast('Eksekusi antrean gagal: ' + err.message, 'error');
+        })
+        .finally(() => {
+          btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Jalankan Antrean';
+          btn.disabled = false;
+        });
+    }
+
+    function syncGoogleSheetAction() {
+      const btn = document.getElementById('btnSyncSheet');
+      if (btn) {
+        btn.innerHTML = 'Menyelaraskan...';
+        btn.disabled = true;
+      }
+      showToast('Menyelaraskan data langsung dari Google Sheet...', 'info');
+
+      callBackend('syncGoogleSheet')
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('Data berhasil diselaraskan 100% dengan Google Sheet!', 'success');
+        })
+        .catch(err => {
+          showToast('Gagal selaraskan: ' + err.message, 'error');
+        })
+        .finally(() => {
+          if (btn) {
+            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg> Selaraskan Google Sheet`;
+            btn.disabled = false;
+          }
+        });
+    }
+
+    function renderAll() {
+      // Summary stats
+      document.getElementById('statVideos').textContent = (appData.summary && appData.summary.videos) || (appData.media ? appData.media.length : 0);
+      document.getElementById('statQueued').textContent = (appData.summary && appData.summary.queued) || 0;
+      document.getElementById('statUploading').textContent = (appData.summary && appData.summary.uploading) || 0;
+      document.getElementById('statPublished').textContent = (appData.summary && appData.summary.published) || 0;
+      document.getElementById('statAttention').textContent = (appData.summary && appData.summary.attention) || 0;
+
+      if (appData.sheetUrl) {
+        document.getElementById('btnSheetLink').href = appData.sheetUrl;
+      }
+
+      document.getElementById('lastSyncText').textContent = 'Terakhir Sinkron: ' + new Date().toLocaleTimeString('id-ID');
+
+      renderNiches();
+      renderDriveSources();
+      renderAccounts();
+      renderJobs();
+      renderPublishedJobs();
+      renderMedia();
+      renderMetaSchedules();
+      renderPerformance();
+    }
+
+    // 1. NICHES
+    function renderNiches() {
+      const container = document.getElementById('nicheListContainer');
+      const badge = document.getElementById('navBadgeNiche');
+      const niches = appData.niches || [];
+      badge.textContent = niches.length;
+
+      if (!niches.length) {
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 36px;">Belum ada niche terdaftar. Klik <b>Tambah Niche Baru</b>.</div>`;
+        return;
+      }
+
+      container.innerHTML = niches.map(n => {
+        const isAktif = String(n.aktif).toUpperCase() === 'TRUE';
+        const isAutoJadwal = String(n.auto_jadwal).toUpperCase() === 'TRUE';
+        const isAutoPublikasi = String(n.auto_publikasi).toUpperCase() === 'TRUE';
+
+        return `
+          <div class="niche-card-item">
+            <div>
+              <div class="niche-header">
+                <div>
+                  <div class="niche-name">${escapeHtml(n.nama)}</div>
+                  <div class="niche-id">${escapeHtml(n.niche_id)}</div>
+                </div>
+                <span class="badge ${isAktif ? 'badge-success' : 'badge-neutral'}">
+                  ${isAktif ? 'AKTIF' : 'NONAKTIF'}
+                </span>
+              </div>
+              <div class="niche-meta-rows" style="margin-top: 14px;">
+                <div class="niche-row">
+                  <span style="color: var(--text-muted);">Folder Drive:</span>
+                  <a href="https://drive.google.com/drive/folders/${escapeHtml(n.folder_id)}" target="_blank" class="font-mono" style="color: var(--primary); text-decoration: underline; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${escapeHtml(n.folder_id || 'Belum diatur')}
+                  </a>
+                </div>
+                <div class="niche-row">
+                  <span style="color: var(--text-muted);">Auto Jadwal:</span>
+                  <button class="btn btn-sm ${isAutoJadwal ? 'btn-success' : 'btn-secondary'}" onclick="toggleAutoJadwal('${escapeHtml(n.niche_id)}', ${!isAutoJadwal})">
+                    ${isAutoJadwal ? 'AKTIF' : 'MATI'}
+                  </button>
+                </div>
+                <div class="niche-row">
+                  <span style="color: var(--text-muted);">Auto Publikasi:</span>
+                  <button class="btn btn-sm ${isAutoPublikasi ? 'btn-success' : 'btn-secondary'}" onclick="toggleAutoPublikasi('${escapeHtml(n.niche_id)}', ${!isAutoPublikasi})">
+                    ${isAutoPublikasi ? 'AKTIF' : 'MATI'}
+                  </button>
+                </div>
+                <div class="niche-row">
+                  <span style="color: var(--text-muted);">Mode Jadwal:</span>
+                  <span style="font-weight: 700; color: #10b981; font-size: 0.78rem;">
+                    ${(n.mode_jadwal || 'GOLDEN_SLOTS') === 'GOLDEN_SLOTS' ? '🌟 Slot Jam Emas (07:15, 11:30, 16:30, 19:00, 21:15)' : `⏰ ${escapeHtml(n.jam_awal || '08:00')} - ${escapeHtml(n.jam_akhir || '23:00')} (${n.interval_menit || 90} mnt)`}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; pt-3; border-top: 1px solid var(--border-color);">
+              <button class="btn btn-sm btn-secondary" onclick="openModalEditNiche('${escapeHtml(n.niche_id)}')">
+                Edit
+              </button>
+              <button class="btn btn-sm btn-secondary" onclick="scanDriveForNiche('${escapeHtml(n.niche_id)}')">
+                Scan Drive
+              </button>
+              <button class="btn btn-sm btn-danger" onclick="deleteNicheAction('${escapeHtml(n.niche_id)}', '${escapeHtml(n.nama)}')">
+                Hapus
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openModalAddNiche() {
+      document.getElementById('addNicheName').value = '';
+      document.getElementById('addNicheFolderId').value = '';
+      document.getElementById('addNicheCaption').value = '';
+      openModal('modalAddNiche');
+    }
+
+    function submitAddNiche() {
+      const name = document.getElementById('addNicheName').value.trim();
+      const folderId = document.getElementById('addNicheFolderId').value.trim();
+      const caption = document.getElementById('addNicheCaption').value.trim();
+
+      if (!name) return showToast('Nama niche wajib diisi!', 'error');
+      if (!folderId) return showToast('Folder ID Drive wajib diisi!', 'error');
+
+      showToast('Menyimpan niche baru...', 'info');
+      callBackend('registerNiche', { name, folderId, captionTemplate: caption, autoPublikasi: true, autoJadwal: true })
+        .then(res => {
+          appData = res;
+          renderAll();
+          closeModal('modalAddNiche');
+          showToast('Niche berhasil ditambahkan!', 'success');
+        })
+        .catch(err => showToast('Gagal menambah niche: ' + err.message, 'error'));
+    }
+
+    function openModalEditNiche(nicheId) {
+      const niche = (appData.niches || []).find(n => n.niche_id === nicheId);
+      if (!niche) return showToast('Niche tidak ditemukan', 'error');
+
+      document.getElementById('editNicheId').value = niche.niche_id;
+      document.getElementById('editNicheIdDisplay').value = niche.niche_id;
+      document.getElementById('editNicheName').value = niche.nama || '';
+      document.getElementById('editNicheFolderId').value = niche.folder_id || '';
+      document.getElementById('editNicheCaption').value = niche.instruksi_ai || '';
+      document.getElementById('editNicheModeJadwal').value = niche.mode_jadwal || 'GOLDEN_SLOTS';
+      document.getElementById('editNicheJamAwal').value = niche.jam_awal || '08:00';
+      document.getElementById('editNicheJamAkhir').value = niche.jam_akhir || '23:00';
+      document.getElementById('editNicheInterval').value = niche.interval_menit || 90;
+      document.getElementById('editNicheBatasHarian').value = niche.batas_harian || 20;
+      openModal('modalEditNiche');
+    }
+
+    function submitEditNiche() {
+      const id = document.getElementById('editNicheId').value;
+      const name = document.getElementById('editNicheName').value.trim();
+      const folderId = document.getElementById('editNicheFolderId').value.trim();
+      const caption = document.getElementById('editNicheCaption').value.trim();
+      const modeJadwal = document.getElementById('editNicheModeJadwal').value || 'GOLDEN_SLOTS';
+      const jamAwal = document.getElementById('editNicheJamAwal').value.trim() || '08:00';
+      const jamAkhir = document.getElementById('editNicheJamAkhir').value.trim() || '23:00';
+      const intervalMenit = parseInt(document.getElementById('editNicheInterval').value, 10) || 90;
+      const batasHarian = parseInt(document.getElementById('editNicheBatasHarian').value, 10) || 20;
+
+      if (!name) return showToast('Nama niche tidak boleh kosong', 'error');
+
+      showToast('Menyimpan perubahan niche...', 'info');
+      callBackend('updateNiche', { id, name, folderId, captionTemplate: caption, modeJadwal, jamAwal, jamAkhir, intervalMenit, batasHarian })
+        .then(res => {
+          appData = res;
+          renderAll();
+          closeModal('modalEditNiche');
+          showToast('Niche berhasil diperbarui!', 'success');
+        })
+        .catch(err => showToast('Gagal perbarui niche: ' + err.message, 'error'));
+    }
+
+    function deleteNicheAction(nicheId, nicheName) {
+      if (!confirm(`Apakah Anda yakin ingin MENGHAPUS niche "${nicheName}"? Semua video, akun, dan antrean yang terkait akan ikut dihapus!`)) {
+        return;
+      }
+      showToast('Menghapus niche...', 'info');
+      callBackend('deleteNiche', nicheId)
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('Niche berhasil dihapus!', 'success');
+        })
+        .catch(err => showToast('Gagal menghapus niche: ' + err.message, 'error'));
+    }
+
+    function toggleAutoJadwal(nicheId, val) {
+      callBackend('toggleAutoJadwalWeb', nicheId, val)
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('Auto jadwal diperbarui', 'success');
+        })
+        .catch(err => showToast('Gagal ubah auto jadwal: ' + err.message, 'error'));
+    }
+
+    function toggleAutoPublikasi(nicheId, val) {
+      callBackend('toggleAutoPublikasiWeb', nicheId, val)
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('Auto publikasi diperbarui', 'success');
+        })
+        .catch(err => showToast('Gagal ubah auto publikasi: ' + err.message, 'error'));
+    }
+
+    // 2. DRIVE SOURCES
+    function renderDriveSources() {
+      const tbody = document.getElementById('driveSourceTableBody');
+      const badge = document.getElementById('navBadgeDrive');
+      const sources = appData.driveSources || [];
+      const niches = appData.niches || [];
+      badge.textContent = sources.length;
+
+      if (!sources.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">Belum ada folder Drive yang terhubung.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = sources.map(s => {
+        const niche = niches.find(n => n.niche_id === s.niche_id);
+        const nicheName = niche ? niche.nama : s.niche_id;
+        const isAktif = String(s.status).toUpperCase() === 'AKTIF';
+
+        return `
+          <tr>
+            <td>
+              <div style="font-weight: 700;">${escapeHtml(nicheName)}</div>
+              <div class="font-mono" style="font-size: 0.72rem; color: var(--text-dim);">${escapeHtml(s.niche_id)}</div>
+            </td>
+            <td>
+              <a href="https://drive.google.com/drive/folders/${escapeHtml(s.folder_id)}" target="_blank" class="font-mono" style="color: var(--primary); text-decoration: underline;">
+                ${escapeHtml(s.folder_id)}
+              </a>
+            </td>
+            <td>
+              <span class="badge ${isAktif ? 'badge-success' : 'badge-neutral'}">
+                ${isAktif ? 'AKTIF' : 'NONAKTIF'}
+              </span>
+            </td>
+            <td style="font-size: 0.75rem; color: var(--text-muted);">
+              ${s.terakhir_scan ? new Date(s.terakhir_scan).toLocaleString('id-ID') : 'Belum pernah'}
+            </td>
+            <td style="text-align: right;">
+              <div style="display: inline-flex; gap: 6px;">
+                <button class="btn btn-sm btn-secondary" onclick="scanDriveForNiche('${escapeHtml(s.niche_id)}')">
+                  Scan
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="openModalEditDriveFolder('${escapeHtml(s.niche_id)}', '${escapeHtml(nicheName)}', '${escapeHtml(s.folder_id)}')">
+                  Ganti Folder
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteDriveFolderAction('${escapeHtml(s.niche_id)}', '${escapeHtml(s.folder_id)}')">
+                  Putuskan
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openModalAddDriveFolder() {
+      const select = document.getElementById('addDriveNicheId');
+      const niches = appData.niches || [];
+      select.innerHTML = niches.map(n => `<option value="${escapeHtml(n.niche_id)}">${escapeHtml(n.nama)} (${escapeHtml(n.niche_id)})</option>`).join('');
+      document.getElementById('addDriveFolderId').value = '';
+      openModal('modalAddDriveFolder');
+    }
+
+    function submitAddDriveFolder() {
+      const nicheId = document.getElementById('addDriveNicheId').value;
+      const folderId = document.getElementById('addDriveFolderId').value.trim();
+
+      if (!folderId) return showToast('Folder ID wajib diisi!', 'error');
+
+      showToast('Menghubungkan folder Drive...', 'info');
+      callBackend('addDriveFolder', { nicheId, folderId })
+        .then(res => {
+          appData = res;
+          renderAll();
+          closeModal('modalAddDriveFolder');
+          showToast('Folder video komputer berhasil dihubungkan!', 'success');
+        })
+        .catch(err => showToast('Gagal menghubungkan folder: ' + err.message, 'error'));
+    }
+
+    function openModalEditDriveFolder(nicheId, nicheName, currentFolderId) {
+      document.getElementById('editDriveNicheId').value = nicheId;
+      document.getElementById('editDriveNicheName').value = `${nicheName} (${nicheId})`;
+      document.getElementById('editDriveFolderId').value = currentFolderId;
+      openModal('modalEditDriveFolder');
+    }
+
+    function submitEditDriveFolder() {
+      const nicheId = document.getElementById('editDriveNicheId').value;
+      const folderId = document.getElementById('editDriveFolderId').value.trim();
+
+      if (!folderId) return showToast('Folder ID wajib diisi!', 'error');
+
+      showToast('Menyimpan perubahan folder Drive...', 'info');
+      callBackend('updateDriveFolderForNiche', { nicheId, folderId })
+        .then(res => {
+          appData = res;
+          renderAll();
+          closeModal('modalEditDriveFolder');
+          showToast('Folder video komputer berhasil diperbarui!', 'success');
+        })
+        .catch(err => showToast('Gagal perbarui folder: ' + err.message, 'error'));
+    }
+
+    function deleteDriveFolderAction(nicheId, folderId) {
+      if (!confirm(`Apakah Anda yakin ingin memutuskan folder video ini dari niche?`)) {
+        return;
+      }
+      showToast('Memutuskan folder Drive...', 'info');
+      callBackend('deleteDriveFolder', { nicheId, folderId })
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('Folder Drive berhasil diputuskan!', 'success');
+        })
+        .catch(err => showToast('Gagal memutuskan folder: ' + err.message, 'error'));
+    }
+
+    function scanDriveForNiche(nicheId) {
+      showToast('Memindai video di folder komputer lokal...', 'info');
+      callBackend('scanDrive', nicheId)
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('Pemindaian video lokal selesai!', 'success');
+        })
+        .catch(err => showToast('Gagal memindai Drive: ' + err.message, 'error'));
+    }
+
+    // 3. ACCOUNTS
+    function renderAccounts() {
+      const tbody = document.getElementById('accountTableBody');
+      const badge = document.getElementById('navBadgeAccount');
+      const accounts = appData.accounts || [];
+      const niches = appData.niches || [];
+      badge.textContent = accounts.length;
+
+      if (!accounts.length) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Belum ada akun sosial media terdaftar.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = accounts.map(a => {
+        const niche = niches.find(n => n.niche_id === a.niche_id);
+        const nicheName = niche ? niche.nama : a.niche_id;
+        const isAktif = String(a.aktif).toUpperCase() === 'TRUE';
+        const isTokenReady = Boolean(a.tokenReady);
+        const isTt = a.platform === 'TIKTOK';
+        const isFb = a.platform === 'FACEBOOK';
+        const badgeClass = isFb ? 'badge-info' : (isTt ? 'badge-tiktok' : 'badge-warning');
+        const badgeStyle = isTt ? 'background: #000; color: #00f2fe; border: 1px solid #fe2c55;' : '';
+
+        return `
+          <tr>
+            <td>
+              <span class="badge ${badgeClass}" style="${badgeStyle}">
+                ${a.platform}
+              </span>
+            </td>
+            <td style="font-weight: 700;">${escapeHtml(a.nama_akun || a.akun_id)}</td>
+            <td class="font-mono" style="font-size: 0.75rem;">${escapeHtml(a.platform_user_id)}</td>
+            <td>${escapeHtml(nicheName)}</td>
+            <td>
+              <span class="badge ${isTokenReady ? 'badge-success' : 'badge-danger'}">
+                ${isTokenReady ? 'TOKEN SIAP' : 'BELUM ADA'}
+              </span>
+            </td>
+            <td>
+              <span class="badge ${isAktif ? 'badge-success' : 'badge-neutral'}">
+                ${isAktif ? 'AKTIF' : 'NONAKTIF'}
+              </span>
+            </td>
+            <td style="text-align: right;">
+              <div style="display: inline-flex; gap: 6px; align-items: center;">
+                ${isTt ? `
+                  <button class="btn btn-sm" style="background: #000; color: #00f2fe; border: 1px solid #fe2c55; font-size: 0.72rem; padding: 4px 8px; font-weight: 700;" onclick="reauthTikTokDirect('${escapeHtml(a.niche_id)}', ${a.tt_app_index || 0})" title="Login ulang ke TikTok">
+                    Login TikTok
+                  </button>
+                ` : ''}
+                <button class="btn btn-sm btn-secondary" onclick="testAccountConnection('${escapeHtml(a.akun_id)}')">
+                  Tes
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="openModalEditAccount('${escapeHtml(a.akun_id)}', '${escapeHtml(a.nama_akun)}', '${escapeHtml(a.platform_user_id)}')">
+                  Edit
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteAccountAction('${escapeHtml(a.akun_id)}', '${escapeHtml(a.nama_akun)}')">
+                  Hapus
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function reauthTikTokDirect(nicheId, appIndex = 0) {
+      if (!nicheId) return showToast('Niche ID tidak ditemukan untuk akun ini', 'error');
+      showToast('Mengalihkan ke otorisasi TikTok...', 'info');
+      setTimeout(() => {
+        window.location.href = `/auth/tiktok/login?nicheId=${encodeURIComponent(nicheId)}&appIndex=${encodeURIComponent(appIndex)}`;
+      }, 400);
+    }
+
+    function connectTikTokOAuth() {
+      const nicheSelect = document.getElementById('addAccountNicheId');
+      const nicheId = nicheSelect ? nicheSelect.value : '';
+      if (!nicheId) {
+        return showToast('Pilih Niche terlebih dahulu sebelum otorisasi!', 'error');
+      }
+      const appSelect = document.getElementById('tiktokOAuthAppSelect');
+      const appIndex = appSelect ? appSelect.value : '0';
+      showToast('Mengalihkan ke halaman otorisasi resmi TikTok...', 'info');
+      setTimeout(() => {
+        window.location.href = `/auth/tiktok/login?nicheId=${encodeURIComponent(nicheId)}&appIndex=${encodeURIComponent(appIndex)}`;
+      }, 500);
+    }
+
+    function openModalAddAccount() {
+      const select = document.getElementById('addAccountNicheId');
+      const niches = appData.niches || [];
+      select.innerHTML = niches.map(n => `<option value="${escapeHtml(n.niche_id)}">${escapeHtml(n.nama)}</option>`).join('');
+      document.getElementById('addAccountName').value = '';
+      document.getElementById('addAccountPlatformId').value = '';
+      document.getElementById('addAccountToken').value = '';
+      openModal('modalAddAccount');
+    }
+
+    function submitAddAccount() {
+      const nicheId = document.getElementById('addAccountNicheId').value;
+      const platform = document.getElementById('addAccountPlatform').value;
+      const name = document.getElementById('addAccountName').value.trim();
+      const platformUserId = document.getElementById('addAccountPlatformId').value.trim();
+      const accessToken = document.getElementById('addAccountToken').value.trim();
+
+      if (!name) return showToast('Nama akun wajib diisi!', 'error');
+      if (!platformUserId) return showToast('Platform User ID wajib diisi!', 'error');
+      if (!accessToken) return showToast('Access Token wajib diisi!', 'error');
+
+      showToast('Menyimpan dan menguji koneksi akun...', 'info');
+      callBackend('registerAccount', { nicheId, platform, platformUserId, name, accessToken })
+        .then(res => {
+          appData = res;
+          renderAll();
+          closeModal('modalAddAccount');
+          showToast('Akun media sosial berhasil ditambahkan dan terhubung!', 'success');
+        })
+        .catch(err => showToast('Gagal menambah akun: ' + err.message, 'error'));
+    }
+
+    function openModalEditAccount(accountId, currentName, currentPlatformId) {
+      document.getElementById('editAccountId').value = accountId;
+      document.getElementById('editAccountName').value = currentName;
+      document.getElementById('editAccountPlatformId').value = currentPlatformId;
+      document.getElementById('editAccountToken').value = '';
+      openModal('modalEditAccount');
+    }
+
+    function submitEditAccount() {
+      const accountId = document.getElementById('editAccountId').value;
+      const nama_akun = document.getElementById('editAccountName').value.trim();
+      const platform_user_id = document.getElementById('editAccountPlatformId').value.trim();
+      const accessToken = document.getElementById('editAccountToken').value.trim();
+
+      if (!nama_akun) return showToast('Nama akun tidak boleh kosong', 'error');
+
+      const payload = { accountId, nama_akun, platform_user_id };
+      if (accessToken) payload.accessToken = accessToken;
+
+      showToast('Menyimpan perubahan akun...', 'info');
+      callBackend('updateAccount', payload)
+        .then(res => {
+          appData = res;
+          renderAll();
+          closeModal('modalEditAccount');
+          showToast('Akun media sosial berhasil diperbarui!', 'success');
+        })
+        .catch(err => showToast('Gagal perbarui akun: ' + err.message, 'error'));
+    }
+
+    function deleteAccountAction(accountId, accountName) {
+      if (!confirm(`Apakah Anda yakin ingin MENGHAPUS akun "${accountName}"? Semua antrean untuk akun ini akan ikut dibersihkan!`)) {
+        return;
+      }
+      showToast('Menghapus akun...', 'info');
+      callBackend('deleteSocialAccount', accountId)
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('Akun sosial media berhasil dihapus!', 'success');
+        })
+        .catch(err => showToast('Gagal menghapus akun: ' + err.message, 'error'));
+    }
+
+    function testAccountConnection(accountId) {
+      showToast('Menguji koneksi akun ke Meta API...', 'info');
+      callBackend('testMetaAccountConnection', accountId)
+        .then(res => {
+          showToast(`Koneksi SUKSES: Akun "${res.nama_akun || accountId}" terhubung normal ke Graph API!`, 'success');
+        })
+        .catch(err => showToast('Koneksi GAGAL: ' + err.message, 'error'));
+    }
+
+    // 4. QUEUE & JOBS
+    function formatPostUrl(j, platformOverride) {
+      let url = '';
+      let platform = '';
+      let status = '';
+      let publishId = '';
+
+      if (typeof j === 'object' && j !== null) {
+        url = String(j.post_url || '').trim();
+        platform = String(j.platform || platformOverride || '').toUpperCase();
+        status = String(j.status || 'PUBLISHED').toUpperCase();
+        publishId = String(j.platform_publish_id || j.perf_id || '').trim();
+      } else {
+        url = String(j || '').trim();
+        platform = String(platformOverride || '').toUpperCase();
+        status = 'PUBLISHED';
+      }
+
+      if (url && !url.startsWith('http')) {
+        if (platform === 'FACEBOOK') {
+          url = 'https://www.facebook.com' + (url.startsWith('/') ? '' : '/') + url;
+        } else if (platform === 'INSTAGRAM') {
+          url = 'https://www.instagram.com' + (url.startsWith('/') ? '' : '/') + url;
+        } else if (platform === 'YOUTUBE') {
+          url = 'https://www.youtube.com' + (url.startsWith('/') ? '' : '/') + url;
+        } else if (platform === 'TIKTOK') {
+          url = 'https://www.tiktok.com' + (url.startsWith('/') ? '' : '/') + url;
+        }
+      } else if (!url && status === 'PUBLISHED' && publishId) {
+        if (platform === 'FACEBOOK') {
+          url = 'https://www.facebook.com/reel/' + publishId + '/';
+        } else if (platform === 'YOUTUBE') {
+          url = 'https://www.youtube.com/watch?v=' + publishId;
+        }
+      }
+
+      // Untuk Instagram di browser desktop: format /p/ mencegah Instagram auto-scroll/redirect ke reel orang lain
+      if (platform === 'INSTAGRAM' && url.includes('/reel/')) {
+        url = url.replace('/reel/', '/p/');
+      }
+
+      return url;
+    }
+
+    function switchQueueSubTab(tab) {
+      const wrapApp = document.getElementById('wrapAppQueue');
+      const wrapPublished = document.getElementById('wrapPublishedQueue');
+      const wrapMeta = document.getElementById('wrapMetaQueue');
+      const filterWrap = document.getElementById('appQueueFilterWrap');
+      const publishedFilterWrap = document.getElementById('publishedQueueFilterWrap');
+      const btnApp = document.getElementById('subtabBtnAppQueue');
+      const btnPublished = document.getElementById('subtabBtnPublishedQueue');
+      const btnMeta = document.getElementById('subtabBtnMetaQueue');
+
+      if (wrapApp) wrapApp.style.display = tab === 'pending' ? 'block' : 'none';
+      if (wrapPublished) wrapPublished.style.display = tab === 'published' ? 'block' : 'none';
+      if (wrapMeta) wrapMeta.style.display = tab === 'meta' ? 'block' : 'none';
+
+      if (filterWrap) filterWrap.style.display = tab === 'pending' ? 'block' : 'none';
+      if (publishedFilterWrap) publishedFilterWrap.style.display = tab === 'published' ? 'block' : 'none';
+
+      if (btnApp) btnApp.className = tab === 'pending' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+      if (btnPublished) btnPublished.className = tab === 'published' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+      if (btnMeta) btnMeta.className = tab === 'meta' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-secondary';
+
+      if (tab === 'published') renderPublishedJobs();
+      else if (tab === 'meta') renderMetaSchedules();
+      else renderJobs();
+    }
+
+    function renderJobs() {
+      const tbody = document.getElementById('jobTableBody');
+      const badge = document.getElementById('navBadgeJob');
+      const countPendingEl = document.getElementById('countPendingQueue');
+      const countPublishedEl = document.getElementById('countPublishedQueue');
+      const filter = (document.getElementById('filterJobStatus') || {}).value || 'ACTIVE';
+      const allJobs = appData.jobs || [];
+
+      // Pisahkan antrean:
+      // 1. Antrean AKTIF (READY, UPLOADING, PROCESSING)
+      const activeJobs = allJobs.filter(j => j.status === 'READY' || j.status === 'UPLOADING' || j.status === 'PROCESSING');
+      const cancelledJobs = allJobs.filter(j => j.status === 'CANCELLED');
+      const publishedJobsAll = allJobs.filter(j => j.status === 'PUBLISHED');
+      const pendingJobsAll = allJobs.filter(j => j.status !== 'PUBLISHED');
+
+      // Fokuskan antrean utama dan indikator badge hanya pada antrean aktif (READY / UPLOADING)
+      if (countPendingEl) countPendingEl.textContent = activeJobs.length;
+      if (countPublishedEl) countPublishedEl.textContent = publishedJobsAll.length;
+      if (badge) badge.textContent = activeJobs.length;
+
+      let jobs = [];
+      if (filter === 'ACTIVE') {
+        jobs = [...activeJobs];
+      } else if (filter === 'ALL') {
+        jobs = [...pendingJobsAll];
+      } else if (filter === 'READY') {
+        jobs = allJobs.filter(j => j.status === 'READY');
+      } else if (filter === 'UPLOADING') {
+        jobs = allJobs.filter(j => j.status === 'UPLOADING' || j.status === 'PROCESSING');
+      } else if (filter === 'CANCELLED') {
+        jobs = [...cancelledJobs];
+      } else if (filter === 'ATTENTION') {
+        jobs = allJobs.filter(j => ['BLOCKED', 'FAILED', 'UNKNOWN'].includes(j.status));
+      } else {
+        jobs = [...activeJobs];
+      }
+
+      if (!tbody) return;
+
+      if (!jobs.length) {
+        let emptyTitle = "Tidak Ada Antrean Aktif";
+        let emptyDesc = "Semua antrean video aktif telah selesai dipublikasikan.";
+        if (filter === 'ACTIVE') {
+          emptyTitle = "Tidak Ada Antrean Aktif (READY / UPLOADING)";
+          emptyDesc = cancelledJobs.length > 0 
+            ? `Terdapat ${cancelledJobs.length} antrean yang dibatalkan sebelumnya. Anda dapat membersihkannya dengan 1 klik tombol "🧹 Bersihkan yang Dibatalkan" di atas.`
+            : `Semua jadwal tayang sudah terbit atau belum ada video baru yang dijadwalkan.`;
+        } else if (filter === 'CANCELLED') {
+          emptyTitle = "Tidak Ada Antrean Dibatalkan";
+          emptyDesc = "Bersih! Tidak ada antrean video yang berstatus CANCELLED.";
+        } else if (filter === 'READY') {
+          emptyTitle = "Tidak Ada Antrean Siap Dikirim";
+          emptyDesc = "Tidak ada video dengan status READY saat ini.";
+        }
+
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 48px 20px;">
+              <div style="font-size: 2.5rem; margin-bottom: 8px;">🎉</div>
+              <div style="font-weight: 700; font-size: 1.05rem; color: var(--text-main); margin-bottom: 4px;">${emptyTitle}</div>
+              <div style="font-size: 0.84rem; color: var(--text-muted); max-width: 500px; margin: 0 auto 16px;">
+                ${emptyDesc}
+              </div>
+              <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn btn-sm btn-primary" onclick="switchNav('view-media')">
+                  🎬 Buka Perpustakaan Video
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="switchQueueSubTab('published')">
+                  ✅ Buka Riwayat Terposting (${publishedJobsAll.length})
+                </button>
+                ${cancelledJobs.length > 0 ? `
+                  <button class="btn btn-sm btn-secondary" onclick="cleanupCancelledJobsAction()" style="color: #dc2626; border-color: #fca5a5; background: #fef2f2; font-weight: 700;">
+                    🧹 Bersihkan yang Dibatalkan (${cancelledJobs.length})
+                  </button>
+                ` : ''}
+              </div>
+            </td>
+          </tr>`;
+        return;
+      }
+
+      const sessions = appData.uploadSessions || [];
+      const accountMap = new Map();
+      (appData.accounts || []).forEach(a => accountMap.set(a.akun_id, a));
+
+      tbody.innerHTML = jobs.map(j => {
+        let statusBadgeClass = 'badge-neutral';
+        if (j.status === 'READY') statusBadgeClass = 'badge-info';
+        else if (j.status === 'UPLOADING' || j.status === 'PROCESSING') statusBadgeClass = 'badge-warning';
+        else if (j.status === 'CANCELLED') statusBadgeClass = 'badge-neutral';
+        else if (['BLOCKED', 'FAILED', 'UNKNOWN'].includes(j.status)) statusBadgeClass = 'badge-danger';
+
+        const canRetry = ['BLOCKED', 'FAILED', 'UNKNOWN', 'READY'].includes(j.status);
+        const acc = accountMap.get(j.akun_id);
+        const accountName = acc ? acc.nama_akun : '';
+
+        // Upload progress calculation from UPLOAD SESSION sheet
+        const session = sessions.find(s => s.job_id === j.job_id);
+        const hasSession = session && Number(session.total_bytes || 0) > 0;
+        const pct = hasSession ? Number(session.progress_pct || 0) : 0;
+        const uploadedMb = hasSession ? (Number(session.uploaded_bytes || 0) / (1024 * 1024)).toFixed(1) : '0';
+        const totalMb = hasSession ? (Number(session.total_bytes || 0) / (1024 * 1024)).toFixed(1) : '0';
+
+        let progressHtml = '';
+        if (j.status === 'UPLOADING' || j.status === 'PROCESSING') {
+          progressHtml = `
+            <div style="margin-top: 6px; min-width: 130px;">
+              <div style="background: #e2e8f0; height: 6px; border-radius: 999px; overflow: hidden;">
+                <div style="background: linear-gradient(90deg, #4f46e5, #06b6d4); height: 100%; width: ${pct || 35}%; transition: width 0.3s ease;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+                <span style="font-weight: 700; color: var(--primary);">${pct}% Uploaded</span>
+                <span>${hasSession ? `${uploadedMb}/${totalMb} MB` : 'Mengirim...'}</span>
+              </div>
+            </div>`;
+        }
+
+        return `
+          <tr>
+            <td class="font-mono" style="font-size: 0.75rem;">${escapeHtml(j.job_id)}</td>
+            <td style="max-width: 220px;">
+              <div style="font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(j.media_id)}</div>
+              <div style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(j.niche_id)}</div>
+            </td>
+            <td style="text-align: center;">
+              <span class="badge ${j.platform === 'FACEBOOK' ? 'badge-info' : 'badge-warning'}">
+                ${escapeHtml(j.platform)}
+              </span>
+              ${accountName ? `<div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; margin-top: 4px; line-height: 1.3;">📢 ${escapeHtml(accountName)}</div>` : ''}
+            </td>
+            <td style="font-size: 0.75rem; color: var(--text-muted);">
+              ${j.scheduled_at ? new Date(j.scheduled_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB' : '-'}
+            </td>
+            <td style="text-align: center;">
+              <span class="badge ${statusBadgeClass}">
+                ${escapeHtml(j.status)}
+              </span>
+              ${progressHtml}
+            </td>
+            <td class="truncate-cell" title="${escapeHtml(j.last_error || '')}" style="color: ${j.last_error ? (j.status === 'CANCELLED' ? 'var(--text-muted)' : 'var(--danger)') : 'var(--text-muted)'}; font-size: 0.75rem;">
+              ${escapeHtml(j.last_error || 'Normal')}
+            </td>
+            <td style="text-align: center;">
+              <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                ${canRetry ? `
+                  <button class="btn btn-sm btn-primary" onclick="retryJobAction('${escapeHtml(j.job_id)}')">
+                    Kirim Sekarang
+                  </button>
+                ` : ''}
+                <button class="btn btn-sm btn-secondary" onclick="deleteJobAction('${escapeHtml(j.job_id)}')" style="padding: 4px 8px; font-size: 0.72rem; color: #dc2626; border-color: #fca5a5; background: #fef2f2; border-radius: 6px;" title="Hapus antrean ini dari daftar">
+                  🗑️ Hapus
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderPublishedJobs() {
+      const tbody = document.getElementById('publishedJobTableBody');
+      const filterPlatform = (document.getElementById('filterPublishedPlatform') || {}).value || 'ALL';
+      const allJobs = appData.jobs || [];
+      let publishedJobs = allJobs.filter(j => j.status === 'PUBLISHED');
+
+      if (filterPlatform !== 'ALL') {
+        publishedJobs = publishedJobs.filter(j => j.platform === filterPlatform);
+      }
+
+      if (!tbody) return;
+
+      if (!publishedJobs.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 36px;">Belum ada riwayat postingan terbit.</td></tr>`;
+        return;
+      }
+
+      const accountMap = new Map();
+      (appData.accounts || []).forEach(a => accountMap.set(a.akun_id, a));
+
+      tbody.innerHTML = publishedJobs.map(j => {
+        const isFb = j.platform === 'FACEBOOK';
+        const badgeStyle = isFb ? 'background: #1877f2; color: #fff;' : 'background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff;';
+        const acc = accountMap.get(j.akun_id);
+        const accountName = acc ? acc.nama_akun : '';
+        const postLink = formatPostUrl(j);
+
+        return `
+          <tr>
+            <td>
+              <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem; margin-bottom: 2px;">
+                ${escapeHtml(j.media_id)}
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted);">
+                Job ID: <span class="font-mono">${escapeHtml(j.job_id)}</span> • Niche: ${escapeHtml(j.niche_id)}
+              </div>
+            </td>
+            <td style="text-align: center;">
+              <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; ${badgeStyle}">
+                ${escapeHtml(j.platform)}
+              </span>
+              ${accountName ? `<div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; margin-top: 4px; line-height: 1.3;">📢 ${escapeHtml(accountName)}</div>` : ''}
+            </td>
+            <td>
+              <div style="font-size: 0.78rem; color: var(--text-muted);">
+                ${j.updated_at ? new Date(j.updated_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB' : (j.scheduled_at ? new Date(j.scheduled_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB' : '-')}
+              </div>
+            </td>
+            <td style="text-align: center;">
+              <span class="font-mono" style="font-size: 0.75rem; background: #f1f5f9; padding: 3px 6px; border-radius: 4px; color: var(--text-main);">
+                ${escapeHtml(j.platform_publish_id || '-')}
+              </span>
+            </td>
+            <td style="text-align: center;">
+              ${postLink ? `
+                <a href="${escapeHtml(postLink)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary" style="font-size: 0.76rem; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;">
+                  <span>Buka Postingan</span> ↗
+                </a>
+              ` : '<span style="color: var(--text-dim);">-</span>'}
+            </td>
+            <td style="text-align: center;">
+              <button class="btn btn-sm btn-secondary" style="font-size: 0.76rem; padding: 4px 10px;" onclick="switchNav('view-performance')">
+                📊 Lihat Performa
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function retryJobAction(jobId) {
+      showToast(`Mengirim ulang job ${jobId}...`, 'info');
+      callBackend('retryJobWeb', jobId)
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast(`Job ${jobId} berhasil diproses!`, 'success');
+        })
+        .catch(err => showToast(`Gagal kirim: ${err.message}`, 'error'));
+    }
+
+    function deleteJobAction(jobId) {
+      if (!confirm(`Hapus antrean job (${jobId}) ini?`)) return;
+      showToast(`Menghapus job ${jobId}...`, 'info');
+      callBackend('deleteJobWeb', jobId)
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast(`Job ${jobId} berhasil dihapus dari antrean!`, 'success');
+        })
+        .catch(err => showToast(`Gagal menghapus job: ${err.message}`, 'error'));
+    }
+
+    function cleanupCancelledJobsAction() {
+      const allJobs = appData.jobs || [];
+      const cancelledCount = allJobs.filter(j => j.status === 'CANCELLED').length;
+      if (cancelledCount === 0) {
+        showToast('Tidak ada antrean yang berstatus Dibatalkan (CANCELLED).', 'info');
+        return;
+      }
+      if (!confirm(`Bersihkan semua ${cancelledCount} antrean yang DIBATALKAN? Tindakan ini akan menghapus sampah antrean secara permanen.`)) return;
+      showToast('Membersihkan antrean yang dibatalkan...', 'info');
+      callBackend('cleanupCancelledJobsWeb')
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast(`Berhasil membersihkan ${cancelledCount} antrean yang dibatalkan!`, 'success');
+        })
+        .catch(err => showToast(`Gagal membersihkan: ${err.message}`, 'error'));
+    }
+
+    function renderMetaSchedules() {
+      const tbody = document.getElementById('metaScheduleTableBody');
+      const badge = document.getElementById('countMetaQueue');
+      const schedules = appData.metaSchedules || [];
+      const syncInfo = appData.metaSync || {};
+
+      if (badge) badge.textContent = schedules.length;
+
+      const timeEl = document.getElementById('metaSyncTime');
+      if (timeEl) {
+        timeEl.textContent = syncInfo.lastSync 
+          ? new Date(syncInfo.lastSync).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB'
+          : 'Belum pernah sinkron';
+      }
+
+      const errEl = document.getElementById('metaSyncError');
+      if (errEl) {
+        errEl.textContent = syncInfo.lastError ? `⚠️ ${syncInfo.lastError}` : '';
+      }
+
+      if (!tbody) return;
+
+      if (!schedules.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 36px 20px;">
+              <div style="font-weight: 700; color: var(--text-main); font-size: 1rem; margin-bottom: 6px;">
+                🔍 Tidak Ada Jadwal Tayang di Meta Creator Studio Langsung
+              </div>
+              <div style="font-size: 0.83rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 12px; line-height: 1.5;">
+                Pengecekan live ke Meta Graph API telah dilakukan (${escapeHtml(syncInfo.lastStatus || 'Selesai')}). Tidak ditemukan postingan yang sedang dijadwalkan secara manual di situs Facebook Creator Studio / Meta Business Suite.
+              </div>
+              <div style="font-size: 0.82rem; color: var(--primary); font-weight: 600; margin-bottom: 14px;">
+                💡 Catatan: Jadwal otomatis sistem Anda berada di tab sebelah kiri: <b>"📋 Antrean Web App"</b> (${(appData.summary && appData.summary.queued) || 0} Siap Kirim).
+              </div>
+              <button class="btn btn-sm btn-secondary" onclick="syncMetaCalendarWeb()" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 6px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                Periksa Ulang Meta Creator Studio Sekarang
+              </button>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      const accounts = appData.accounts || [];
+      tbody.innerHTML = schedules.map(s => {
+        const acc = accounts.find(a => a.akun_id === s.akun_id);
+        const accName = acc ? acc.nama_akun : (s.akun_id || '-');
+        const isFb = s.platform === 'FACEBOOK';
+        const badgeStyle = isFb ? 'background: #1877f2; color: #fff;' : 'background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff;';
+
+        return `
+          <tr>
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-weight: 700; ${badgeStyle}">
+                  ${escapeHtml(s.platform || 'META')}
+                </span>
+                <span style="font-weight: 600; color: var(--text-main); font-size: 0.85rem;">${escapeHtml(accName)}</span>
+              </div>
+            </td>
+            <td>
+              <div style="font-weight: 600; font-size: 0.82rem; color: var(--text-main);">
+                ${s.scheduled_at ? new Date(s.scheduled_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB' : '-'}
+              </div>
+            </td>
+            <td>
+              <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; max-height: 60px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;" title="${escapeHtml(s.message || '')}">
+                ${s.message ? escapeHtml(s.message) : '<i style="color: var(--text-dim);">(Tidak ada teks pesan)</i>'}
+              </div>
+            </td>
+            <td style="text-align: center;">
+              <div class="font-mono" style="font-size: 0.72rem; color: var(--text-muted);">${escapeHtml(s.meta_post_id || '-')}</div>
+              <span class="badge badge-neutral" style="font-size: 0.68rem; margin-top: 2px;">${escapeHtml(s.source || 'CREATOR_STUDIO')}</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+        function renderPerformance() {
+      const tbody = document.getElementById('performanceTableBody');
+      const badge = document.getElementById('navBadgePerf');
+      const filter = (document.getElementById('filterPerfPlatform') || {}).value || 'ALL';
+      let rawItems = appData.performance || [];
+      const hasRealNames = rawItems.some(p => p.nama_video && !p.nama_video.startsWith('VID-'));
+      let items = hasRealNames ? rawItems.filter(p => !p.nama_video || !p.nama_video.startsWith('VID-')) : rawItems;
+
+      // Fallback cerdas: Jika lembar PERFORMA KONTEN belum disinkronkan, ambil dari konten yang BERHASIL TERBIT (PUBLISHED)
+      if (!items.length) {
+        const publishedJobs = (appData.jobs || []).filter(j => j.status === 'PUBLISHED');
+        if (publishedJobs.length > 0) {
+          items = publishedJobs.map(j => {
+            const media = (appData.media || []).find(m => m.media_id === j.media_id);
+            return {
+              perf_id: j.job_id,
+              niche_id: j.niche_id,
+              akun_id: j.akun_id,
+              platform: j.platform,
+              nama_video: media ? media.nama_file : j.media_id,
+              posted_at: j.updated_at || j.scheduled_at,
+              post_url: j.post_url,
+              views_24h: 0,
+              views_3d: 0,
+              views_7d: 0,
+              likes: 0,
+              comments: 0,
+              shares: 0,
+              isFallback: true
+            };
+          });
+        }
+      }
+
+      if (badge) badge.textContent = items.length;
+
+      let totalViews = 0;
+      let totalViews24 = 0;
+      let totalViews3d = 0;
+      let totalLikes = 0;
+      let totalComments = 0;
+      let totalShares = 0;
+
+      items.forEach(p => {
+        const vLive = Math.max(Number(p.views_7d || 0), Number(p.views_3d || 0), Number(p.views_24h || 0));
+        totalViews += vLive;
+        totalViews24 += Number(p.views_24h || 0);
+        totalViews3d += Number(p.views_3d || 0);
+        totalLikes += Number(p.likes || 0);
+        totalComments += Number(p.comments || 0);
+        totalShares += Number(p.shares || 0);
+      });
+
+      const elViewsTotal = document.getElementById('perfStatViewsTotal');
+      const elViews24 = document.getElementById('perfStatViews24');
+      const elLikes = document.getElementById('perfStatLikes');
+      const elEngage = document.getElementById('perfStatEngage');
+
+      if (elViewsTotal) elViewsTotal.textContent = totalViews.toLocaleString('id-ID');
+      if (elViews24) elViews24.textContent = totalViews24.toLocaleString('id-ID');
+      if (elLikes) elLikes.textContent = totalLikes.toLocaleString('id-ID');
+      if (elEngage) elEngage.textContent = (totalComments + totalShares).toLocaleString('id-ID');
+
+      if (filter !== 'ALL') {
+        items = items.filter(p => p.platform === filter);
+      }
+
+      if (!tbody) return;
+
+      if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 36px;">Belum ada konten yang terbit atau performa belum tercatat. Setelah ada postingan terbit, klik tombol "Tarik Insight Meta".</td></tr>`;
+        return;
+      }
+
+      // Build account lookup map
+      const accountMap = new Map();
+      (appData.accounts || []).forEach(a => accountMap.set(a.akun_id, a));
+
+      tbody.innerHTML = items.map(p => {
+        const isFb = p.platform === 'FACEBOOK';
+        const badgeStyle = isFb ? 'background: #1877f2; color: #fff;' : 'background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff;';
+
+        // Lookup account name
+        const acc = accountMap.get(p.akun_id);
+        const accountName = acc ? acc.nama_akun : '';
+        const vLive = Math.max(Number(p.views_7d || 0), Number(p.views_3d || 0), Number(p.views_24h || 0));
+
+        return `
+          <tr>
+            <td>
+              <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem; margin-bottom: 2px;">
+                ${escapeHtml(p.nama_video || p.perf_id)}
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+                <span class="font-mono">${escapeHtml(p.perf_id || '')}</span>
+                ${p.post_url ? `• <a href="${escapeHtml(formatPostUrl(p.post_url, p.platform))}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">Buka Postingan ↗</a>` : ''}
+              </div>
+            </td>
+            <td style="text-align: center;">
+              <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; ${badgeStyle}">
+                ${escapeHtml(p.platform)}
+              </span>
+              ${accountName ? `<div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; margin-top: 4px; line-height: 1.3;">📢 ${escapeHtml(accountName)}</div>` : ''}
+            </td>
+            <td>
+              <div style="font-size: 0.78rem; color: var(--text-muted);">
+                ${p.posted_at ? new Date(p.posted_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB' : '-'}
+              </div>
+            </td>
+            <td style="text-align: center; font-weight: 800; color: var(--primary); font-size: 0.95rem;">
+              ${vLive.toLocaleString('id-ID')}
+              ${p.isFallback ? `<span style="font-size: 0.68rem; color: var(--text-dim); display: block; font-weight: 400;">(Siap Tarik)</span>` : ''}
+            </td>
+            <td style="text-align: center; font-weight: 600; color: var(--info);">
+              ${Number(p.views_24h || 0).toLocaleString('id-ID')}
+            </td>
+            <td style="text-align: center; font-weight: 600; color: var(--text-muted);">
+              ${Number(p.views_3d || 0).toLocaleString('id-ID')}
+            </td>
+            <td style="text-align: center; font-weight: 700; color: var(--danger);">
+              ${Number(p.likes || 0).toLocaleString('id-ID')}
+            </td>
+            <td style="text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+              💬 ${Number(p.comments || 0)} • 🔁 ${Number(p.shares || 0)}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function syncPerformaWeb() {
+      const btn = document.getElementById('btnSyncPerf');
+      if (btn) {
+        btn.innerHTML = '<span class="spinner" style="width: 12px; height: 12px; margin-right: 4px;"></span> Menarik Insight...';
+        btn.disabled = true;
+      }
+
+      callBackend('sinkronkanPerformaWeb')
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('Data performa dan insight Meta berhasil diperbarui!', 'success');
+        })
+        .catch(err => {
+          showToast('Sinkronisasi insight: ' + err.message, 'warning');
+          loadData();
+        })
+        .finally(() => {
+          if (btn) {
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg> Tarik Insight Meta';
+            btn.disabled = false;
+          }
+        });
+    }
+
+    function syncMetaCalendarWeb() {
+      const btn = document.getElementById('btnSyncMetaCalendar');
+      if (btn) btn.innerHTML = '<span class="spinner" style="width: 12px; height: 12px; margin-right: 4px;"></span> Memeriksa Meta...';
+      showToast('Memeriksa jadwal di Meta Creator Studio langsung...', 'info');
+
+      callBackend('syncMetaCalendar')
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('Selesai: ' + ((appData.metaSync && appData.metaSync.lastStatus) || 'Sukses memeriksa Meta'), 'success');
+        })
+        .catch(err => {
+          showToast('Gagal sinkron jadwal Meta: ' + err.message, 'error');
+        })
+        .finally(() => {
+          if (btn) btn.innerHTML = '🔄 Periksa Ulang Meta Creator Studio';
+        });
+    }
+
+    // 5. MEDIA LIBRARY (MODEL LIST DETAIL)
+    let searchDebounceTimer = null;
+    function onSearchVideoDebounce() {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(renderMedia, 150);
+    }
+
+            let currentMediaViewMode = 'cards';
+
+    function setMediaViewMode(mode) {
+      currentMediaViewMode = mode;
+      const btnCards = document.getElementById('btnMediaViewCards');
+      const btnTable = document.getElementById('btnMediaViewTable');
+      const wrapCards = document.getElementById('videoStudioCardsWrap');
+      const wrapTable = document.getElementById('videoTableWrap');
+
+      if (mode === 'cards') {
+        if (btnCards) { btnCards.style.background = 'var(--primary)'; btnCards.style.color = '#fff'; btnCards.style.fontWeight = '700'; }
+        if (btnTable) { btnTable.style.background = '#ffffff'; btnTable.style.color = 'var(--text-muted)'; btnTable.style.fontWeight = '600'; }
+        if (wrapCards) wrapCards.style.display = 'block';
+        if (wrapTable) wrapTable.style.display = 'none';
+      } else {
+        if (btnCards) { btnCards.style.background = '#ffffff'; btnCards.style.color = 'var(--text-muted)'; btnCards.style.fontWeight = '600'; }
+        if (btnTable) { btnTable.style.background = 'var(--primary)'; btnTable.style.color = '#fff'; btnTable.style.fontWeight = '700'; }
+        if (wrapCards) wrapCards.style.display = 'none';
+        if (wrapTable) wrapTable.style.display = 'block';
+      }
+      renderMedia();
+    }
+
+    function renderMedia() {
+      const cardsContainer = document.getElementById("videoStudioCardsContainer");
+      const tbody = document.getElementById("videoTableBody");
+      const badge = document.getElementById("navBadgeMedia");
+      const searchVal = (document.getElementById("searchVideoInput") ? document.getElementById("searchVideoInput").value : "").toLowerCase().trim();
+      let media = appData.media || [];
+      const posts = appData.posts || [];
+      const niches = appData.niches || [];
+
+      // Populate filter dropdown if needed
+      const selectNiche = document.getElementById("filterMediaNiche");
+      if (selectNiche && niches.length && selectNiche.options.length <= 1) {
+        const cur = selectNiche.value || "ALL";
+        selectNiche.innerHTML = '<option value="ALL">Semua Niche</option>' +
+          niches.map(n => `<option value="${escapeHtml(n.niche_id)}">${escapeHtml(n.nama)}</option>`).join("");
+        selectNiche.value = cur;
+      }
+
+      const filterNicheVal = selectNiche ? selectNiche.value : "ALL";
+      const filterStatusVal = document.getElementById("filterMediaStatus") ? document.getElementById("filterMediaStatus").value : "ALL";
+
+      // Build media to jobs mapping for quick schedule & status detection
+      const jobsByMedia = new Map();
+      (appData.jobs || []).forEach(j => {
+        if (!j.media_id) return;
+        if (!jobsByMedia.has(j.media_id)) jobsByMedia.set(j.media_id, []);
+        jobsByMedia.get(j.media_id).push(j);
+      });
+
+      if (filterNicheVal && filterNicheVal !== "ALL") {
+        media = media.filter(m => m.niche_id === filterNicheVal);
+      }
+      if (filterStatusVal && filterStatusVal !== "ALL") {
+        media = media.filter(m => {
+          const mJobs = jobsByMedia.get(m.media_id) || [];
+          const isSch = mJobs.some(j => j.status === 'READY' || j.status === 'UPLOADING' || j.status === 'SCHEDULED');
+          const isPub = !isSch && mJobs.some(j => j.status === 'PUBLISHED');
+          if (filterStatusVal === 'TERJADWAL') return isSch;
+          if (filterStatusVal === 'SELESAI' || filterStatusVal === 'PUBLISHED') return isPub;
+          if (filterStatusVal === 'SIAP' || filterStatusVal === 'BARU') return !isSch && !isPub;
+          return true;
+        });
+      }
+      if (searchVal) {
+        media = media.filter(m => String(m.nama_file || "").toLowerCase().includes(searchVal) || String(m.media_id || "").toLowerCase().includes(searchVal));
+      }
+
+      if (badge) badge.textContent = (appData.media || []).length;
+      const countEl = document.getElementById("countVideoTotal");
+      if (countEl) countEl.textContent = media.length;
+
+      // Fast lookup maps
+      const postMap = new Map();
+      posts.forEach(p => postMap.set(p.media_id, p));
+      const nicheMap = new Map();
+      niches.forEach(n => nicheMap.set(n.niche_id, n.nama));
+
+      // Handle Empty State
+      if (!media.length) {
+        const emptyHtml = `<div style="text-align: center; color: var(--text-muted); padding: 48px; background: #ffffff; border-radius: 12px; border: 1px dashed var(--border-color);">
+          <div style="font-size: 2rem; margin-bottom: 8px;">🎬</div>
+          <div style="font-weight: 700; font-size: 1rem; color: var(--text-main); margin-bottom: 4px;">Tidak ada video dalam filter ini</div>
+          <div style="font-size: 0.8rem; color: var(--text-dim);">Silakan ubah filter pencarian atau scan folder video komputer Anda.</div>
+        </div>`;
+        if (cardsContainer) cardsContainer.innerHTML = emptyHtml;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 36px;">Tidak ada video dalam filter ini.</td></tr>`;
+        return;
+      }
+
+      // Helper function to extract schedule details for any media
+      function getMediaScheduleInfo(m) {
+        const mediaId = m.media_id;
+        const mJobs = jobsByMedia.get(mediaId) || [];
+        const scheduledJobs = mJobs.filter(j => j.status === 'READY' || j.status === 'UPLOADING' || j.status === 'SCHEDULED');
+        const publishedJobs = mJobs.filter(j => j.status === 'PUBLISHED');
+        const isScheduled = scheduledJobs.length > 0;
+        
+        const publishedPlatforms = (m.publishedPlatforms && m.publishedPlatforms.length > 0) 
+          ? m.publishedPlatforms 
+          : [...new Set(publishedJobs.map(j => j.platform))];
+        const isFullyPublished = Boolean(m.isFullyPublished || m.status === 'PUBLISHED');
+        const isPublished = isFullyPublished || (!isScheduled && publishedPlatforms.length > 0);
+
+        let scheduleTimeStr = '';
+        let scheduledPlatforms = [];
+        if (isScheduled) {
+          const earliest = scheduledJobs.reduce((min, j) => {
+            const t = new Date(j.scheduled_at).getTime();
+            return (!isNaN(t) && t < min) ? t : min;
+          }, Infinity);
+          if (earliest !== Infinity) {
+            const d = new Date(earliest);
+            const day = String(d.getDate()).padStart(2, '0');
+            const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+            const mon = months[d.getMonth()] || '';
+            const hrs = String(d.getHours()).padStart(2, '0');
+            const mins = String(d.getMinutes()).padStart(2, '0');
+            scheduleTimeStr = `${day} ${mon}, ${hrs}:${mins} WIB`;
+          }
+          scheduledPlatforms = [...new Set(scheduledJobs.map(j => j.platform))];
+        }
+
+        return {
+          isScheduled,
+          isPublished,
+          isFullyPublished,
+          scheduledCount: scheduledJobs.length,
+          publishedPlatforms,
+          publishedCount: publishedPlatforms.length || publishedJobs.length,
+          scheduleTimeStr,
+          scheduledPlatforms
+        };
+      }
+
+      // 1. RENDER STUDIO CARDS (MODERN SaaS STYLE)
+      if (cardsContainer) {
+        cardsContainer.innerHTML = media.slice(0, 150).map(m => {
+          const post = postMap.get(m.media_id);
+          const nicheName = nicheMap.get(m.niche_id) || m.niche_id || "-";
+          const caption = post ? post.caption_utama : (m.caption_manual || "");
+          const isAi = m.caption_mode === "AI";
+
+          const schInfo = getMediaScheduleInfo(m);
+
+          let statusBadgeHtml = '';
+          if (schInfo.isFullyPublished) {
+            statusBadgeHtml = `
+              <span class="badge" style="background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; font-weight: 700; padding: 4px 10px; border-radius: 9999px; box-shadow: 0 1px 3px rgba(16, 185, 129, 0.2);" title="Lengkap terbit di: ${schInfo.publishedPlatforms.join(', ')}">
+                ✅ Selesai Terbit (${schInfo.publishedPlatforms.join(', ') || 'Semua Platform'})
+              </span>
+            `;
+          } else if (schInfo.isScheduled) {
+            statusBadgeHtml = `
+              <span class="badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 700; padding: 4px 10px; border-radius: 9999px; box-shadow: 0 1px 3px rgba(217, 119, 6, 0.2);" title="Terjadwal di: ${schInfo.scheduledPlatforms.join(', ')}">
+                ⏰ Terjadwal (${schInfo.scheduledCount} Akun)
+              </span>
+            `;
+          } else if (schInfo.publishedPlatforms && schInfo.publishedPlatforms.length > 0) {
+            statusBadgeHtml = `
+              <span class="badge" style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; font-weight: 700; padding: 4px 10px; border-radius: 9999px;" title="Sudah terbit di: ${schInfo.publishedPlatforms.join(', ')}">
+                ✓ Terbit: ${schInfo.publishedPlatforms.join(', ')}
+              </span>
+            `;
+          } else {
+            statusBadgeHtml = `
+              <span class="badge badge-success" style="font-weight: 700; padding: 4px 10px; border-radius: 9999px;">
+                • Siap Dijadwalkan
+              </span>
+            `;
+          }
+
+          return `
+            <div class="video-studio-card" style="${schInfo.isFullyPublished ? 'border: 1.5px solid #10b981; background: #f0fdf4;' : (schInfo.isScheduled ? 'border: 1.5px solid #f59e0b; background: #fffdfa;' : '')}">
+              <div class="vsc-header">
+                <div class="vsc-title-wrap">
+                  <div class="vsc-icon" style="${schInfo.isFullyPublished ? 'background: #d1fae5; border: 1px solid #6ee7b7;' : (schInfo.isScheduled ? 'background: #fef3c7; border: 1px solid #fde68a;' : '')}">
+                    ${schInfo.isFullyPublished ? '✅' : (schInfo.isScheduled ? '⏰' : '🎬')}
+                  </div>
+                  <div>
+                    <div class="vsc-title" title="${escapeHtml(m.nama_file)}">${escapeHtml(m.nama_file)}</div>
+                    <div class="vsc-meta">
+                      <span class="font-mono vsc-id">${escapeHtml(m.media_id)}</span>
+                      <span>•</span>
+                      <span class="badge badge-info" style="font-size: 0.72rem; padding: 2px 8px;">${escapeHtml(nicheName)}</span>
+                      <span>•</span>
+                      ${m.file_path 
+                        ? `<a href="javascript:void(0)" onclick="openFileLocation('${escapeHtml(m.media_id)}')" class="vsc-drive-link" style="color: var(--primary); text-decoration: underline; cursor: pointer; font-weight: 600;" title="Klik untuk membuka folder lokasi file di File Explorer:&#10;${escapeHtml(m.file_path)}">📁 File Komputer (Lokal) ↗</a>` 
+                        : (m.drive_file_id 
+                            ? `<a href="https://drive.google.com/file/d/${escapeHtml(m.drive_file_id)}/view" target="_blank" rel="noopener noreferrer" class="vsc-drive-link">📁 Buka di Google Drive ↗</a>` 
+                            : `<span class="vsc-drive-link" style="color: var(--text-muted);">📁 File Lokal</span>`)}
+                    </div>
+                    ${schInfo.isScheduled ? `
+                      <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; background: #fffbeb; border: 1px solid #fef08a; padding: 3px 8px; border-radius: 6px; font-size: 0.74rem; color: #854d0e; font-weight: 700;">
+                        <span>⏰ Tayang: <b>${escapeHtml(schInfo.scheduleTimeStr)}</b></span>
+                        <span>•</span>
+                        <span>Platform: ${schInfo.scheduledPlatforms.map(p => escapeHtml(p)).join(', ')}</span>
+                      </div>
+                    ` : ''}
+                    ${schInfo.isFullyPublished ? `
+                      <div style="margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 3px 8px; border-radius: 6px; font-size: 0.74rem; color: #065f46; font-weight: 700;">
+                        <span>🎉 Telah Selesai Dipublikasi di: <b>${schInfo.publishedPlatforms.join(', ') || 'Facebook, Instagram, TikTok'}</b></span>
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+                <div class="vsc-badges">
+                  ${post && (post.manual_locked === 'TRUE' || post.manual_locked === true) ? `<span class="badge" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700; padding: 4px 10px; border-radius: 9999px;">🔒 Terkunci Aman</span>` : ''}
+                  <span class="badge ${isAi ? "badge-warning" : "badge-neutral"}" style="font-weight: 700; padding: 4px 10px; border-radius: 9999px;">
+                    ${isAi ? "✨ Gemini AI" : "✍️ Manual"}
+                  </span>
+                  ${statusBadgeHtml}
+                </div>
+              </div>
+
+              <div class="vsc-body">
+                <div class="vsc-caption-box">
+                  <div class="vsc-caption-label">Pratinjau Caption:</div>
+                  <div class="vsc-caption-text" title="${escapeHtml(caption)}">
+                    ${caption ? escapeHtml(caption) : '<i style="color: var(--text-dim);">Belum ada caption</i>'}
+                  </div>
+                  ${post && post.hashtags ? `<div class="vsc-hashtags">${escapeHtml(post.hashtags)}</div>` : ""}
+                </div>
+
+                <div class="vsc-actions">
+                  <button class="btn btn-secondary" onclick="playVideoModal('${escapeHtml(m.media_id)}', '${escapeHtml(m.nama_file)}')" style="display: inline-flex; align-items: center; gap: 4px;" title="Putar pratinjau video di aplikasi">
+                    ▶️ Tonton
+                  </button>
+                  ${schInfo.isFullyPublished ? `
+                    <button class="btn btn-secondary" onclick="openModalSchedule('${escapeHtml(m.media_id)}')" style="border-color: #10b981; color: #065f46; font-weight: 700; background: #ecfdf5;" title="Video sudah terbit lengkap di semua platform (klik untuk melihat rincian)">
+                      ✅ Lengkap Terbit
+                    </button>
+                  ` : `
+                    <button class="btn btn-primary" onclick="openModalSchedule('${escapeHtml(m.media_id)}')" style="box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);">
+                      📅 ${schInfo.isScheduled ? 'Atur Jadwal' : 'Jadwalkan'}
+                    </button>
+                  `}
+                  <button class="btn btn-secondary" onclick="openModalCaption('${escapeHtml(m.media_id)}')">
+                    ✏️ Edit Caption
+                  </button>
+                  <button class="btn btn-ai" onclick="generateAiCaptionAction('${escapeHtml(m.media_id)}')">
+                    ✨ Buat AI
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      // 2. RENDER TABLE VIEW (STRICT 5 COLUMNS)
+      if (tbody) {
+        tbody.innerHTML = media.slice(0, 150).map(m => {
+          const post = postMap.get(m.media_id);
+          const nicheName = nicheMap.get(m.niche_id) || m.niche_id || "-";
+          const caption = post ? post.caption_utama : (m.caption_manual || "");
+          const isAi = m.caption_mode === "AI";
+
+          const schInfo = getMediaScheduleInfo(m);
+
+          let tableStatusHtml = '';
+          if (schInfo.isFullyPublished) {
+            tableStatusHtml = `
+              <span class="badge" style="background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; font-weight: 700; padding: 4px 8px; border-radius: 9999px; font-size: 0.72rem; display: inline-block;">
+                ✅ Selesai Terbit<br>
+                <span style="font-size: 0.65rem; color: #047857;">${schInfo.publishedPlatforms.join(', ') || 'Semua Platform'}</span>
+              </span>
+            `;
+          } else if (schInfo.isScheduled) {
+            tableStatusHtml = `
+              <span class="badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 700; padding: 4px 8px; border-radius: 9999px; font-size: 0.72rem; display: inline-block;">
+                ⏰ Terjadwal<br>
+                <span style="font-size: 0.67rem; font-weight: 700; color: #b45309;">${escapeHtml(schInfo.scheduleTimeStr)}</span>
+              </span>
+            `;
+          } else if (schInfo.publishedPlatforms && schInfo.publishedPlatforms.length > 0) {
+            tableStatusHtml = `
+              <span class="badge" style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; font-weight: 700; padding: 4px 8px; border-radius: 9999px; font-size: 0.72rem;">
+                ✓ Terbit: ${schInfo.publishedPlatforms.join(', ')}
+              </span>
+            `;
+          } else {
+            tableStatusHtml = `
+              <span class="badge badge-success" style="font-weight: 700; padding: 4px 8px; border-radius: 9999px; font-size: 0.72rem;">
+                • Siap
+              </span>
+            `;
+          }
+
+          return `
+            <tr style="${schInfo.isFullyPublished ? 'background: #f9fdfa;' : (schInfo.isScheduled ? 'background: #fffdf5;' : '')}">
+              <td style="width: 32%; text-align: left; vertical-align: middle;">
+                <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem; line-height: 1.35; margin-bottom: 5px; word-break: break-word;" title="${escapeHtml(m.nama_file)}">
+                  ${schInfo.isFullyPublished ? '<span style="color: #10b981; margin-right: 4px;">✅</span>' : (schInfo.isScheduled ? '<span style="color: #d97706; margin-right: 4px;">⏰</span>' : '')}${escapeHtml(m.nama_file)}
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <span class="font-mono vsc-id">${escapeHtml(m.media_id)}</span>
+                  <span>•</span>
+                  <span class="badge badge-info" style="font-size: 0.7rem; padding: 2px 7px;">${escapeHtml(nicheName)}</span>
+                  <span>•</span>
+                  ${m.file_path 
+                    ? `<a href="javascript:void(0)" onclick="openFileLocation('${escapeHtml(m.media_id)}')" style="color: var(--primary); font-weight: 600; text-decoration: underline; cursor: pointer;" title="Klik untuk membuka folder lokasi file di File Explorer:&#10;${escapeHtml(m.file_path)}">📁 File Komputer (Lokal) ↗</a>` 
+                    : (m.drive_file_id 
+                        ? `<a href="https://drive.google.com/file/d/${escapeHtml(m.drive_file_id)}/view" target="_blank" rel="noopener noreferrer" style="color: var(--primary); font-weight: 600; text-decoration: none;">📁 Buka Drive ↗</a>` 
+                        : `<span style="color: var(--text-muted);">📁 File Lokal</span>`)}
+                </div>
+                ${schInfo.isScheduled ? `
+                  <div style="font-size: 0.69rem; color: #b45309; font-weight: 700; margin-top: 4px;">
+                    ⏰ Tayang: ${escapeHtml(schInfo.scheduleTimeStr)} (${schInfo.scheduledPlatforms.join(', ')})
+                  </div>
+                ` : ''}
+                ${schInfo.isFullyPublished ? `
+                  <div style="font-size: 0.69rem; color: #065f46; font-weight: 700; margin-top: 4px;">
+                    🎉 Terbit Lengkap di: ${schInfo.publishedPlatforms.join(', ') || 'Facebook, Instagram, TikTok'}
+                  </div>
+                ` : ''}
+              </td>
+
+              <td style="width: 13%; text-align: center; vertical-align: middle;">
+                <span class="badge ${isAi ? "badge-warning" : "badge-neutral"}" style="font-weight: 700; padding: 4px 10px; border-radius: 9999px;">
+                  ${isAi ? "✨ AI" : "✍️ MANUAL"}
+                </span>
+                ${post && (post.manual_locked === 'TRUE' || post.manual_locked === true) ? `<div style="margin-top: 4px;"><span class="badge" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 9999px;">🔒 Terkunci</span></div>` : ''}
+              </td>
+
+              <td style="width: 13%; text-align: center; vertical-align: middle;">
+                ${tableStatusHtml}
+              </td>
+
+              <td style="width: 22%; text-align: left; vertical-align: middle;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.45; max-height: 42px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;" title="${escapeHtml(caption)}">
+                  ${caption ? escapeHtml(caption) : '<span style="color: var(--text-dim); font-style: italic;">Belum ada caption</span>'}
+                </div>
+                ${post && post.hashtags ? `<div style="font-size: 0.68rem; color: var(--primary); font-weight: 600; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(post.hashtags)}</div>` : ""}
+              </td>
+
+              <td style="width: 20%; text-align: center; vertical-align: middle;">
+                <div style="display: flex; gap: 5px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                  <button class="btn btn-secondary btn-sm" onclick="playVideoModal('${escapeHtml(m.media_id)}', '${escapeHtml(m.nama_file)}')" style="padding: 4px 8px; font-size: 0.72rem;" title="Putar Pratinjau Video">
+                    ▶️ Tonton
+                  </button>
+                  ${schInfo.isFullyPublished ? `
+                    <button class="btn btn-secondary btn-sm" onclick="openModalSchedule('${escapeHtml(m.media_id)}')" style="display: inline-flex; align-items: center; gap: 3px; padding: 4px 8px; font-size: 0.72rem; font-weight: 700; color: #065f46; border-color: #10b981; background: #ecfdf5;" title="Video sudah terbit lengkap di semua platform (klik untuk melihat rincian)">
+                      ✅ Terbit Lengkap
+                    </button>
+                  ` : `
+                    <button class="btn btn-primary btn-sm" onclick="openModalSchedule('${escapeHtml(m.media_id)}')" style="display: inline-flex; align-items: center; gap: 3px; padding: 4px 8px; font-size: 0.72rem; font-weight: 600;" title="Jadwalkan Postingan">
+                      📅 Jadwalkan
+                    </button>
+                  `}
+                  <button class="btn btn-secondary btn-sm" onclick="openModalCaption('${escapeHtml(m.media_id)}')" style="padding: 4px 8px; font-size: 0.72rem;" title="Edit Caption">
+                    ✏️ Edit
+                  </button>
+                  <button class="btn btn-secondary btn-sm" onclick="generateAiCaptionAction('${escapeHtml(m.media_id)}')" style="padding: 4px 8px; font-size: 0.72rem; font-weight: 700; color: #4338ca; border-color: #c7d2fe; background: #eef2ff;" title="Buat Caption Otomatis dengan AI">
+                    ✨ Buat AI
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      }
+    }
+
+    function openModalCaption(mediaId) {
+      const media = (appData.media || []).find(m => m.media_id === mediaId);
+      const post = (appData.posts || []).find(p => p.media_id === mediaId);
+
+      document.getElementById('captionMediaId').value = mediaId;
+      document.getElementById('captionMode').value = (media && media.caption_mode) || 'MANUAL';
+      document.getElementById('captionText').value = (post && post.caption_utama) || (media && media.caption_manual) || '';
+      document.getElementById('captionHashtags').value = (post && post.hashtags) || '';
+      openModal('modalCaption');
+    }
+
+    function submitSaveCaption() {
+      const mediaId = document.getElementById('captionMediaId').value;
+      const mode = document.getElementById('captionMode').value;
+      const caption = document.getElementById('captionText').value.trim();
+      const hashtags = document.getElementById('captionHashtags').value.trim();
+
+      if (!caption) return showToast('Caption tidak boleh kosong!', 'error');
+
+      showToast('Menyimpan caption...', 'info');
+      callBackend('savePost', { mediaId, mode, caption, hashtags, manual_locked: 'TRUE' })
+        .then(res => {
+          appData = res;
+          renderAll();
+          closeModal('modalCaption');
+          showToast('Caption berhasil disimpan & dikunci aman!', 'success');
+        })
+        .catch(err => showToast('Gagal simpan caption: ' + err.message, 'error'));
+    }
+
+    function generateAiCaptionAction(mediaId) {
+      const post = (appData.posts || []).find(p => p.media_id === mediaId);
+      if (post && (post.manual_locked === 'TRUE' || post.manual_locked === true) && post.caption_utama) {
+        if (!confirm('Video ini sudah memiliki caption yang terkunci aman.\n\nApakah Anda yakin ingin membuat caption baru dengan Gemini AI dan menimpa caption saat ini?')) {
+          return;
+        }
+      }
+      showToast('Menghasilkan caption dengan Gemini AI...', 'info');
+      callBackend('generateCaption', mediaId, true)
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('Caption AI berhasil dibuat!', 'success');
+        })
+        .catch(err => showToast('Gagal buat caption AI: ' + err.message, 'error'));
+    }
+
+    // === THUMBNAIL / COVER FRAME SELECTOR SYSTEM ===
+    let thumbVideoEl = null;
+
+    function initThumbVideoPlayer() {
+      if (!thumbVideoEl) {
+        thumbVideoEl = document.createElement('video');
+        thumbVideoEl.id = 'scheduleThumbHiddenVideo';
+        thumbVideoEl.crossOrigin = 'anonymous';
+        thumbVideoEl.playsInline = true;
+        thumbVideoEl.muted = true;
+        thumbVideoEl.preload = 'auto';
+        thumbVideoEl.style.display = 'none';
+        document.body.appendChild(thumbVideoEl);
+
+        thumbVideoEl.addEventListener('seeked', () => {
+          renderThumbToCanvas();
+        });
+        thumbVideoEl.addEventListener('loadeddata', () => {
+          const currentSec = parseFloat(document.getElementById('scheduleThumbSlider').value || '1.8');
+          thumbVideoEl.currentTime = currentSec;
+        });
+        thumbVideoEl.addEventListener('error', () => {
+          const loader = document.getElementById('scheduleThumbLoading');
+          if (loader) loader.style.display = 'none';
+        });
+      }
+    }
+
+    function renderThumbToCanvas() {
+      const canvas = document.getElementById('scheduleThumbCanvas');
+      const loader = document.getElementById('scheduleThumbLoading');
+      if (!canvas || !thumbVideoEl) return;
+      try {
+        const ctx = canvas.getContext('2d');
+        if (thumbVideoEl.videoWidth && thumbVideoEl.videoHeight) {
+          ctx.drawImage(thumbVideoEl, 0, 0, canvas.width, canvas.height);
+          if (loader) loader.style.display = 'none';
+        }
+      } catch(e) {
+        if (loader) loader.style.display = 'none';
+      }
+    }
+
+    function onScheduleThumbSliderChange(val) {
+      const sec = parseFloat(val);
+      const ms = Math.round(sec * 1000);
+      const offsetInput = document.getElementById('scheduleCoverOffsetMs');
+      if (offsetInput) offsetInput.value = ms;
+      const textElem = document.getElementById('scheduleThumbTimeText');
+      if (textElem) textElem.textContent = `${sec.toFixed(1)}s (${ms} ms)`;
+      const badge = document.getElementById('scheduleThumbBadge');
+      if (badge) {
+        badge.textContent = `⏱️ Detik ${sec.toFixed(1)}s`;
+        badge.style.background = '#f1f5f9';
+        badge.style.color = '#475569';
+      }
+      const loader = document.getElementById('scheduleThumbLoading');
+      if (loader) loader.style.display = 'flex';
+
+      if (thumbVideoEl) {
+        try {
+          thumbVideoEl.currentTime = sec;
+        } catch(e) {}
+      }
+    }
+
+    function setThumbPreset(sec, label) {
+      const slider = document.getElementById('scheduleThumbSlider');
+      if (slider) slider.value = sec;
+      onScheduleThumbSliderChange(sec);
+      const badge = document.getElementById('scheduleThumbBadge');
+      if (badge) {
+        badge.textContent = label;
+        if (sec === 1.8) {
+          badge.style.background = '#e0e7ff';
+          badge.style.color = '#4338ca';
+        }
+      }
+    }
+
+    function openModalSchedule(mediaId) {
+      const media = (appData.media || []).find(m => m.media_id === mediaId);
+      if (!media) return showToast('Video tidak ditemukan.', 'error');
+
+      const niches = appData.niches || [];
+      const niche = niches.find(n => n.niche_id === media.niche_id);
+      const nicheName = niche ? niche.nama : (media.niche_id || '-');
+
+      const posts = appData.posts || [];
+      const post = posts.find(p => p.media_id === mediaId);
+      const caption = post ? post.caption_utama : (media.caption_manual || '');
+      const hashtags = post ? post.hashtags : '';
+
+      document.getElementById('scheduleMediaId').value = mediaId;
+      document.getElementById('scheduleVideoTitle').textContent = media.nama_file || mediaId;
+      document.getElementById('scheduleVideoId').textContent = media.media_id;
+      document.getElementById('scheduleNicheName').textContent = nicheName;
+      document.getElementById('scheduleCaption').value = caption;
+      document.getElementById('scheduleHashtags').value = hashtags;
+
+      // Inisialisasi Frame / Thumbnail Selector
+      initThumbVideoPlayer();
+      const baseUrl = (window.location.protocol === 'file:' || !window.location.port) ? 'http://localhost:3000' : '';
+      const streamUrl = `${baseUrl}/api/media/stream/${encodeURIComponent(mediaId)}`;
+      const defaultSec = media.cover_offset_ms ? (media.cover_offset_ms / 1000) : 1.8;
+      
+      const slider = document.getElementById('scheduleThumbSlider');
+      if (slider) slider.value = defaultSec;
+      const offsetMs = Math.round(defaultSec * 1000);
+      const offsetInput = document.getElementById('scheduleCoverOffsetMs');
+      if (offsetInput) offsetInput.value = offsetMs;
+      const timeText = document.getElementById('scheduleThumbTimeText');
+      if (timeText) timeText.textContent = `${defaultSec.toFixed(1)}s (${offsetMs} ms)`;
+
+      const thumbBadge = document.getElementById('scheduleThumbBadge');
+      if (thumbBadge) {
+        thumbBadge.textContent = defaultSec === 1.8 ? '✨ Auto Menjual (1.8s)' : `⏱️ Detik ${defaultSec.toFixed(1)}s`;
+        thumbBadge.style.background = defaultSec === 1.8 ? '#e0e7ff' : '#f1f5f9';
+        thumbBadge.style.color = defaultSec === 1.8 ? '#4338ca' : '#475569';
+      }
+
+      const thumbLoader = document.getElementById('scheduleThumbLoading');
+      if (thumbLoader) thumbLoader.style.display = 'flex';
+
+      if (thumbVideoEl) {
+        thumbVideoEl.src = streamUrl;
+        thumbVideoEl.load();
+      }
+
+      // Filter akun sosmed yang cocok dengan niche video ini (dukung TRUE/true/boolean)
+      const allAccounts = appData.accounts || [];
+      const matchedAccounts = allAccounts.filter(a => {
+        const isAccActive = a.aktif === true || String(a.aktif).trim().toUpperCase() === 'TRUE' || String(a.aktif) === '1';
+        const isMatchingNiche = String(a.niche_id || '').trim().toUpperCase() === String(media.niche_id || '').trim().toUpperCase() ||
+                                String(a.niche_id || '').trim().toUpperCase() === String(nicheName || '').trim().toUpperCase();
+        return isAccActive && isMatchingNiche;
+      });
+
+      // Jika tidak ada akun yang spesifik niche tersebut, ambil semua akun aktif sebagai fallback
+      const accountsToShow = matchedAccounts.length > 0 
+        ? matchedAccounts 
+        : allAccounts.filter(a => a.aktif === true || String(a.aktif).trim().toUpperCase() === 'TRUE' || String(a.aktif) === '1');
+
+      const isCrossNicheFallback = matchedAccounts.length === 0 && accountsToShow.length > 0;
+
+      // === PERIKSA RIWAYAT PUBLIKASI (ANTI-DUPLIKASI FACEBOOK, INSTAGRAM, TIKTOK) ===
+      const publishedPlatforms = (media.publishedPlatforms || []).map(p => String(p).toUpperCase());
+      const publishedAccounts = media.publishedAccounts || [];
+      const isFullyPublished = Boolean(media.isFullyPublished || media.status === 'PUBLISHED');
+
+      const accContainer = document.getElementById('scheduleAccountList');
+      if (!accountsToShow.length) {
+        accContainer.innerHTML = `
+          <div style="padding: 12px; border-radius: 8px; background: var(--danger-light); color: var(--danger); font-size: 0.85rem; border: 1px solid rgba(225, 29, 72, 0.2);">
+            ⚠️ Belum ada akun sosial media aktif yang terhubung di sistem.<br>
+            Buka menu <b>Akun Sosial Media</b> untuk menghubungkan akun Facebook / Instagram / TikTok Anda.
+          </div>`;
+      } else {
+        const hasUnpublishedAccount = accountsToShow.some(a => !publishedPlatforms.includes(a.platform.toUpperCase()) && !publishedAccounts.includes(a.akun_id));
+
+        let alertHtml = '';
+        if (isFullyPublished || !hasUnpublishedAccount) {
+          alertHtml = `
+            <div style="margin-bottom: 12px; padding: 12px 14px; border-radius: 8px; background: #fef2f2; border: 1.5px solid #f87171; color: #991b1b; font-size: 0.85rem; line-height: 1.45;">
+              <div style="font-weight: 700; font-size: 0.92rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                🚫 PENOLAKAN SISTEM: Video Sudah Dipublikasikan
+              </div>
+              Video ini sudah pernah diposting di platform <b>Facebook, Instagram, atau TikTok</b>.
+              Sesuai ketentuan sistem anti-duplikasi, penayangan ulang otomatis ditolak untuk mencegah postingan ganda (konten duplikat/spam).
+            </div>
+          `;
+        } else if (publishedPlatforms.length > 0) {
+          alertHtml = `
+            <div style="margin-bottom: 10px; padding: 10px 12px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; font-size: 0.82rem; line-height: 1.4;">
+              ℹ️ <b>Filter Anti-Duplikasi Aktif:</b> Video ini sudah pernah terbit di <b>${publishedPlatforms.join(', ')}</b>.<br>
+              Akun yang sudah pernah terbit otomatis dinonaktifkan (ditolak). Anda hanya dapat menjadwalkan ke platform yang belum pernah terbit.
+            </div>
+          `;
+        }
+
+        let fallbackHeader = '';
+        if (isCrossNicheFallback) {
+          fallbackHeader = `
+            <div style="font-size: 0.75rem; color: var(--warning); margin-bottom: 8px; background: var(--warning-light); padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(217, 119, 6, 0.2);">
+              ℹ️ Akun khusus niche ini belum ada, menampilkan semua akun aktif yang tersedia:
+            </div>`;
+        }
+
+        accContainer.innerHTML = alertHtml + fallbackHeader + accountsToShow.map(a => {
+          const isFb = a.platform === 'FACEBOOK';
+          const isTt = a.platform === 'TIKTOK';
+          const isPublishedOnAcc = publishedPlatforms.includes(a.platform.toUpperCase()) || publishedAccounts.includes(a.akun_id);
+
+          const badgeStyle = isFb 
+            ? 'background: #1877f2; color: #fff;' 
+            : (isTt 
+                ? 'background: #000; color: #00f2fe; border: 1px solid #fe2c55;' 
+                : 'background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff;');
+          
+          if (isPublishedOnAcc) {
+            return `
+              <label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px; background: #f9fafb; opacity: 0.65; cursor: not-allowed;" title="Video sudah pernah terbit di akun ini. Otomatis ditolak agar tidak dobel.">
+                <input type="checkbox" name="scheduleAccounts" value="${escapeHtml(a.akun_id)}" disabled style="width: 17px; height: 17px; cursor: not-allowed;" />
+                <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; ${badgeStyle}">
+                  ${escapeHtml(a.platform)}
+                </span>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-weight: 600; font-size: 0.86rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(a.nama_akun)}</div>
+                  <div style="font-size: 0.72rem; color: #dc2626; font-weight: 600;">⛔ Sudah Terbit di Platform Ini (Ditolak Sistem)</div>
+                </div>
+              </label>
+            `;
+          }
+
+          return `
+            <label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: var(--bg-card); transition: all 0.15s ease;">
+              <input type="checkbox" name="scheduleAccounts" value="${escapeHtml(a.akun_id)}" checked style="width: 17px; height: 17px; cursor: pointer; accent-color: var(--primary);" />
+              <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 700; ${badgeStyle}">
+                ${escapeHtml(a.platform)}
+              </span>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 600; font-size: 0.86rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(a.nama_akun)}</div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">ID: ${escapeHtml(a.platform_user_id || a.akun_id)}</div>
+              </div>
+            </label>
+          `;
+        }).join('');
+      }
+
+      // Update tombol Submit Modal jika seluruh akun sudah terbit
+      const submitBtn = document.querySelector('#modalScheduleVideo button.btn-primary') || document.querySelector('#modalScheduleVideo .modal-footer button:last-child');
+      const hasUnpublished = accountsToShow.some(a => !publishedPlatforms.includes(a.platform.toUpperCase()) && !publishedAccounts.includes(a.akun_id));
+
+      if (submitBtn) {
+        if (!hasUnpublished || isFullyPublished) {
+          submitBtn.disabled = true;
+          submitBtn.style.opacity = '0.55';
+          submitBtn.style.cursor = 'not-allowed';
+          submitBtn.setAttribute('title', 'Video ini sudah terbit di semua platform.');
+          submitBtn.innerHTML = '⛔ Ditolak: Video Sudah Pernah Diposting';
+        } else {
+          submitBtn.disabled = false;
+          submitBtn.style.opacity = '1';
+          submitBtn.style.cursor = 'pointer';
+          submitBtn.removeAttribute('title');
+          submitBtn.innerHTML = '📅 Simpan & Jadwalkan Postingan';
+        }
+      }
+
+      // Default jadwal: 5 menit dari sekarang
+      setScheduleTimeOffset(5);
+
+      openModal('modalScheduleVideo');
+    }
+
+    function toggleSelectAllAccounts() {
+      const boxes = Array.from(document.querySelectorAll('input[name="scheduleAccounts"]')).filter(b => !b.disabled);
+      if (!boxes.length) return;
+      const anyUnchecked = boxes.some(b => !b.checked);
+      boxes.forEach(b => b.checked = anyUnchecked);
+    }
+
+    function setScheduleTimeOffset(minutes) {
+      const d = new Date(Date.now() + minutes * 60000);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const mins = String(d.getMinutes()).padStart(2, '0');
+      document.getElementById('scheduleWhenInput').value = `${year}-${month}-${day}T${hours}:${mins}`;
+    }
+
+    function setScheduleTomorrow(hour) {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(hour).padStart(2, '0');
+      document.getElementById('scheduleWhenInput').value = `${year}-${month}-${day}T${hours}:00`;
+    }
+
+    function submitScheduleVideo() {
+      const mediaId = document.getElementById('scheduleMediaId').value;
+      const caption = document.getElementById('scheduleCaption').value.trim();
+      const hashtags = document.getElementById('scheduleHashtags').value.trim();
+      const whenVal = document.getElementById('scheduleWhenInput').value;
+
+      if (!caption) {
+        return showToast('Isi caption terlebih dahulu sebelum menjadwalkan!', 'error');
+      }
+
+      const selectedBoxes = Array.from(document.querySelectorAll('input[name="scheduleAccounts"]:checked')).filter(b => !b.disabled);
+      const accountIds = selectedBoxes.map(b => b.value);
+
+      if (!accountIds.length) {
+        return showToast('Pilih minimal satu akun yang belum pernah menerbitkan video ini!', 'error');
+      }
+
+      if (!whenVal) {
+        return showToast('Tentukan waktu upload / publikasi!', 'error');
+      }
+
+      const targetDate = new Date(whenVal);
+      if (isNaN(targetDate.getTime()) || targetDate.getTime() < Date.now() + 60000) {
+        return showToast('Waktu jadwal minimal 1 menit dari sekarang!', 'error');
+      }
+
+      const coverOffsetMs = parseInt(document.getElementById('scheduleCoverOffsetMs').value || '1800', 10);
+
+      showToast('Memasukkan video ke antrean upload...', 'info');
+      callBackend('schedulePost', {
+        mediaId: mediaId,
+        accountIds: accountIds,
+        coverOffsetMs: coverOffsetMs,
+        when: targetDate.toISOString(),
+        caption: caption,
+        hashtags: hashtags,
+        mode: 'MANUAL'
+      })
+      .then(res => {
+        appData = res;
+        renderAll();
+        closeModal('modalScheduleVideo');
+        showToast('🎉 Video berhasil dimasukkan ke antrean publikasi!', 'success');
+        switchNav('view-queue');
+      })
+      .catch(err => {
+        showToast('Gagal menjadwalkan: ' + err.message, 'error');
+      });
+    }
+
+    function generateAiCaptionInScheduleModal() {
+      const mediaId = document.getElementById('scheduleMediaId').value;
+      if (!mediaId) return;
+      showToast('Menghasilkan caption dengan Gemini AI...', 'info');
+      callBackend('generateCaption', mediaId, true)
+        .then(res => {
+          appData = res;
+          renderAll();
+          const posts = appData.posts || [];
+          const post = posts.find(p => p.media_id === mediaId);
+          if (post) {
+            document.getElementById('scheduleCaption').value = post.caption_utama || '';
+            document.getElementById('scheduleHashtags').value = post.hashtags || '';
+          }
+          showToast('Caption AI berhasil dibuat dan dimasukkan!', 'success');
+        })
+        .catch(err => showToast('Gagal buat caption AI: ' + err.message, 'error'));
+    }
+
+    // Video Player & Local File Openers
+    let currentPreviewMediaId = null;
+
+    function openFileLocation(mediaId) {
+      showToast('Membuka folder lokasi video di File Explorer...', 'info');
+      callBackend('openFileLocation', mediaId)
+        .then(res => {
+          showToast(res.message || 'Folder lokasi file berhasil dibuka!', 'success');
+        })
+        .catch(err => {
+          showToast('Gagal membuka folder: ' + err.message, 'error');
+        });
+    }
+
+    function openLocalVideo(mediaId, mode = 'folder') {
+      openFileLocation(mediaId);
+    }
+
+    function syncFolderVideosAction() {
+      const btn = document.getElementById('btnSyncFolderVideos');
+      if (btn) {
+        btn.innerHTML = '<span class="spinner" style="width: 12px; height: 12px; margin-right: 4px;"></span> Menyinkronkan...';
+        btn.disabled = true;
+      }
+      showToast('Memindai folder komputer secara langsung...', 'info');
+
+      callBackend('scanAllVideos')
+        .then(res => {
+          appData = res;
+          renderAll();
+          showToast('✅ Perpustakaan video berhasil disinkronkan 100%!', 'success');
+        })
+        .catch(err => {
+          showToast('Gagal sinkron folder: ' + err.message, 'error');
+        })
+        .finally(() => {
+          if (btn) {
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg> <span>Sinkronkan Folder Video</span>';
+            btn.disabled = false;
+          }
+        });
+    }
+
+    function playVideoModal(mediaId, title) {
+      currentPreviewMediaId = mediaId;
+      const titleElem = document.getElementById('videoPlayerTitle');
+      if (titleElem) titleElem.textContent = title || 'Pratinjau Video';
+      const baseUrl = (window.location.protocol === 'file:' || !window.location.port) ? 'http://localhost:3000' : '';
+      const streamUrl = `${baseUrl}/api/media/stream/${encodeURIComponent(mediaId)}`;
+
+      const container = document.getElementById('videoPlayerContainer');
+      if (container) {
+        // Completely recreate video element to ensure clean state
+        container.innerHTML = `
+          <video id="html5VideoPlayer" controls autoplay playsinline style="width: 100%; max-height: 480px; border-radius: 8px; outline: none; background: #000; box-shadow: 0 4px 20px rgba(0,0,0,0.6);">
+            <source src="${streamUrl}" type="video/mp4">
+            Browser Anda tidak mendukung tag video.
+          </video>
+        `;
+      }
+      openModal('modalVideoPlayer');
+    }
+
+    function closeVideoPlayerModal() {
+      const container = document.getElementById('videoPlayerContainer');
+      if (container) {
+        const player = container.querySelector('video');
+        if (player) {
+          try {
+            player.pause();
+            player.muted = true;
+            player.currentTime = 0;
+            player.src = '';
+            player.removeAttribute('src');
+            player.load();
+          } catch (e) {}
+        }
+        // WIPE DOM ELEMENT: Instantly cuts off audio streaming decoder and releases media buffer
+        container.innerHTML = '';
+      }
+      const m = document.getElementById('modalVideoPlayer');
+      if (m) m.classList.remove('active');
+    }
+
+    function openCurrentVideoInWindows() {
+      if (currentPreviewMediaId) {
+        openLocalVideo(currentPreviewMediaId, 'play');
+      }
+    }
+
+    function openCurrentVideoFolder() {
+      if (currentPreviewMediaId) {
+        openLocalVideo(currentPreviewMediaId, 'folder');
+      }
+    }
+
+    // Global ESC & backdrop click listeners for instant modal exit
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeVideoPlayerModal();
+        document.querySelectorAll('.modal-overlay.active').forEach(m => {
+          m.classList.remove('active');
+        });
+      }
+    });
+
+    // Auto-init on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadData();
+
+      // Bind backdrop click to all modal overlays
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            if (overlay.id === 'modalVideoPlayer') {
+              closeVideoPlayerModal();
+            } else {
+              closeModal(overlay.id);
+            }
+          }
+        });
+      });
+
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('connected') === 'tiktok') {
+        setTimeout(() => {
+          showToast('🎉 Akun TikTok Berhasil Dihubungkan & Siap Posting!', 'success');
+          switchNav('view-account');
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }, 700);
+      }
+    });
+  </script>
+</body>
+</html>
