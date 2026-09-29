@@ -1836,6 +1836,42 @@
           <input type="text" id="scheduleHashtags" class="form-control" placeholder="#Bisnis #Musik #Viral" />
         </div>
 
+        <!-- Musik Latar Trending (BGM Auto Ducking) -->
+        <div class="form-group" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label style="margin-bottom: 0; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.88rem;">
+              <input type="checkbox" id="scheduleBgmEnabled" checked onchange="toggleBgmOptions()" style="width: 16px; height: 16px; accent-color: var(--primary);" />
+              <span>🎵 Tambahkan Musik Latar Trending (Otomatis)</span>
+            </label>
+            <span class="badge badge-info" style="font-size: 0.7rem;">Suara Bicara 100% Jelas</span>
+          </div>
+
+          <div id="scheduleBgmSettingsArea" style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div>
+                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;">Tema Suasana / Mood</label>
+                <select id="scheduleBgmCategory" class="form-control" style="font-size: 0.8rem; padding: 6px 10px;">
+                  <option value="AUTO">✨ Auto Sesuai Video (AI/Niche)</option>
+                  <option value="misteri">👻 Misteri / Horor / Tegang</option>
+                  <option value="podcast">🎙️ Podcast Chill / Warm LoFi</option>
+                  <option value="inspiratif">🥺 Inspiratif / Haru / Emosional</option>
+                  <option value="ceria">🎉 Ceria / Komedi / Upbeat Fun</option>
+                </select>
+              </div>
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0;">Volume Musik</label>
+                  <span id="scheduleBgmVolumeLabel" style="font-size: 0.75rem; font-weight: 700; color: var(--primary);">15% (Halus)</span>
+                </div>
+                <input type="range" id="scheduleBgmVolume" min="0.05" max="0.30" step="0.01" value="0.15" oninput="updateBgmVolumeLabel(this.value)" style="width: 100%; accent-color: var(--primary); margin-top: 4px;" />
+              </div>
+            </div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.35;">
+              💡 <b>Auto-Ducking:</b> Musik diputar halus (~15%), suara vokal asli di video tetap 100% jernih, dan aman dari klaim hak cipta.
+            </div>
+          </div>
+        </div>
+
         <!-- Jadwal Waktu -->
         <div class="form-group">
           <label class="form-label">Waktu Upload / Publikasi *</label>
@@ -3861,6 +3897,25 @@
       document.getElementById('scheduleWhenInput').value = `${year}-${month}-${day}T${hours}:00`;
     }
 
+    function toggleBgmOptions() {
+      const chk = document.getElementById('scheduleBgmEnabled');
+      const area = document.getElementById('scheduleBgmSettingsArea');
+      if (area && chk) {
+        area.style.display = chk.checked ? 'flex' : 'none';
+      }
+    }
+
+    function updateBgmVolumeLabel(val) {
+      const lbl = document.getElementById('scheduleBgmVolumeLabel');
+      if (lbl) {
+        const pct = Math.round(parseFloat(val) * 100);
+        let note = 'Halus';
+        if (pct < 10) note = 'Sangat Pelan';
+        else if (pct > 20) note = 'Sedang';
+        lbl.innerText = `${pct}% (${note})`;
+      }
+    }
+
     function submitScheduleVideo() {
       const mediaId = document.getElementById('scheduleMediaId').value;
       const caption = document.getElementById('scheduleCaption').value.trim();
@@ -3888,12 +3943,18 @@
       }
 
       const coverOffsetMs = parseInt(document.getElementById('scheduleCoverOffsetMs').value || '1800', 10);
+      const bgmEnabled = document.getElementById('scheduleBgmEnabled') ? document.getElementById('scheduleBgmEnabled').checked : true;
+      const bgmCategory = document.getElementById('scheduleBgmCategory') ? document.getElementById('scheduleBgmCategory').value : 'AUTO';
+      const bgmVolume = document.getElementById('scheduleBgmVolume') ? parseFloat(document.getElementById('scheduleBgmVolume').value) : 0.15;
 
       showToast('Memasukkan video ke antrean upload...', 'info');
       callBackend('schedulePost', {
         mediaId: mediaId,
         accountIds: accountIds,
         coverOffsetMs: coverOffsetMs,
+        bgmEnabled: bgmEnabled,
+        bgmCategory: bgmCategory,
+        bgmVolume: bgmVolume,
         when: targetDate.toISOString(),
         caption: caption,
         hashtags: hashtags,
