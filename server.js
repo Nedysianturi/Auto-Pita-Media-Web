@@ -44,11 +44,19 @@ try { db.exec("ALTER TABLE media ADD COLUMN cover_offset_ms INTEGER DEFAULT 1800
 try { db.exec("ALTER TABLE jobs ADD COLUMN bgm_enabled TEXT DEFAULT 'TRUE'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE jobs ADD COLUMN bgm_category TEXT DEFAULT 'AUTO'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE jobs ADD COLUMN bgm_volume REAL DEFAULT 0.15"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE jobs ADD COLUMN sfx_enabled TEXT DEFAULT 'TRUE'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE jobs ADD COLUMN sfx_category TEXT DEFAULT 'AUTO'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE jobs ADD COLUMN sfx_volume REAL DEFAULT 0.60"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE posts ADD COLUMN bgm_enabled TEXT DEFAULT 'TRUE'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE posts ADD COLUMN bgm_category TEXT DEFAULT 'AUTO'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE posts ADD COLUMN bgm_volume REAL DEFAULT 0.15"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE posts ADD COLUMN sfx_enabled TEXT DEFAULT 'TRUE'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE posts ADD COLUMN sfx_category TEXT DEFAULT 'AUTO'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE posts ADD COLUMN sfx_volume REAL DEFAULT 0.60"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE niches ADD COLUMN default_bgm_enabled TEXT DEFAULT 'TRUE'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE niches ADD COLUMN default_bgm_category TEXT DEFAULT 'AUTO'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE niches ADD COLUMN default_sfx_enabled TEXT DEFAULT 'TRUE'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE niches ADD COLUMN default_sfx_category TEXT DEFAULT 'AUTO'"); } catch(e) { /* sudah ada */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS niches (
@@ -418,7 +426,66 @@ function pickAudioTrackForMedia(media, categoryPreference = 'AUTO') {
   };
 }
 
-function mixVideoWithAudio(videoPath, audioPath, volumeMusic = 0.15) {
+// === SFX / Hook Sound Effects Catalog Engine ===
+function getSfxCatalogInfo() {
+  const sfxBase = path.join(__dirname, 'assets', 'sfx');
+  const catalog = {
+    misteri: [],
+    podcast: [],
+    inspiratif: [],
+    ceria: []
+  };
+
+  try {
+    if (fs.existsSync(sfxBase)) {
+      Object.keys(catalog).forEach(cat => {
+        const catDir = path.join(sfxBase, cat);
+        if (fs.existsSync(catDir)) {
+          catalog[cat] = fs.readdirSync(catDir)
+            .filter(f => f.toLowerCase().endsWith('.mp3') || f.toLowerCase().endsWith('.wav') || f.toLowerCase().endsWith('.m4a'));
+        }
+      });
+    }
+  } catch (e) {
+    console.error('[SFX CATALOG ERROR]', e.message);
+  }
+
+  return catalog;
+}
+
+function pickSfxTrackForMedia(media, categoryPreference = 'AUTO') {
+  const sfxBase = path.join(__dirname, 'assets', 'sfx');
+  if (!fs.existsSync(sfxBase)) return null;
+
+  let targetCat = categoryPreference ? String(categoryPreference).toLowerCase() : 'auto';
+  if (targetCat === 'auto' || !['misteri', 'podcast', 'inspiratif', 'ceria'].includes(targetCat)) {
+    const raw = (String((media && media.nama_file) || '') + ' ' + String((media && media.niche_id) || '')).toLowerCase();
+    if (raw.includes('misteri') || raw.includes('rjl5') || raw.includes('horor') || raw.includes('hantu') || raw.includes('malam') || raw.includes('jin') || raw.includes('pocong') || raw.includes('sajen')) {
+      targetCat = 'misteri';
+    } else if (raw.includes('komedi') || raw.includes('lucu') || raw.includes('hiburan') || raw.includes('ngakak') || raw.includes('bambu')) {
+      targetCat = 'ceria';
+    } else if (raw.includes('inspirasi') || raw.includes('sedih') || raw.includes('haru') || raw.includes('perjuangan') || raw.includes('ibu') || raw.includes('tangis') || raw.includes('keguguran') || raw.includes('diusir')) {
+      targetCat = 'inspiratif';
+    } else {
+      targetCat = 'podcast';
+    }
+  }
+
+  const catDir = path.join(sfxBase, targetCat);
+  if (!fs.existsSync(catDir)) return null;
+
+  const files = fs.readdirSync(catDir).filter(f => f.toLowerCase().endsWith('.mp3') || f.toLowerCase().endsWith('.wav') || f.toLowerCase().endsWith('.m4a'));
+  if (!files.length) return null;
+
+  const chosen = files[Math.floor(Math.random() * files.length)];
+  return {
+    category: targetCat,
+    name: chosen,
+    path: path.join(catDir, chosen)
+  };
+}
+
+function mixVideoWithAudio(videoPath, bgmAudioPath = null, volumeMusic = 0.15, sfxAudioPath = null, volumeSfx = 0.60) {
   return new Promise((resolve, reject) => {
     const tempDir = path.join(__dirname, 'temp_mixed');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
@@ -426,14 +493,35 @@ function mixVideoWithAudio(videoPath, audioPath, volumeMusic = 0.15) {
     const outExt = path.extname(videoPath) || '.mp4';
     const outputPath = path.join(tempDir, `mixed_${Date.now()}_${Math.random().toString(36).slice(2, 7)}${outExt}`);
 
-    const vol = Math.max(0.02, Math.min(0.5, parseFloat(volumeMusic) || 0.15));
+    const volBgm = Math.max(0.02, Math.min(0.5, parseFloat(volumeMusic) || 0.15));
+    const volSfx = Math.max(0.1, Math.min(1.0, parseFloat(volumeSfx) || 0.60));
+
+    const hasBgm = bgmAudioPath && fs.existsSync(bgmAudioPath);
+    const hasSfx = sfxAudioPath && fs.existsSync(sfxAudioPath);
+
+    if (!hasBgm && !hasSfx) {
+      return resolve(null);
+    }
 
     const { spawn } = require('child_process');
-    const args = [
-      '-y',
-      '-i', videoPath,
-      '-stream_loop', '-1', '-i', audioPath,
-      '-filter_complex', `[0:a]volume=1.0[v];[1:a]volume=${vol}[m];[v][m]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
+    const args = ['-y', '-i', videoPath];
+
+    let filterComplex = '';
+
+    if (hasBgm && hasSfx) {
+      args.push('-stream_loop', '-1', '-i', bgmAudioPath);
+      args.push('-i', sfxAudioPath);
+      filterComplex = `[0:a]volume=1.0[v];[1:a]volume=${volBgm}[m];[2:a]volume=${volSfx}[s];[v][m][s]amix=inputs=3:duration=first:dropout_transition=2[aout]`;
+    } else if (hasBgm) {
+      args.push('-stream_loop', '-1', '-i', bgmAudioPath);
+      filterComplex = `[0:a]volume=1.0[v];[1:a]volume=${volBgm}[m];[v][m]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+    } else if (hasSfx) {
+      args.push('-i', sfxAudioPath);
+      filterComplex = `[0:a]volume=1.0[v];[1:a]volume=${volSfx}[s];[v][s]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+    }
+
+    args.push(
+      '-filter_complex', filterComplex,
       '-map', '0:v',
       '-map', '[aout]',
       '-c:v', 'copy',
@@ -441,7 +529,7 @@ function mixVideoWithAudio(videoPath, audioPath, volumeMusic = 0.15) {
       '-b:a', '192k',
       '-shortest',
       outputPath
-    ];
+    );
 
     const proc = spawn('ffmpeg', args);
     let errOutput = '';
@@ -645,9 +733,9 @@ function autoScheduleUnscheduledMedia() {
           for (const acc of neededAccounts) {
             const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
             db.prepare(`
-              INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?)
-            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, 'TRUE', 'AUTO', 0.15);
+              INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, 'TRUE', 'AUTO', 0.15, 'TRUE', 'AUTO', 0.60);
           }
 
           db.prepare("UPDATE media SET status = 'TERJADWAL' WHERE media_id = ?").run(media.media_id);
@@ -745,10 +833,10 @@ function autoScheduleUnscheduledMedia() {
         for (const acc of neededAccounts) {
           const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
           db.prepare(`
-            INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?)
+            INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
-            jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, 'TRUE', 'AUTO', 0.15
+            jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, 'TRUE', 'AUTO', 0.15, 'TRUE', 'AUTO', 0.60
           );
         }
 
@@ -845,6 +933,7 @@ function getDashboardData() {
     settings: settingsRows,
     aiSettings,
     bgmCatalog: getBgmCatalogInfo(),
+    sfxCatalog: getSfxCatalogInfo(),
     metaSync: {
       lastSync: getSetting('META_LAST_SYNC', ''),
       lastStatus: getSetting('META_LAST_STATUS', 'Belum disinkronkan'),
@@ -1156,6 +1245,9 @@ function saveScheduleWeb(input) {
   const bgmEnabled = (input.bgmEnabled === false || input.bgm_enabled === 'FALSE' || input.bgmEnabled === 'false') ? 'FALSE' : 'TRUE';
   const bgmCategory = input.bgmCategory || input.bgm_category || 'AUTO';
   const bgmVolume = parseFloat(input.bgmVolume || input.bgm_volume || 0.15);
+  const sfxEnabled = (input.sfxEnabled === false || input.sfx_enabled === 'FALSE' || input.sfxEnabled === 'false') ? 'FALSE' : 'TRUE';
+  const sfxCategory = input.sfxCategory || input.sfx_category || 'AUTO';
+  const sfxVolume = parseFloat(input.sfxVolume || input.sfx_volume || 0.60);
 
   db.prepare(`
     INSERT INTO schedules (jadwal_id, konten_id, niche_id, tanggal_jam_wib, akun_ids_csv, status, created_at)
@@ -1168,15 +1260,15 @@ function saveScheduleWeb(input) {
   for (const acc of validAccounts) {
     const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
     db.prepare(`
-      INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?)
+      INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      jobId, jadwalId, post.konten_id, mediaId, media.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume
+      jobId, jadwalId, post.konten_id, mediaId, media.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume, sfxEnabled, sfxCategory, sfxVolume
     );
   }
 
   db.prepare("UPDATE media SET status = 'TERJADWAL', cover_offset_ms = ? WHERE media_id = ?").run(coverOffsetMs, mediaId);
-  db.prepare("UPDATE posts SET status = 'SCHEDULED', cover_offset_ms = ?, bgm_enabled = ?, bgm_category = ?, bgm_volume = ? WHERE konten_id = ?").run(coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume, post.konten_id);
+  db.prepare("UPDATE posts SET status = 'SCHEDULED', cover_offset_ms = ?, bgm_enabled = ?, bgm_category = ?, bgm_volume = ?, sfx_enabled = ?, sfx_category = ?, sfx_volume = ? WHERE konten_id = ?").run(coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume, sfxEnabled, sfxCategory, sfxVolume, post.konten_id);
 
   if (alreadyPublishedAccounts.length > 0) {
     console.log(`[SCHEDULE FILTER] Video "${media.nama_file}": Melewatkan ${alreadyPublishedAccounts.length} akun yang sudah terbit (${alreadyPublishedAccounts.map(a => a.platform).join(',')}), menjadwalkan ke ${validAccounts.length} akun yang tersisa (Cover: ${coverOffsetMs}ms).`);
@@ -1234,21 +1326,39 @@ async function publishJob(jobId) {
   let tempMixedFile = null;
 
   try {
-    // === AUTO BGM DUCKING MIXER ===
-    if (job.bgm_enabled === 'TRUE' || job.bgm_enabled === true || job.bgm_enabled === 'true') {
+    // === AUTO BGM & SFX HOOK DUCKING MIXER ===
+    const isBgm = job.bgm_enabled === 'TRUE' || job.bgm_enabled === true || job.bgm_enabled === 'true';
+    const isSfx = job.sfx_enabled === 'TRUE' || job.sfx_enabled === true || job.sfx_enabled === 'true';
+
+    if (isBgm || isSfx) {
       try {
-        const selectedTrack = pickAudioTrackForMedia(media, job.bgm_category);
-        if (selectedTrack && fs.existsSync(selectedTrack.path)) {
-          console.log(`[BGM MIXER] Memadukan audio trending "${selectedTrack.name}" (${selectedTrack.category}, vol: ${job.bgm_volume || 0.15}) ke ${media.nama_file}...`);
-          const mixed = await mixVideoWithAudio(media.file_path, selectedTrack.path, job.bgm_volume || 0.15);
+        let selectedBgm = null;
+        let selectedSfx = null;
+
+        if (isBgm) {
+          selectedBgm = pickAudioTrackForMedia(media, job.bgm_category);
+        }
+        if (isSfx) {
+          selectedSfx = pickSfxTrackForMedia(media, job.sfx_category);
+        }
+
+        const bgmPath = selectedBgm ? selectedBgm.path : null;
+        const sfxPath = selectedSfx ? selectedSfx.path : null;
+
+        if (bgmPath || sfxPath) {
+          console.log(`[AUDIO MIXER] Memadukan audio ke ${media.nama_file}...`);
+          if (bgmPath) console.log(`  🎵 BGM: "${selectedBgm.name}" (${selectedBgm.category}, vol: ${job.bgm_volume || 0.15})`);
+          if (sfxPath) console.log(`  ⚡ SFX Hook: "${selectedSfx.name}" (${selectedSfx.category}, vol: ${job.sfx_volume || 0.60})`);
+
+          const mixed = await mixVideoWithAudio(media.file_path, bgmPath, job.bgm_volume || 0.15, sfxPath, job.sfx_volume || 0.60);
           if (mixed && fs.existsSync(mixed)) {
             activeFilePath = mixed;
             tempMixedFile = mixed;
-            console.log(`[BGM MIXER] Video + Musik sukses dipadukan: ${tempMixedFile}`);
+            console.log(`[AUDIO MIXER] Video + Audio sukses dipadukan: ${tempMixedFile}`);
           }
         }
-      } catch (bgmErr) {
-        console.warn('[BGM MIXER WARNING] Gagal memadukan BGM, melanjutkan dengan video asli:', bgmErr.message);
+      } catch (mixErr) {
+        console.warn('[AUDIO MIXER WARNING] Gagal memadukan audio, melanjutkan dengan video asli:', mixErr.message);
       }
     }
 
@@ -2367,6 +2477,9 @@ app.post('/api/action', async (req, res) => {
           bgmEnabled: p.bgmEnabled !== undefined ? p.bgmEnabled : true,
           bgmCategory: p.bgmCategory || 'AUTO',
           bgmVolume: p.bgmVolume !== undefined ? p.bgmVolume : 0.15,
+          sfxEnabled: p.sfxEnabled !== undefined ? p.sfxEnabled : true,
+          sfxCategory: p.sfxCategory || 'AUTO',
+          sfxVolume: p.sfxVolume !== undefined ? p.sfxVolume : 0.60,
           scheduledTime: new Date(p.when).toLocaleString('sv-SE').slice(0, 16)
         });
         break;
