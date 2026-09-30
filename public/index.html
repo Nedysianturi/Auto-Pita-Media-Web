@@ -781,17 +781,30 @@
       min-width: 260px;
     }
     .vsc-icon {
-      width: 42px;
-      height: 42px;
+      width: 52px;
+      height: 52px;
       border-radius: 10px;
-      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
       font-size: 1.25rem;
       flex-shrink: 0;
-      box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      border: 1px solid rgba(0,0,0,0.06);
+    }
+    .vsc-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.2s ease;
+    }
+    .vsc-icon:hover img {
+      transform: scale(1.08);
     }
     .vsc-title {
       font-size: 0.95rem;
@@ -1402,25 +1415,45 @@
     <!-- VIEW 6: PERFORMA KONTEN (VIEWS, LIKES, SHARES) -->
     <div id="view-performance" class="view-content">
       <!-- Metric Cards Grid -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
-        <div class="card" style="padding: 18px 20px; border-left: 4px solid var(--primary);">
-          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Total Tayangan (Live)</div>
-          <div style="font-size: 1.8rem; font-weight: 800; color: var(--primary); margin: 6px 0 2px 0;" id="perfStatViewsTotal">0</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div class="card" style="padding: 18px 20px; border-left: 4px solid #6366f1; position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Total Tayangan (Live)</div>
+            <div style="width: 28px; height: 28px; border-radius: 8px; background: #eef2ff; color: #6366f1; display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </div>
+          </div>
+          <div style="font-size: 1.8rem; font-weight: 800; color: #4338ca; margin: 6px 0 2px 0;" id="perfStatViewsTotal">0</div>
           <div style="font-size: 0.72rem; color: var(--text-dim);">Akumulasi penonton semua video</div>
         </div>
-        <div class="card" style="padding: 18px 20px;">
-          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Views 24 Jam Pertama</div>
-          <div style="font-size: 1.7rem; font-weight: 800; color: var(--info); margin: 6px 0 2px 0;" id="perfStatViews24">0</div>
+        <div class="card" style="padding: 18px 20px; border-left: 4px solid #0284c7; position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Views 24 Jam Pertama</div>
+            <div style="width: 28px; height: 28px; border-radius: 8px; background: #f0f9ff; color: #0284c7; display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+          </div>
+          <div style="font-size: 1.8rem; font-weight: 800; color: #0369a1; margin: 6px 0 2px 0;" id="perfStatViews24">0</div>
           <div style="font-size: 0.72rem; color: var(--text-dim);">Penonton hari pertama tayang</div>
         </div>
-        <div class="card" style="padding: 18px 20px;">
-          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Total Likes & Reaksi</div>
-          <div style="font-size: 1.7rem; font-weight: 800; color: var(--danger); margin: 6px 0 2px 0;" id="perfStatLikes">0</div>
+        <div class="card" style="padding: 18px 20px; border-left: 4px solid #e11d48; position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Total Likes & Reaksi</div>
+            <div style="width: 28px; height: 28px; border-radius: 8px; background: #fff1f2; color: #e11d48; display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            </div>
+          </div>
+          <div style="font-size: 1.8rem; font-weight: 800; color: #be123c; margin: 6px 0 2px 0;" id="perfStatLikes">0</div>
           <div style="font-size: 0.72rem; color: var(--text-dim);">Apresiasi & suka dari audiens</div>
         </div>
-        <div class="card" style="padding: 18px 20px;">
-          <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Komentar & Shares</div>
-          <div style="font-size: 1.7rem; font-weight: 800; color: var(--success); margin: 6px 0 2px 0;" id="perfStatEngage">0</div>
+        <div class="card" style="padding: 18px 20px; border-left: 4px solid #059669; position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Komentar & Shares</div>
+            <div style="width: 28px; height: 28px; border-radius: 8px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+          </div>
+          <div style="font-size: 1.8rem; font-weight: 800; color: #047857; margin: 6px 0 2px 0;" id="perfStatEngage">0</div>
           <div style="font-size: 0.72rem; color: var(--text-dim);">Interaksi dan sebaran video</div>
         </div>
       </div>
@@ -1432,12 +1465,15 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
             Tabel Analisis Performa Konten Terpublikasi
           </div>
-          <div style="display: flex; gap: 8px; align-items: center;">
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <button id="btnSyncPerf" class="btn btn-sm btn-primary" onclick="syncPerformaWeb()" style="box-shadow: 0 1px 3px rgba(79, 70, 229, 0.25);">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
               Tarik Insight Meta
             </button>
-            <select id="filterPerfPlatform" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onchange="renderPerformance()">
+            <select id="filterPerfNiche" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem; font-weight: 600;" onchange="renderPerformance()">
+              <option value="ALL">Semua Niche</option>
+            </select>
+            <select id="filterPerfPlatform" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem; font-weight: 600;" onchange="renderPerformance()">
               <option value="ALL">Semua Platform</option>
               <option value="FACEBOOK">Facebook Page</option>
               <option value="INSTAGRAM">Instagram Professional</option>
@@ -1448,14 +1484,14 @@
           <table>
             <thead>
               <tr>
-                <th style="width: 24%;">Video / Judul Konten</th>
-                <th style="width: 11%; text-align: center;">Platform</th>
+                <th style="width: 28%;">Video / Judul Konten</th>
+                <th style="width: 12%; text-align: center;">Platform & Akun</th>
                 <th style="width: 13%;">Waktu Tayang</th>
-                <th style="width: 13%; text-align: center;">Total Views 🔥</th>
-                <th style="width: 10%; text-align: center;">Views 24h</th>
-                <th style="width: 10%; text-align: center;">Views 3d</th>
-                <th style="width: 9%; text-align: center;">Likes 👍</th>
-                <th style="width: 10%; text-align: center;">Komen / Share 💬</th>
+                <th style="width: 12%; text-align: center;">Total Views (Live)</th>
+                <th style="width: 9%; text-align: center;">Views 24h</th>
+                <th style="width: 9%; text-align: center;">Views 3d</th>
+                <th style="width: 8%; text-align: center;">Likes</th>
+                <th style="width: 9%; text-align: center;">Komen & Share</th>
               </tr>
             </thead>
             <tbody id="performanceTableBody">
@@ -2863,11 +2899,22 @@
                 ${isAktif ? 'AKTIF' : 'NONAKTIF'}
               </span>
             </td>
-            <td style="font-size: 0.75rem; color: var(--text-muted);">
-              ${s.terakhir_scan ? new Date(s.terakhir_scan).toLocaleString('id-ID') : 'Siap dipindai'}
+            <td>
+              <div style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 999px;">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                <span>Watcher Aktif</span>
+              </div>
+              <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 3px;">
+                ${s.terakhir_scan ? 'Dipindai: ' + new Date(s.terakhir_scan).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : 'Siaga realtime'}
+              </div>
             </td>
             <td style="text-align: right;">
-              <div style="display: inline-flex; gap: 6px;">
+              <div style="display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+                ${(s.folder_path || s.folder_id) ? `
+                  <button class="btn btn-sm btn-secondary" onclick="openFolderInExplorerAction('${escapeHtml((s.folder_path || s.folder_id).replace(/\\/g, '\\\\'))}')" style="display: inline-flex; align-items: center; gap: 4px;" title="Buka folder langsung di File Explorer Windows">
+                    📂 Buka Folder
+                  </button>
+                ` : ''}
                 <button class="btn btn-sm btn-secondary" onclick="scanDriveForNiche('${escapeHtml(s.niche_id)}')">
                   🔄 Scan Video
                 </button>
@@ -3419,6 +3466,21 @@
               </div>
             </div>`;
           }
+        let countdownBadge = '';
+        if (j.scheduled_at && j.status === 'READY') {
+          const diffMs = new Date(j.scheduled_at).getTime() - Date.now();
+          const diffMins = Math.round(diffMs / 60000);
+          if (diffMins < 0) {
+            countdownBadge = `<div style="margin-top: 3px;"><span class="badge badge-neutral" style="font-size: 0.65rem; padding: 1px 6px;">Siap Mengudara</span></div>`;
+          } else if (diffMins < 60) {
+            countdownBadge = `<div style="margin-top: 3px;"><span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.65rem; padding: 1px 6px; font-weight: 700;">⏳ ${diffMins} mnt lagi</span></div>`;
+          } else if (diffMins < 1440) {
+            const hrs = (diffMins / 60).toFixed(1);
+            countdownBadge = `<div style="margin-top: 3px;"><span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.65rem; padding: 1px 6px; font-weight: 700;">⏳ ${hrs} jam lagi</span></div>`;
+          } else {
+            const days = Math.round(diffMins / 1440);
+            countdownBadge = `<div style="margin-top: 3px;"><span class="badge" style="background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; font-size: 0.65rem; padding: 1px 6px; font-weight: 600;">⏳ ${days} hari lagi</span></div>`;
+          }
         }
 
         return `
@@ -3440,8 +3502,14 @@
               </span>
               ${accountName ? `<div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; margin-top: 4px; line-height: 1.3;">📢 ${escapeHtml(accountName)}</div>` : ''}
             </td>
-            <td style="font-size: 0.75rem; color: var(--text-muted);">
-              ${j.scheduled_at ? new Date(j.scheduled_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB' : '-'}
+            <td>
+              <div style="font-weight: 600; color: #1e293b; font-size: 0.76rem; white-space: nowrap;">
+                ${j.scheduled_at ? new Date(j.scheduled_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; white-space: nowrap;">
+                ${j.scheduled_at ? '⏰ ' + new Date(j.scheduled_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : ''}
+              </div>
+              ${countdownBadge}
             </td>
             <td style="text-align: center;">
               <span class="badge ${statusBadgeClass}">
@@ -3675,10 +3743,22 @@
       }).join('');
     }
 
-        function renderPerformance() {
+    function renderPerformance() {
       const tbody = document.getElementById('performanceTableBody');
       const badge = document.getElementById('navBadgePerf');
-      const filter = (document.getElementById('filterPerfPlatform') || {}).value || 'ALL';
+      const platformFilter = (document.getElementById('filterPerfPlatform') || {}).value || 'ALL';
+      const nicheSelect = document.getElementById('filterPerfNiche');
+      
+      // Populate niche filter dynamically
+      const niches = appData.niches || [];
+      if (nicheSelect && niches.length && nicheSelect.options.length <= 1) {
+        const curNiche = nicheSelect.value || 'ALL';
+        nicheSelect.innerHTML = '<option value="ALL">Semua Niche</option>' +
+          niches.map(n => `<option value="${escapeHtml(n.niche_id)}">${escapeHtml(n.nama)}</option>`).join('');
+        nicheSelect.value = curNiche;
+      }
+      const nicheFilter = nicheSelect ? nicheSelect.value : 'ALL';
+
       let rawItems = appData.performance || [];
       const hasRealNames = rawItems.some(p => p.nama_video && !p.nama_video.startsWith('VID-'));
       let items = hasRealNames ? rawItems.filter(p => !p.nama_video || !p.nama_video.startsWith('VID-')) : rawItems;
@@ -3738,14 +3818,17 @@
       if (elLikes) elLikes.textContent = totalLikes.toLocaleString('id-ID');
       if (elEngage) elEngage.textContent = (totalComments + totalShares).toLocaleString('id-ID');
 
-      if (filter !== 'ALL') {
-        items = items.filter(p => p.platform === filter);
+      if (nicheFilter !== 'ALL') {
+        items = items.filter(p => p.niche_id === nicheFilter);
+      }
+      if (platformFilter !== 'ALL') {
+        items = items.filter(p => p.platform === platformFilter);
       }
 
       if (!tbody) return;
 
       if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 36px;">Belum ada konten yang terbit atau performa belum tercatat. Setelah ada postingan terbit, klik tombol "Tarik Insight Meta".</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 36px;">Belum ada konten yang terbit atau performa belum tercatat pada filter ini. Setelah ada postingan terbit, klik tombol "Tarik Insight Meta".</td></tr>`;
         return;
       }
 
@@ -3762,15 +3845,27 @@
         const accountName = acc ? acc.nama_akun : '';
         const vLive = Math.max(Number(p.views_7d || 0), Number(p.views_3d || 0), Number(p.views_24h || 0));
 
+        const rawTitle = (p.nama_video || p.perf_id || '').replace(/\.mp4$/i, '');
+        const d = p.posted_at ? new Date(p.posted_at) : null;
+        const dateStr = d ? d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+        const timeStr = d ? d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : '';
+
         return `
           <tr>
             <td>
-              <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem; margin-bottom: 2px;">
-                ${escapeHtml(p.nama_video || p.perf_id)}
-              </div>
-              <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
-                <span class="font-mono">${escapeHtml(p.perf_id || '')}</span>
-                ${p.post_url ? `• <a href="${escapeHtml(formatPostUrl(p.post_url, p.platform))}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">Buka Postingan ↗</a>` : ''}
+              <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <div style="width: 28px; height: 28px; border-radius: 6px; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.85rem; margin-top: 2px;">
+                  🎬
+                </div>
+                <div style="min-width: 0;">
+                  <div style="font-weight: 700; color: var(--text-main); font-size: 0.84rem; margin-bottom: 3px; line-height: 1.35; word-break: break-word;" title="${escapeHtml(p.nama_video || '')}">
+                    ${escapeHtml(rawTitle)}
+                  </div>
+                  <div style="font-size: 0.7rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span class="font-mono" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 1px 5px; border-radius: 4px;">${escapeHtml(p.perf_id || '')}</span>
+                    ${p.post_url ? `• <a href="${escapeHtml(formatPostUrl(p.post_url, p.platform))}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); font-weight: 600; text-decoration: none;">Buka Postingan ↗</a>` : ''}
+                  </div>
+                </div>
               </div>
             </td>
             <td style="text-align: center;">
@@ -3780,25 +3875,27 @@
               ${accountName ? `<div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600; margin-top: 4px; line-height: 1.3;">📢 ${escapeHtml(accountName)}</div>` : ''}
             </td>
             <td>
-              <div style="font-size: 0.78rem; color: var(--text-muted);">
-                ${p.posted_at ? new Date(p.posted_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB' : '-'}
-              </div>
+              <div style="font-weight: 600; color: #1e293b; font-size: 0.76rem; white-space: nowrap;">📅 ${dateStr}</div>
+              ${timeStr ? `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; white-space: nowrap;">⏰ ${timeStr}</div>` : ''}
             </td>
-            <td style="text-align: center; font-weight: 800; color: var(--primary); font-size: 0.95rem;">
+            <td style="text-align: center; font-weight: 800; color: #4338ca; font-size: 0.95rem;">
               ${vLive.toLocaleString('id-ID')}
               ${p.isFallback ? `<span style="font-size: 0.68rem; color: var(--text-dim); display: block; font-weight: 400;">(Siap Tarik)</span>` : ''}
             </td>
-            <td style="text-align: center; font-weight: 600; color: var(--info);">
+            <td style="text-align: center; font-weight: 600; color: #0284c7;">
               ${Number(p.views_24h || 0).toLocaleString('id-ID')}
             </td>
             <td style="text-align: center; font-weight: 600; color: var(--text-muted);">
               ${Number(p.views_3d || 0).toLocaleString('id-ID')}
             </td>
-            <td style="text-align: center; font-weight: 700; color: var(--danger);">
+            <td style="text-align: center; font-weight: 700; color: #e11d48;">
               ${Number(p.likes || 0).toLocaleString('id-ID')}
             </td>
-            <td style="text-align: center; font-size: 0.8rem; color: var(--text-muted);">
-              💬 ${Number(p.comments || 0)} • 🔁 ${Number(p.shares || 0)}
+            <td style="text-align: center;">
+              <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+                <span style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 6px; font-size: 0.74rem; font-weight: 600; color: #334155;" title="Komentar">💬 ${Number(p.comments || 0)}</span>
+                <span style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 6px; font-size: 0.74rem; font-weight: 600; color: #334155;" title="Shares / Bagikan">🔁 ${Number(p.shares || 0)}</span>
+              </div>
             </td>
           </tr>
         `;
@@ -4034,8 +4131,11 @@
             <div class="video-studio-card" style="${schInfo.isFullyPublished ? 'border: 1.5px solid #10b981; background: #f0fdf4;' : (schInfo.isScheduled ? 'border: 1.5px solid #f59e0b; background: #fffdfa;' : '')}">
               <div class="vsc-header">
                 <div class="vsc-title-wrap">
-                  <div class="vsc-icon" style="${schInfo.isFullyPublished ? 'background: #d1fae5; border: 1px solid #6ee7b7;' : (schInfo.isScheduled ? 'background: #fef3c7; border: 1px solid #fde68a;' : '')}">
-                    ${schInfo.isFullyPublished ? '✅' : (schInfo.isScheduled ? '⏰' : '🎬')}
+                  <div class="vsc-icon" onclick="playVideoModal('${escapeHtml(m.media_id)}', '${escapeHtml(m.nama_file)}')" title="Klik untuk memutar pratinjau video">
+                    <img src="/api/media/${encodeURIComponent(m.media_id)}/frame" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                    <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 1.25rem; background: ${schInfo.isFullyPublished ? '#d1fae5' : (schInfo.isScheduled ? '#fef3c7' : 'linear-gradient(135deg, #4f46e5, #6366f1)')};">
+                      ${schInfo.isFullyPublished ? '✅' : (schInfo.isScheduled ? '⏰' : '🎬')}
+                    </div>
                   </div>
                   <div>
                     <div class="vsc-title" title="${escapeHtml(m.nama_file)}">${escapeHtml(m.nama_file)}</div>
