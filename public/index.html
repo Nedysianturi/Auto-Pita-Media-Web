@@ -1175,10 +1175,6 @@
             Akun Media Sosial Terhubung (Meta API)
           </div>
           <div style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary" onclick="inspectTokensAction()" title="Periksa sisa masa aktif token akun ke Meta API">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              Periksa Masa Aktif Token
-            </button>
             <button class="btn btn-primary" onclick="openModalAddAccount()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               Tambah Akun Baru
@@ -1189,13 +1185,12 @@
           <table>
             <thead>
               <tr>
-                <th>Platform</th>
-                <th>Nama Akun</th>
-                <th>Platform ID</th>
-                <th>Niche</th>
-                <th>Status Token</th>
-                <th>Status Aktif</th>
-                <th style="text-align: right;">Aksi</th>
+                <th style="width: 14%;">Platform</th>
+                <th style="width: 26%;">Nama Akun</th>
+                <th style="width: 16%;">Platform ID</th>
+                <th style="width: 16%;">Niche</th>
+                <th style="width: 16%; text-align: center;">Status Akun</th>
+                <th style="width: 12%; text-align: right;">Aksi</th>
               </tr>
             </thead>
             <tbody id="accountTableBody">
@@ -3733,7 +3728,7 @@
       badge.textContent = accounts.length;
 
       if (!accounts.length) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Belum ada akun sosial media terdaftar.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Belum ada akun sosial media terdaftar.</td></tr>`;
         return;
       }
 
@@ -3757,25 +3752,23 @@
             <td style="font-weight: 700;">${escapeHtml(a.nama_akun || a.akun_id)}</td>
             <td class="font-mono" style="font-size: 0.75rem;">${escapeHtml(a.platform_user_id)}</td>
             <td>${escapeHtml(nicheName)}</td>
-            <td>
+            <td style="text-align: center;">
               ${(() => {
+                if (!isAktif) {
+                  return `<span class="badge badge-neutral" style="font-weight: 700;">○ Nonaktif (Dijeda)</span>`;
+                }
                 const tokenStatus = a.token_status || 'ACTIVE';
-                const tokenInfo = a.token_info || (isTokenReady ? 'Token Aktif' : 'Belum ada token');
+                const tokenInfo = a.token_info || (isTokenReady ? 'Permanen (Never Expires)' : 'Belum ada token');
                 if (!isTokenReady) {
-                  return `<span class="badge badge-danger">BELUM ADA</span>`;
+                  return `<span class="badge badge-danger" style="font-weight: 700;">🔴 Belum Ada Token</span>`;
                 } else if (tokenStatus === 'WARNING') {
-                  return `<span class="badge" style="background: rgba(234, 179, 8, 0.15); color: #a16207; border: 1px solid #facc15; font-weight: 700;">⚠️ PERIKSA</span><div style="font-size: 0.7rem; color: #a16207; margin-top: 3px;">${escapeHtml(tokenInfo)}</div>`;
+                  return `<span class="badge" style="background: rgba(234, 179, 8, 0.15); color: #a16207; border: 1px solid #facc15; font-weight: 700;">⚠️ Periksa Token</span><div style="font-size: 0.68rem; color: #a16207; font-weight: 600; margin-top: 3px;">${escapeHtml(tokenInfo)}</div>`;
                 } else if (tokenStatus === 'EXPIRED') {
-                  return `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #b91c1c; border: 1px solid #ef4444; font-weight: 700;">🔴 KEDALUWARSA</span><div style="font-size: 0.7rem; color: #b91c1c; margin-top: 3px;">${escapeHtml(tokenInfo)}</div>`;
+                  return `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #b91c1c; border: 1px solid #ef4444; font-weight: 700;">🔴 Kedaluwarsa</span><div style="font-size: 0.68rem; color: #b91c1c; font-weight: 600; margin-top: 3px;">Perlu login ulang</div>`;
                 } else {
-                  return `<span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.3);">🟢 AKTIF</span><div style="font-size: 0.7rem; color: #15803d; margin-top: 3px;">${escapeHtml(tokenInfo)}</div>`;
+                  return `<span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.3); font-weight: 700;">🟢 Terhubung</span><div style="font-size: 0.68rem; color: #15803d; font-weight: 600; margin-top: 2px;">${escapeHtml(tokenInfo)}</div>`;
                 }
               })()}
-            </td>
-            <td>
-              <span class="badge ${isAktif ? 'badge-success' : 'badge-neutral'}">
-                ${isAktif ? 'AKTIF' : 'NONAKTIF'}
-              </span>
             </td>
             <td style="text-align: right;">
               <div style="display: inline-flex; gap: 6px; align-items: center;">
