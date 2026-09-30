@@ -35,3 +35,4 @@ recover_captions.py
 *.log
 .DS_Store
 Thumbs.db
+temp_mixed/

@@ -57,6 +57,12 @@ try { db.exec("ALTER TABLE niches ADD COLUMN default_bgm_enabled TEXT DEFAULT 'T
 try { db.exec("ALTER TABLE niches ADD COLUMN default_bgm_category TEXT DEFAULT 'AUTO'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE niches ADD COLUMN default_sfx_enabled TEXT DEFAULT 'TRUE'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE niches ADD COLUMN default_sfx_category TEXT DEFAULT 'AUTO'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE jobs ADD COLUMN outro_enabled TEXT DEFAULT 'TRUE'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE jobs ADD COLUMN outro_text TEXT"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE posts ADD COLUMN outro_enabled TEXT DEFAULT 'TRUE'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE posts ADD COLUMN outro_text TEXT"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE niches ADD COLUMN default_outro_enabled TEXT DEFAULT 'TRUE'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE niches ADD COLUMN default_outro_text TEXT"); } catch(e) { /* sudah ada */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS niches (
@@ -485,43 +491,243 @@ function pickSfxTrackForMedia(media, categoryPreference = 'AUTO') {
   };
 }
 
-function mixVideoWithAudio(videoPath, bgmAudioPath = null, volumeMusic = 0.15, sfxAudioPath = null, volumeSfx = 0.60) {
-  return new Promise((resolve, reject) => {
-    const tempDir = path.join(__dirname, 'temp_mixed');
-    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+// ==========================================
+// 🛡️ INTERNAL ANTI-SHADOWBAN DICTIONARY (KAMUS SENSOR KATA TERLARANG)
+// Mencegah akun terkena shadowban, batasan jangkauan, atau strike
+// pada algoritma Facebook Reels, Instagram Reels, dan TikTok
+// ==========================================
+const ANTI_SHADOWBAN_DICTIONARY = [
+  // 1. Kekerasan, Kematian, Pembunuhan & Bahaya Fisik (Multi-kata didahulukan)
+  { pattern: /\bgantung\s+diri\b/gi, replacement: 'mengakhiri hidup' },
+  { pattern: /\bbunuh\s+diri\b/gi, replacement: 'mengakhiri hidup' },
+  { pattern: /\bpelecehan\s+seksual\b/gi, replacement: 'tindakan tidak pantas' },
+  { pattern: /\bserangan\s+jantung\b/gi, replacement: 'kondisi darurat medis' },
+  { pattern: /\bputus\s+urat\s+nadi\b/gi, replacement: 'luka parah' },
+  { pattern: /\bmenumpahkan\s+darah\b/gi, replacement: 'menyebabkan luka' },
+  { pattern: /\bair\s+keras\b/gi, replacement: 'cairan kimia berbahaya' },
+  { pattern: /\bopen\s+bo\b/gi, replacement: 'open b*' },
 
-    const outExt = path.extname(videoPath) || '.mp4';
-    const outputPath = path.join(tempDir, `mixed_${Date.now()}_${Math.random().toString(36).slice(2, 7)}${outExt}`);
+  // Tindakan & Kematian
+  { pattern: /\bpembunuhan\s+berencana\b/gi, replacement: 'kasus tragis terencana' },
+  { pattern: /\bpembunuhan\b/gi, replacement: 'kasus tragis' },
+  { pattern: /\bmembunuh\b/gi, replacement: 'menghabisi' },
+  { pattern: /\bdibunuh\b/gi, replacement: 'dihabisi' },
+  { pattern: /\bpembunuh\b/gi, replacement: 'pelaku' },
+  { pattern: /\bbunuh\b/gi, replacement: 'b*nuh' },
 
-    const volBgm = Math.max(0.02, Math.min(0.5, parseFloat(volumeMusic) || 0.15));
-    const volSfx = Math.max(0.1, Math.min(1.0, parseFloat(volumeSfx) || 0.60));
+  { pattern: /\bmutilasi\b/gi, replacement: 'm*tilasi' },
+  { pattern: /\bdimutilasi\b/gi, replacement: 'tindakan keji' },
+  { pattern: /\bdibacok\b/gi, replacement: 'diserang' },
+  { pattern: /\bmbacok\b/gi, replacement: 'menyerang' },
+  { pattern: /\bbacok\b/gi, replacement: 'b*cok' },
+  { pattern: /\bditusuk\b/gi, replacement: 'diserang senjata tajam' },
+  { pattern: /\bmenusuk\b/gi, replacement: 'melukai' },
+  { pattern: /\btusuk\b/gi, replacement: 't*suk' },
+  { pattern: /\bdisiksa\b/gi, replacement: 'dianiaya' },
+  { pattern: /\bmenyiksa\b/gi, replacement: 'menganiaya' },
+  { pattern: /\bpenyiksaan\b/gi, replacement: 'penganiayaan' },
+  { pattern: /\bsiksa\b/gi, replacement: 's*ksa' },
+  { pattern: /\bdiracun\b/gi, replacement: 'diberi zat berbahaya' },
+  { pattern: /\bracun\b/gi, replacement: 'r*cun' },
 
-    const hasBgm = bgmAudioPath && fs.existsSync(bgmAudioPath);
-    const hasSfx = sfxAudioPath && fs.existsSync(sfxAudioPath);
+  { pattern: /\btewas\b/gi, replacement: 't*was' },
+  { pattern: /\bkematian\b/gi, replacement: 'kepergian' },
+  { pattern: /\bmati\b/gi, replacement: 'meninggal' },
+  { pattern: /\bmayat\b/gi, replacement: 'jasad' },
+  { pattern: /\bjenazah\b/gi, replacement: 'jasad' },
+  { pattern: /\bbangkai\b/gi, replacement: 'jasad' },
+  { pattern: /\bberdarah\b/gi, replacement: 'terluka' },
+  { pattern: /\bdarah\b/gi, replacement: 'd*rah' },
 
-    if (!hasBgm && !hasSfx) {
-      return resolve(null);
+  // Senjata
+  { pattern: /\bsenjata\s+api\b/gi, replacement: 'senpi' },
+  { pattern: /\bsenjata\b/gi, replacement: 's*njata' },
+  { pattern: /\bpistol\b/gi, replacement: 'p*stol' },
+  { pattern: /\bsenapan\b/gi, replacement: 's*napan' },
+  { pattern: /\bpeluru\b/gi, replacement: 'p*luru' },
+  { pattern: /\bcelurit\b/gi, replacement: 'sajam' },
+  { pattern: /\bparang\b/gi, replacement: 'sajam' },
+  { pattern: /\bbom\b/gi, replacement: 'b*m' },
+  { pattern: /\bledakan\b/gi, replacement: 'dentuman keras' },
+
+  // 2. Seksualitas, Asusila & Pelecehan
+  { pattern: /\bpemerkosaan\b/gi, replacement: 'tindakan asusila' },
+  { pattern: /\bmemerkosa\b/gi, replacement: 'melecehkan' },
+  { pattern: /\bdiperkosa\b/gi, replacement: 'dilecehkan' },
+  { pattern: /\bperkosa\b/gi, replacement: 'p*rkosa' },
+  { pattern: /\bpelecehan\b/gi, replacement: 'tindakan tak pantas' },
+  { pattern: /\bcabul\b/gi, replacement: 'tindakan asusila' },
+  { pattern: /\btelanjang\b/gi, replacement: 'tanpa busana' },
+  { pattern: /\bmesum\b/gi, replacement: 'asusila' },
+  { pattern: /\bporno\b/gi, replacement: 'p*rno' },
+  { pattern: /\bbokep\b/gi, replacement: 'konten dewasa' },
+  { pattern: /\bprostitusi\b/gi, replacement: 'pr*stitusi' },
+  { pattern: /\bpelacur\b/gi, replacement: 'p*lacur' },
+  { pattern: /\blontek?\b/gi, replacement: 'l*nte' },
+  { pattern: /\bperek\b/gi, replacement: 'p*rek' },
+
+  // 3. Narkoba & Zat Ilegal
+  { pattern: /\bnarkoba\b/gi, replacement: 'n*rkoba' },
+  { pattern: /\bnarkotika\b/gi, replacement: 'zat terlarang' },
+  { pattern: /\bsabu-sabu\b/gi, replacement: 'zat terlarang' },
+  { pattern: /\bsabu\b/gi, replacement: 's*bu' },
+  { pattern: /\bganja\b/gi, replacement: 'g*nja' },
+  { pattern: /\bheroin\b/gi, replacement: 'h*roin' },
+  { pattern: /\bekstasi\b/gi, replacement: 'ekst*si' },
+  { pattern: /\bmiras\b/gi, replacement: 'minuman terlarang' },
+
+  // 4. Mistis & Horor Ekstrem
+  { pattern: /\bsantet\b/gi, replacement: 's*ntet' },
+  { pattern: /\bguna-guna\b/gi, replacement: 'ilmu gaib' },
+  { pattern: /\bpesugihan\b/gi, replacement: 'ritual terlarang' },
+  { pattern: /\btumbal\b/gi, replacement: 't*mbal' },
+  { pattern: /\bkerasukan\b/gi, replacement: 'gangguan gaib' },
+
+  // 5. Ujaran Kasar / Profanitas
+  { pattern: /\banjing\b/gi, replacement: 'anj*ng' },
+  { pattern: /\bbabi\b/gi, replacement: 'b*bi' },
+  { pattern: /\bbangsat\b/gi, replacement: 'b*ngsat' },
+  { pattern: /\bbajingan\b/gi, replacement: 'b*jingan' },
+  { pattern: /\bkontol\b/gi, replacement: 'k*ntol' },
+  { pattern: /\bmemek\b/gi, replacement: 'm*mek' },
+  { pattern: /\bitil\b/gi, replacement: 'i*il' },
+  { pattern: /\bjembut\b/gi, replacement: 'j*mbut' },
+  { pattern: /\bpantek\b/gi, replacement: 'p*ntek' },
+  { pattern: /\bpepek\b/gi, replacement: 'p*pek' },
+  { pattern: /\bkampret\b/gi, replacement: 'k*mpret' },
+  { pattern: /\bbrengsek\b/gi, replacement: 'br*ngsek' },
+  { pattern: /\bgoblok\b/gi, replacement: 'g*blok' },
+  { pattern: /\btolol\b/gi, replacement: 't*lol' },
+  { pattern: /\bidiot\b/gi, replacement: 'i*iot' }
+];
+
+function sanitizeCaptionAntiShadowban(text) {
+  if (!text || typeof text !== 'string') return text;
+  let sanitized = text;
+  for (const item of ANTI_SHADOWBAN_DICTIONARY) {
+    sanitized = sanitized.replace(item.pattern, item.replacement);
+  }
+  return sanitized;
+}
+
+function detectSensitiveWords(text) {
+  if (!text || typeof text !== 'string') return [];
+  const found = [];
+  for (const item of ANTI_SHADOWBAN_DICTIONARY) {
+    if (item.pattern.test(text)) {
+      found.push(item.pattern.source.replace(/\\b/g, ''));
     }
+  }
+  return Array.from(new Set(found));
+}
 
+function getDefaultOutroText(nicheNameOrId) {
+  const str = String(nicheNameOrId || '').toLowerCase();
+  if (str.includes('rekaman') || str.includes('podcast')) {
+    return '🔔 Suka video ini? Follow @Pitarekaman.tv untuk obrolan seru lainnya!';
+  }
+  return '🔔 Suka cerita ini? Follow @PitaMisteri.tv untuk kisah berikutnya!';
+}
+
+function getVideoDuration(filePath) {
+  return new Promise((resolve) => {
     const { spawn } = require('child_process');
-    const args = ['-y', '-i', videoPath];
+    const proc = spawn('ffprobe', [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'default=noprint_wrappers=1:nokey=1',
+      filePath
+    ]);
+    let out = '';
+    proc.stdout.on('data', d => { out += d.toString(); });
+    proc.on('close', code => {
+      const dur = parseFloat(out.trim());
+      resolve(Number.isFinite(dur) && dur > 0 ? dur : 0);
+    });
+    proc.on('error', () => resolve(0));
+  });
+}
 
-    let filterComplex = '';
+async function mixVideoWithAudio(videoPath, bgmAudioPath = null, volumeMusic = 0.15, sfxAudioPath = null, volumeSfx = 0.60, outroText = null) {
+  const tempDir = path.join(__dirname, 'temp_mixed');
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
-    if (hasBgm && hasSfx) {
-      args.push('-stream_loop', '-1', '-i', bgmAudioPath);
-      args.push('-i', sfxAudioPath);
-      filterComplex = `[0:a]volume=1.0[v];[1:a]volume=${volBgm}[m];[2:a]volume=${volSfx}[s];[v][m][s]amix=inputs=3:duration=first:dropout_transition=2[aout]`;
-    } else if (hasBgm) {
-      args.push('-stream_loop', '-1', '-i', bgmAudioPath);
-      filterComplex = `[0:a]volume=1.0[v];[1:a]volume=${volBgm}[m];[v][m]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
-    } else if (hasSfx) {
-      args.push('-i', sfxAudioPath);
-      filterComplex = `[0:a]volume=1.0[v];[1:a]volume=${volSfx}[s];[v][s]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
-    }
+  const outExt = path.extname(videoPath) || '.mp4';
+  const outputPath = path.join(tempDir, `mixed_${Date.now()}_${Math.random().toString(36).slice(2, 7)}${outExt}`);
 
+  const volBgm = Math.max(0.02, Math.min(0.5, parseFloat(volumeMusic) || 0.15));
+  const volSfx = Math.max(0.1, Math.min(1.0, parseFloat(volumeSfx) || 0.60));
+
+  const hasBgm = bgmAudioPath && fs.existsSync(bgmAudioPath);
+  const hasSfx = sfxAudioPath && fs.existsSync(sfxAudioPath);
+  const hasOutro = !!(outroText && String(outroText).trim());
+
+  if (!hasBgm && !hasSfx && !hasOutro) {
+    return null;
+  }
+
+  let duration = 0;
+  let drawtextFilter = '';
+  if (hasOutro) {
+    duration = await getVideoDuration(videoPath);
+    const startT = Math.max(0, duration - 3.2).toFixed(2);
+    // Bersihkan emoji agar tidak merender kotak kosong di font Windows, lalu escape karakter khusus FFmpeg drawtext
+    const cleanText = String(outroText).replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim() || 'Suka video ini? Follow channel kami untuk kisah berikutnya!';
+    const safeText = cleanText
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "'\\\\''")
+      .replace(/:/g, '\\:')
+      .replace(/%/g, '%%');
+
+    const fontFile = 'C\\:/Windows/Fonts/segoeuib.ttf';
+    drawtextFilter = `drawtext=fontfile='${fontFile}':text='${safeText}':fontcolor=white:fontsize=34:box=1:boxcolor=black@0.85:boxborderw=18:x=(w-text_w)/2:y=h-680:enable='gte(t,${startT})'`;
+  }
+
+  const { spawn } = require('child_process');
+  const args = ['-y', '-i', videoPath];
+
+  let audioFilter = '';
+  if (hasBgm && hasSfx) {
+    args.push('-stream_loop', '-1', '-i', bgmAudioPath);
+    args.push('-i', sfxAudioPath);
+    audioFilter = `[0:a]volume=1.0[v];[1:a]volume=${volBgm}[m];[2:a]volume=${volSfx}[s];[v][m][s]amix=inputs=3:duration=first:dropout_transition=2[aout]`;
+  } else if (hasBgm) {
+    args.push('-stream_loop', '-1', '-i', bgmAudioPath);
+    audioFilter = `[0:a]volume=1.0[v];[1:a]volume=${volBgm}[m];[v][m]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+  } else if (hasSfx) {
+    args.push('-i', sfxAudioPath);
+    audioFilter = `[0:a]volume=1.0[v];[1:a]volume=${volSfx}[s];[v][s]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
+  }
+
+  if (hasOutro && audioFilter) {
+    // Both outro overlay and audio mixing
+    const filterComplex = `[0:v]${drawtextFilter}[vout];${audioFilter}`;
     args.push(
       '-filter_complex', filterComplex,
+      '-map', '[vout]',
+      '-map', '[aout]',
+      '-c:v', 'libx264',
+      '-preset', 'ultrafast',
+      '-crf', '20',
+      '-c:a', 'aac',
+      '-b:a', '192k',
+      '-shortest',
+      outputPath
+    );
+  } else if (hasOutro && !audioFilter) {
+    // Outro overlay only, audio copied directly
+    args.push(
+      '-vf', drawtextFilter,
+      '-c:v', 'libx264',
+      '-preset', 'ultrafast',
+      '-crf', '20',
+      '-c:a', 'copy',
+      outputPath
+    );
+  } else if (!hasOutro && audioFilter) {
+    // Audio mixing only, video copied directly (ultra fast)
+    args.push(
+      '-filter_complex', audioFilter,
       '-map', '0:v',
       '-map', '[aout]',
       '-c:v', 'copy',
@@ -530,7 +736,9 @@ function mixVideoWithAudio(videoPath, bgmAudioPath = null, volumeMusic = 0.15, s
       '-shortest',
       outputPath
     );
+  }
 
+  return new Promise((resolve, reject) => {
     const proc = spawn('ffmpeg', args);
     let errOutput = '';
     proc.stderr.on('data', d => { errOutput += d.toString(); });
@@ -544,6 +752,7 @@ function mixVideoWithAudio(videoPath, bgmAudioPath = null, volumeMusic = 0.15, s
     proc.on('error', err => reject(err));
   });
 }
+
 
 function getPublishedMediaInfo(mediaId, namaFile) {
   const platforms = new Set();
@@ -733,9 +942,9 @@ function autoScheduleUnscheduledMedia() {
           for (const acc of neededAccounts) {
             const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
             db.prepare(`
-              INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60);
+              INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id));
           }
 
           db.prepare("UPDATE media SET status = 'TERJADWAL' WHERE media_id = ?").run(media.media_id);
@@ -833,10 +1042,10 @@ function autoScheduleUnscheduledMedia() {
         for (const acc of neededAccounts) {
           const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
           db.prepare(`
-            INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
-            jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60
+            jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id)
           );
         }
 
@@ -1119,7 +1328,12 @@ Kembalikan HANYA format JSON valid dengan field berikut:
     result = await callGemini('gemini-1.5-flash');
   }
 
-  // Save to database
+  // Save to database with Anti-Shadowban automatic sanitization
+  const cleanMain = sanitizeCaptionAntiShadowban(result.main || '');
+  const cleanFb = sanitizeCaptionAntiShadowban(result.facebook || '');
+  const cleanIg = sanitizeCaptionAntiShadowban(result.instagram || '');
+  const cleanHash = sanitizeCaptionAntiShadowban(result.hashtags || '');
+
   db.prepare(`
     UPDATE posts SET
       mode_caption = 'AI',
@@ -1132,17 +1346,17 @@ Kembalikan HANYA format JSON valid dengan field berikut:
       updated_at = ?
     WHERE media_id = ?
   `).run(
-    result.main || '',
-    result.facebook || '',
-    result.instagram || '',
-    result.hashtags || '',
+    cleanMain,
+    cleanFb,
+    cleanIg,
+    cleanHash,
     isoNow(),
     mediaId
   );
 
   db.prepare(`UPDATE media SET caption_mode = 'AI', status = 'SIAP' WHERE media_id = ?`).run(mediaId);
 
-  console.log(`[GEMINI] Successfully generated AI caption for media ${mediaId}`);
+  console.log(`[GEMINI] Successfully generated AI caption for media ${mediaId} (Anti-Shadowban sanitized)`);
   return getDashboardData();
 }
 
@@ -1157,6 +1371,11 @@ function savePost(input) {
 
   const mode = input.mode || media.caption_mode || 'MANUAL';
 
+  const cleanUtama = sanitizeCaptionAntiShadowban(caption);
+  const cleanFb = input.facebook ? sanitizeCaptionAntiShadowban(input.facebook) : '';
+  const cleanIg = input.instagram ? sanitizeCaptionAntiShadowban(input.instagram) : '';
+  const cleanHash = input.hashtags ? sanitizeCaptionAntiShadowban(input.hashtags) : '';
+
   db.prepare(`
     UPDATE posts SET
       mode_caption = ?,
@@ -1170,10 +1389,10 @@ function savePost(input) {
     WHERE media_id = ?
   `).run(
     mode,
-    caption,
-    input.facebook || '',
-    input.instagram || '',
-    input.hashtags || '',
+    cleanUtama,
+    cleanFb,
+    cleanIg,
+    cleanHash,
     (input.manual_locked === 'TRUE' || mode === 'MANUAL' || input.locked === 'TRUE') ? 'TRUE' : 'FALSE',
     isoNow(),
     mediaId
@@ -1248,6 +1467,10 @@ function saveScheduleWeb(input) {
   const sfxEnabled = (input.sfxEnabled === false || input.sfx_enabled === 'FALSE' || input.sfxEnabled === 'false') ? 'FALSE' : 'TRUE';
   const sfxCategory = input.sfxCategory || input.sfx_category || 'AUTO';
   const sfxVolume = parseFloat(input.sfxVolume || input.sfx_volume || 0.60);
+  const outroEnabled = (input.outroEnabled === false || input.outro_enabled === 'FALSE' || input.outroEnabled === 'false') ? 'FALSE' : 'TRUE';
+  const outroText = (input.outroText !== undefined && input.outroText !== null && String(input.outroText).trim())
+    ? String(input.outroText).trim()
+    : (input.outro_text || getDefaultOutroText(media.niche_id));
 
   db.prepare(`
     INSERT INTO schedules (jadwal_id, konten_id, niche_id, tanggal_jam_wib, akun_ids_csv, status, created_at)
@@ -1260,15 +1483,15 @@ function saveScheduleWeb(input) {
   for (const acc of validAccounts) {
     const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
     db.prepare(`
-      INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      jobId, jadwalId, post.konten_id, mediaId, media.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume, sfxEnabled, sfxCategory, sfxVolume
+      jobId, jadwalId, post.konten_id, mediaId, media.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume, sfxEnabled, sfxCategory, sfxVolume, outroEnabled, outroText
     );
   }
 
   db.prepare("UPDATE media SET status = 'TERJADWAL', cover_offset_ms = ? WHERE media_id = ?").run(coverOffsetMs, mediaId);
-  db.prepare("UPDATE posts SET status = 'SCHEDULED', cover_offset_ms = ?, bgm_enabled = ?, bgm_category = ?, bgm_volume = ?, sfx_enabled = ?, sfx_category = ?, sfx_volume = ? WHERE konten_id = ?").run(coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume, sfxEnabled, sfxCategory, sfxVolume, post.konten_id);
+  db.prepare("UPDATE posts SET status = 'SCHEDULED', cover_offset_ms = ?, bgm_enabled = ?, bgm_category = ?, bgm_volume = ?, sfx_enabled = ?, sfx_category = ?, sfx_volume = ?, outro_enabled = ?, outro_text = ? WHERE konten_id = ?").run(coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume, sfxEnabled, sfxCategory, sfxVolume, outroEnabled, outroText, post.konten_id);
 
   if (alreadyPublishedAccounts.length > 0) {
     console.log(`[SCHEDULE FILTER] Video "${media.nama_file}": Melewatkan ${alreadyPublishedAccounts.length} akun yang sudah terbit (${alreadyPublishedAccounts.map(a => a.platform).join(',')}), menjadwalkan ke ${validAccounts.length} akun yang tersisa (Cover: ${coverOffsetMs}ms).`);
@@ -1326,11 +1549,13 @@ async function publishJob(jobId) {
   let tempMixedFile = null;
 
   try {
-    // === AUTO BGM & SFX HOOK DUCKING MIXER ===
+    // === AUTO BGM, SFX HOOK & OUTRO FOLLOWER CTA ENHANCER ===
     const isBgm = job.bgm_enabled === 'TRUE' || job.bgm_enabled === true || job.bgm_enabled === 'true';
     const isSfx = job.sfx_enabled === 'TRUE' || job.sfx_enabled === true || job.sfx_enabled === 'true';
+    const isOutro = job.outro_enabled === 'TRUE' || job.outro_enabled === true || job.outro_enabled === 'true' || job.outro_enabled === undefined;
+    const outroTextToUse = isOutro ? (job.outro_text || getDefaultOutroText(niche ? (niche.nama || niche.niche_id) : media.niche_id)) : null;
 
-    if (isBgm || isSfx) {
+    if (isBgm || isSfx || isOutro) {
       try {
         let selectedBgm = null;
         let selectedSfx = null;
@@ -1345,25 +1570,27 @@ async function publishJob(jobId) {
         const bgmPath = selectedBgm ? selectedBgm.path : null;
         const sfxPath = selectedSfx ? selectedSfx.path : null;
 
-        if (bgmPath || sfxPath) {
-          console.log(`[AUDIO MIXER] Memadukan audio ke ${media.nama_file}...`);
+        if (bgmPath || sfxPath || isOutro) {
+          console.log(`[MEDIA ENHANCER] Memproses video ${media.nama_file}...`);
           if (bgmPath) console.log(`  🎵 BGM: "${selectedBgm.name}" (${selectedBgm.category}, vol: ${job.bgm_volume || 0.15})`);
           if (sfxPath) console.log(`  ⚡ SFX Hook: "${selectedSfx.name}" (${selectedSfx.category}, vol: ${job.sfx_volume || 0.60})`);
+          if (isOutro) console.log(`  🔔 Outro Follower CTA: "${outroTextToUse}"`);
 
-          const mixed = await mixVideoWithAudio(media.file_path, bgmPath, job.bgm_volume || 0.15, sfxPath, job.sfx_volume || 0.60);
+          const mixed = await mixVideoWithAudio(media.file_path, bgmPath, job.bgm_volume || 0.15, sfxPath, job.sfx_volume || 0.60, outroTextToUse);
           if (mixed && fs.existsSync(mixed)) {
             activeFilePath = mixed;
             tempMixedFile = mixed;
-            console.log(`[AUDIO MIXER] Video + Audio sukses dipadukan: ${tempMixedFile}`);
+            console.log(`[MEDIA ENHANCER] Video sukses disempurnakan: ${tempMixedFile}`);
           }
         }
       } catch (mixErr) {
-        console.warn('[AUDIO MIXER WARNING] Gagal memadukan audio, melanjutkan dengan video asli:', mixErr.message);
+        console.warn('[MEDIA ENHANCER WARNING] Gagal memadukan audio/outro, melanjutkan dengan video asli:', mixErr.message);
       }
     }
 
-    const captionText = (job.platform === 'FACEBOOK' ? (post.caption_facebook || post.caption_utama) : (post.caption_instagram || post.caption_utama)) +
+    const rawCaption = (job.platform === 'FACEBOOK' ? (post.caption_facebook || post.caption_utama) : (post.caption_instagram || post.caption_utama)) +
       (post.hashtags ? '\n\n' + post.hashtags : '');
+    const captionText = sanitizeCaptionAntiShadowban(rawCaption);
 
     let publishResult = null;
 
@@ -2348,6 +2575,10 @@ app.post('/api/action', async (req, res) => {
         const defaultBgmCategory = p.default_bgm_category || p.defaultBgmCategory || 'AUTO';
         const defaultSfxEnabled = (p.default_sfx_enabled === 'FALSE' || p.defaultSfxEnabled === 'FALSE' || p.defaultSfxEnabled === false) ? 'FALSE' : 'TRUE';
         const defaultSfxCategory = p.default_sfx_category || p.defaultSfxCategory || 'AUTO';
+        const defaultOutroEnabled = (p.default_outro_enabled === 'FALSE' || p.defaultOutroEnabled === 'FALSE' || p.defaultOutroEnabled === false) ? 'FALSE' : 'TRUE';
+        const defaultOutroText = (p.default_outro_text !== undefined && p.default_outro_text !== null && String(p.default_outro_text).trim())
+          ? String(p.default_outro_text).trim()
+          : (p.defaultOutroText !== undefined && String(p.defaultOutroText).trim() ? String(p.defaultOutroText).trim() : getDefaultOutroText(p.name));
 
         db.prepare(`
           UPDATE niches SET
@@ -2362,9 +2593,11 @@ app.post('/api/action', async (req, res) => {
             default_bgm_enabled = ?,
             default_bgm_category = ?,
             default_sfx_enabled = ?,
-            default_sfx_category = ?
+            default_sfx_category = ?,
+            default_outro_enabled = ?,
+            default_outro_text = ?
           WHERE niche_id = ?
-        `).run(p.name, folderPath, p.captionTemplate || '', jamAwal, jamAkhir, intervalMenit, batasHarian, modeJadwal, defaultBgmEnabled, defaultBgmCategory, defaultSfxEnabled, defaultSfxCategory, nicheId);
+        `).run(p.name, folderPath, p.captionTemplate || '', jamAwal, jamAkhir, intervalMenit, batasHarian, modeJadwal, defaultBgmEnabled, defaultBgmCategory, defaultSfxEnabled, defaultSfxCategory, defaultOutroEnabled, defaultOutroText, nicheId);
 
         if (folderPath && fs.existsSync(folderPath)) {
           try { scanDrive(nicheId); } catch(e){}
@@ -2489,8 +2722,21 @@ app.post('/api/action', async (req, res) => {
           sfxEnabled: p.sfxEnabled !== undefined ? p.sfxEnabled : true,
           sfxCategory: p.sfxCategory || 'AUTO',
           sfxVolume: p.sfxVolume !== undefined ? p.sfxVolume : 0.60,
+          outroEnabled: p.outroEnabled !== undefined ? p.outroEnabled : true,
+          outroText: p.outroText || '',
           scheduledTime: new Date(p.when).toLocaleString('sv-SE').slice(0, 16)
         });
+        break;
+      }
+
+      case 'sanitizeAntiShadowban': {
+        const text = args[0] || '';
+        result = {
+          original: text,
+          sanitized: sanitizeCaptionAntiShadowban(text),
+          detected: detectSensitiveWords(text),
+          totalKamus: ANTI_SHADOWBAN_DICTIONARY.length
+        };
         break;
       }
 
