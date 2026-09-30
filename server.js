@@ -3554,6 +3554,34 @@ app.post('/api/action', async (req, res) => {
         break;
       }
 
+      // System Settings & Global Stop Action
+      case 'toggleGlobalStop': {
+        const current = getSetting('STOP_GLOBAL', 'FALSE') === 'TRUE';
+        const nextVal = current ? 'FALSE' : 'TRUE';
+        setSetting('STOP_GLOBAL', nextVal, 'Status penghentian global antrean');
+        console.log(`[GLOBAL STOP] Global Stop diubah -> ${nextVal}`);
+        result = getDashboardData();
+        break;
+      }
+
+      case 'getSystemSettings': {
+        const stats = fs.existsSync(DB_PATH) ? fs.statSync(DB_PATH) : null;
+        const backupDir = path.join(__dirname, 'backups');
+        const backupCount = fs.existsSync(backupDir) ? fs.readdirSync(backupDir).filter(f => f.endsWith('.sqlite')).length : 0;
+        const tempDir = path.join(__dirname, 'temp_mixed');
+        const tempFiles = fs.existsSync(tempDir) ? fs.readdirSync(tempDir) : [];
+        result = {
+          dbSize: stats ? (stats.size / (1024 * 1024)).toFixed(2) + ' MB' : '0 MB',
+          dbPath: DB_PATH,
+          backupCount,
+          tempCount: tempFiles.length,
+          globalStop: getSetting('STOP_GLOBAL', 'FALSE') === 'TRUE',
+          sheetUrl: getSetting('GOOGLE_SHEET_URL', '#'),
+          internetOnline: isInternetOnline
+        };
+        break;
+      }
+
       // Cover Frame Selector Actions
       case 'updateJobCoverOffset': {
         const payload = args[0] || {};

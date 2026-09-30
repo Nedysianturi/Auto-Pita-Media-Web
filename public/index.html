@@ -1025,43 +1025,38 @@
           </div>
           <span class="nav-badge" id="navBadgePerf">0</span>
         </button>
+
+        <!-- SISTEM Section Header -->
+        <div style="margin: 18px 12px 6px 14px; font-size: 0.68rem; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; display: flex; align-items: center; gap: 6px;">
+          <span>SISTEM</span>
+        </div>
+
+        <button class="nav-btn" onclick="switchNav('view-settings')">
+          <div class="nav-btn-inner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>Pengaturan</span>
+          </div>
+        </button>
       </nav>
     </div>
 
     <!-- Sidebar Bottom Actions -->
     <div class="sidebar-footer">
-      <button id="btnRunQueue" class="btn btn-success" style="width: 100%;" onclick="runQueueWeb()">
+      <button id="btnRunQueue" class="btn btn-success" style="width: 100%; font-weight: 700; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);" onclick="runQueueWeb()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="5 3 19 12 5 21 5 3"></polygon>
         </svg>
         Jalankan Antrean
       </button>
 
-      <button id="btnRefresh" class="btn btn-secondary" style="width: 100%;" onclick="loadData()">
+      <button id="btnRefresh" class="btn btn-secondary" style="width: 100%; font-weight: 600;" onclick="loadData()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
         </svg>
         Sinkronkan Data
-      </button>
-
-      <button id="btnSyncSheet" class="btn btn-secondary" style="width: 100%; border-color: rgba(34, 197, 94, 0.4);" onclick="syncGoogleSheetAction()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-          <polyline points="10 9 9 9 8 9"></polyline>
-        </svg>
-        Selaraskan Google Sheet
-      </button>
-
-      <button class="btn btn-secondary" style="width: 100%; border-color: rgba(99, 102, 241, 0.4);" onclick="openModalDatabaseBackup()" title="Buka Pengelola Cadangan Database">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-        </svg>
-        💾 Database & Cadangan
       </button>
     </div>
   </aside>
@@ -1504,6 +1499,212 @@
           </table>
         </div>
       </div>
+    <!-- ==================== VIEW: SETTINGS ==================== -->
+    <div id="view-settings" class="view-content">
+      
+      <!-- Top Banner Summary -->
+      <div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-radius: 16px; padding: 22px 28px; margin-bottom: 24px; color: #ffffff; box-shadow: 0 4px 20px rgba(49, 46, 129, 0.15); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.6rem;">⚙️</span>
+            <div>
+              <h2 style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin-bottom: 2px;">Pusat Pengaturan & Pemeliharaan Sistem</h2>
+              <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0;">Kelola kesehatan basis data SQLite, sinkronisasi Google Sheets, pembersihan penyimpanan, dan kontrol darurat server.</p>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="renderSettingsView()" style="background: rgba(255,255,255,0.15); color: #fff; border-color: rgba(255,255,255,0.25); font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+            <span>Segarkan Status</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 Core Settings Cards Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; margin-bottom: 24px;">
+
+        <!-- 1. Database & Cadangan Lokal -->
+        <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 16px;">
+              <div class="card-title" style="display: flex; align-items: center; gap: 10px; font-size: 1.05rem;">
+                <span style="font-size: 1.3rem;">📦</span>
+                <span>Basis Data & Cadangan Lokal (SQLite)</span>
+              </div>
+              <span class="badge badge-success" style="font-size: 0.72rem;">SQLite Aktif</span>
+            </div>
+
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+              Seluruh data video, jadwal tayang, token akun, dan performa Meta tersimpan secara mandiri dan cepat di file SQLite lokal komputer Anda.
+            </div>
+
+            <!-- Database Info Box -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 16px; font-size: 0.78rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-muted); font-weight: 600;">File Database:</span>
+                <span class="font-mono" style="font-weight: 700; color: #1e293b;" id="settingsDbPathDisplay">data.sqlite</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-muted); font-weight: 600;">Ukuran File:</span>
+                <span style="font-weight: 700; color: var(--primary);" id="settingsDbSizeDisplay">Memuat...</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-muted); font-weight: 600;">Total Cadangan Tersedia:</span>
+                <span style="font-weight: 700; color: #059669;" id="settingsDbBackupCountDisplay">Memuat...</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted); font-weight: 600;">Statistik Ringkas:</span>
+                <span style="font-weight: 600; color: #334155;" id="settingsDbStatsDisplay">Memuat...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--border-color);">
+            <button type="button" class="btn btn-sm btn-primary" onclick="createBackupFromSettings()" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700;">
+              💾 Buat Cadangan Sekarang
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="openModalDatabaseBackup()" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 600;">
+              🔄 Riwayat & Pulihkan (Restore)
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="openBackupFolderAction()" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 600;">
+              📂 Buka Folder Cadangan
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Integrasi Cloud & Google Sheets -->
+        <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 16px;">
+              <div class="card-title" style="display: flex; align-items: center; gap: 10px; font-size: 1.05rem;">
+                <span style="font-size: 1.3rem;">📄</span>
+                <span>Integrasi Cloud & Google Spreadsheet</span>
+              </div>
+              <span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.72rem;">Online Sync</span>
+            </div>
+
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+              Salin dan selaraskan data antrean, performa video, dan status akun secara dua arah ke Google Sheets untuk kemudahan audit dan laporan eksekutif dari perangkat manapun.
+            </div>
+
+            <!-- Sheets Info Box -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 16px; font-size: 0.78rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-muted); font-weight: 600;">Status Tautan:</span>
+                <span style="font-weight: 700; color: #059669;">🟢 Terhubung & Siap Sinkron</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-muted); font-weight: 600;">Mode Penyelarasan:</span>
+                <span style="font-weight: 600; color: #334155;">Dua Arah (Local SQLite ⇄ Google Sheets)</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-muted); font-weight: 600;">Akses Spreadsheet:</span>
+                <a href="#" id="settingsSheetExternalLink" target="_blank" rel="noopener noreferrer" style="font-weight: 700; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                  <span>Buka di Google Sheets</span> ↗
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--border-color);">
+            <button type="button" class="btn btn-sm btn-primary" onclick="syncGoogleSheetAction()" style="background: #059669; border-color: #059669; display: inline-flex; align-items: center; gap: 5px; font-weight: 700;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              <span>Selaraskan Google Sheet Sekarang</span>
+            </button>
+            <a href="#" id="settingsSheetBtnLink" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 600; text-decoration: none;">
+              Buka Lembar Kerja ↗
+            </a>
+          </div>
+        </div>
+
+        <!-- 3. Pembersih Penyimpanan (Storage Cleaner) -->
+        <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 16px;">
+              <div class="card-title" style="display: flex; align-items: center; gap: 10px; font-size: 1.05rem;">
+                <span style="font-size: 1.3rem;">🧹</span>
+                <span>Pembersih Penyimpanan (Storage Cleaner)</span>
+              </div>
+              <span class="badge badge-neutral" style="font-size: 0.72rem;">Disk Space Saver</span>
+            </div>
+
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+              Saat sistem menggabungkan BGM/SFX/Outro atau merender frame thumbnail, file sementara (*temp files*) tersimpan di folder kerja. Pembersihan ini melegakan kapasitas harddisk Anda tanpa menyentuh video master asli.
+            </div>
+
+            <!-- Storage Info Box -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 16px; font-size: 0.78rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-muted); font-weight: 600;">Folder File Sementara:</span>
+                <span class="font-mono" style="font-weight: 700; color: #1e293b;">temp_mixed/</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-muted); font-weight: 600;">Jumlah File Sementara:</span>
+                <span style="font-weight: 700; color: #d97706;" id="settingsTempCountDisplay">Memuat...</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted); font-weight: 600;">Keamanan Data:</span>
+                <span style="font-weight: 700; color: #059669;">🛡️ Video Master di Komputer 100% Aman</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--border-color);">
+            <button type="button" class="btn btn-sm btn-primary" onclick="cleanStorageFromSettings()" style="background: #d97706; border-color: #d97706; display: inline-flex; align-items: center; gap: 5px; font-weight: 700;">
+              🧹 Bersihkan File Sementara Sekarang
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. Kontrol Darurat & Otomasi Sistem -->
+        <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 16px;">
+              <div class="card-title" style="display: flex; align-items: center; gap: 10px; font-size: 1.05rem;">
+                <span style="font-size: 1.3rem;">🛡️</span>
+                <span>Status Mesin & Kontrol Darurat (Emergency Pause)</span>
+              </div>
+              <span id="settingsGlobalStatusBadge" class="badge badge-success" style="font-size: 0.72rem;">Sistem Normal</span>
+            </div>
+
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+              Kontrol terpusat untuk menjeda seluruh jadwal posting otomatis ke Facebook dan Instagram jika terjadi kendala mendadak, serta status pengawas jaringan internet.
+            </div>
+
+            <!-- System Info Box -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 16px; font-size: 0.78rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-muted); font-weight: 600;">Internet Watchdog:</span>
+                <span style="font-weight: 700; color: #059669;" id="settingsInternetStatus">🟢 Aktif & Siaga</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: var(--text-muted); font-weight: 600;">Folder Watcher:</span>
+                <span style="font-weight: 700; color: #334155;">👁️ 2 Folder Master Video Dipantau</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted); font-weight: 600;">Status Antrean Global:</span>
+                <span style="font-weight: 700;" id="settingsQueueStatusText">Aktif Berjalan</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--border-color);">
+            <button type="button" id="btnSettingsToggleGlobal" class="btn btn-sm btn-secondary" onclick="toggleGlobalStopFromSettings()" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700;">
+              ⏸️ Jeda Seluruh Antrean Otomatis
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="switchNav('view-niche')" style="font-weight: 600;">
+              ⚙️ Kelola Niche
+            </button>
+          </div>
+        </div>
+
+      </div>
+
     </div>
 
   </main>
@@ -2381,12 +2582,17 @@
         'view-account': ['Akun Sosial Media', 'Kelola akun Facebook Page dan Instagram Professional (Meta API).'],
         'view-queue': ['Antrean & Jadwal', 'Status pengiriman video terjadwal, progress upload, dan sinkronisasi Meta Creator Studio.'],
         'view-media': ['Perpustakaan Video (List Detail)', 'Daftar lengkap video Drive dengan caption detail, mode AI/Manual, dan aksi cepat.'],
-        'view-performance': ['Performa Konten Video', 'Analisis penonton (views 24 jam & 3 hari), likes, komentar, dan interaksi audiens.']
+        'view-performance': ['Performa Konten Video', 'Analisis penonton (views 24 jam & 3 hari), likes, komentar, dan interaksi audiens.'],
+        'view-settings': ['Pengaturan & Pemeliharaan Sistem', 'Kelola cadangan database SQLite, sinkronisasi Google Sheets, pembersihan penyimpanan, dan status server.']
       };
 
       if (titles[viewId]) {
         document.getElementById('pageTitleText').textContent = titles[viewId][0];
         document.getElementById('pageSubtitleText').textContent = titles[viewId][1];
+      }
+
+      if (viewId === 'view-settings') {
+        renderSettingsView();
       }
     }
 
@@ -2664,6 +2870,120 @@
       renderMedia();
       renderMetaSchedules();
       renderPerformance();
+      renderSettingsView();
+    }
+
+    // === SETTINGS & SYSTEM MAINTENANCE ===
+    async function renderSettingsView() {
+      // 1. Quick stats from appData
+      const nichesCount = (appData.niches || []).length;
+      const accountsCount = (appData.accounts || []).length;
+      const mediaCount = (appData.media || []).length;
+      const jobsCount = (appData.jobs || []).length;
+
+      const statsEl = document.getElementById('settingsDbStatsDisplay');
+      if (statsEl) {
+        statsEl.textContent = `${nichesCount} Niche • ${accountsCount} Akun • ${mediaCount} Video • ${jobsCount} Antrean`;
+      }
+
+      // 2. Fetch system settings from backend
+      try {
+        const sys = await callBackend('getSystemSettings');
+        if (sys) {
+          const pathEl = document.getElementById('settingsDbPathDisplay');
+          const sizeEl = document.getElementById('settingsDbSizeDisplay');
+          const backupEl = document.getElementById('settingsDbBackupCountDisplay');
+          const tempEl = document.getElementById('settingsTempCountDisplay');
+          const sheetLink = document.getElementById('settingsSheetExternalLink');
+          const sheetBtn = document.getElementById('settingsSheetBtnLink');
+          const globalBadge = document.getElementById('settingsGlobalStatusBadge');
+          const queueText = document.getElementById('settingsQueueStatusText');
+          const btnToggle = document.getElementById('btnSettingsToggleGlobal');
+          const netStatus = document.getElementById('settingsInternetStatus');
+
+          if (pathEl && sys.dbPath) pathEl.textContent = sys.dbPath;
+          if (sizeEl) sizeEl.textContent = sys.dbSize || '0 MB';
+          if (backupEl) backupEl.textContent = `${sys.backupCount || 0} Arsip Cadangan (.sqlite)`;
+          if (tempEl) tempEl.textContent = `${sys.tempCount || 0} File Cache Sementara`;
+
+          const sheetUrl = sys.sheetUrl || appData.sheetUrl || '#';
+          if (sheetLink) sheetLink.href = sheetUrl;
+          if (sheetBtn) sheetBtn.href = sheetUrl;
+
+          if (sys.globalStop) {
+            if (globalBadge) {
+              globalBadge.className = 'badge badge-danger';
+              globalBadge.textContent = 'Antrean Dijeda (Paused)';
+            }
+            if (queueText) {
+              queueText.style.color = '#dc2626';
+              queueText.textContent = '⏸️ Dihentikan Sementara (Emergency Stop)';
+            }
+            if (btnToggle) {
+              btnToggle.className = 'btn btn-sm btn-primary';
+              btnToggle.textContent = '▶️ Lanjutkan Seluruh Antrean Otomatis';
+            }
+          } else {
+            if (globalBadge) {
+              globalBadge.className = 'badge badge-success';
+              globalBadge.textContent = 'Sistem Normal';
+            }
+            if (queueText) {
+              queueText.style.color = '#059669';
+              queueText.textContent = '🟢 Aktif Berjalan Normal';
+            }
+            if (btnToggle) {
+              btnToggle.className = 'btn btn-sm btn-secondary';
+              btnToggle.textContent = '⏸️ Jeda Seluruh Antrean Otomatis';
+            }
+          }
+
+          if (netStatus) {
+            netStatus.textContent = sys.internetOnline ? '🟢 Aktif & Siaga (Online)' : '🔴 Terputus (Offline)';
+            netStatus.style.color = sys.internetOnline ? '#059669' : '#dc2626';
+          }
+        }
+      } catch (e) {
+        console.warn('[SETTINGS LOAD NOTICE]:', e.message);
+      }
+    }
+
+    async function createBackupFromSettings() {
+      showToast('Membuat cadangan basis data SQLite...', 'info');
+      try {
+        const res = await callBackend('createBackup');
+        if (res && res.error) throw new Error(res.error);
+        showToast('🎉 Cadangan database berhasil dibuat!', 'success');
+        renderSettingsView();
+      } catch (err) {
+        showToast('Gagal membuat cadangan: ' + err.message, 'error');
+      }
+    }
+
+    async function cleanStorageFromSettings() {
+      showToast('Membersihkan file sementara temp_mixed...', 'info');
+      try {
+        const res = await callBackend('cleanStorageTemp');
+        const count = res.deletedCount || 0;
+        const mb = res.freedMb || 0;
+        showToast(`🧹 Berhasil membersihkan ${count} file sementara (${mb} MB ruang dilegakan)!`, 'success');
+        renderSettingsView();
+      } catch (err) {
+        showToast('Gagal membersihkan penyimpanan: ' + err.message, 'error');
+      }
+    }
+
+    async function toggleGlobalStopFromSettings() {
+      showToast('Mengubah status antrean global...', 'info');
+      try {
+        const res = await callBackend('toggleGlobalStop');
+        appData = res;
+        renderAll();
+        renderSettingsView();
+        showToast('Status antrean global berhasil diperbarui!', 'success');
+      } catch (err) {
+        showToast('Gagal mengubah status antrean: ' + err.message, 'error');
+      }
     }
 
     // 1. NICHES
