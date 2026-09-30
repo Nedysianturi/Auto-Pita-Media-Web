@@ -3466,6 +3466,8 @@
               </div>
             </div>`;
           }
+        }
+
         let countdownBadge = '';
         if (j.scheduled_at && j.status === 'READY') {
           const diffMs = new Date(j.scheduled_at).getTime() - Date.now();
