@@ -1042,23 +1042,6 @@
         </button>
       </nav>
     </div>
-
-    <!-- Sidebar Bottom Actions -->
-    <div class="sidebar-footer">
-      <button id="btnRunQueue" class="btn btn-success" style="width: 100%; font-weight: 700; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);" onclick="runQueueWeb()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="5 3 19 12 5 21 5 3"></polygon>
-        </svg>
-        Jalankan Antrean
-      </button>
-
-      <button id="btnRefresh" class="btn btn-secondary" style="width: 100%; font-weight: 600;" onclick="loadData()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
-        </svg>
-        Sinkronkan Data
-      </button>
-    </div>
   </aside>
 
   <!-- MAIN VIEW CONTENT -->
@@ -1518,6 +1501,36 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
             <span>Segarkan Status</span>
           </button>
+        </div>
+      </div>
+
+      <!-- Operational Actions Card: Jalankan Antrean & Sinkronkan Data -->
+      <div class="card" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 16px; padding: 22px 26px; margin-bottom: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.25rem;">⚡</span>
+              <span>Aksi Cepat Operasional Studio</span>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 3px;">
+              Kirim antrean video ke Facebook & Instagram sekarang juga atau perbarui sinkronisasi dashboard dari basis data lokal.
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <button id="btnRunQueue" class="btn btn-success" style="padding: 10px 22px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 3px 10px rgba(5, 150, 105, 0.3); display: inline-flex; align-items: center; gap: 8px;" onclick="runQueueWeb()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 17px; height: 17px;">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span>Jalankan Antrean Sekarang</span>
+            </button>
+
+            <button id="btnRefresh" class="btn btn-secondary" style="padding: 10px 18px; font-weight: 700; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px;" onclick="loadData()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 17px; height: 17px;">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+              </svg>
+              <span>Sinkronkan Data</span>
+            </button>
+          </div>
         </div>
       </div>
 
