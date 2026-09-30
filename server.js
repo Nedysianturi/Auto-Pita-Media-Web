@@ -3,7 +3,48 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const dns = require('dns').promises;
 const { DatabaseSync } = require('node:sqlite');
+
+// === RESILIENT CRASH GUARDS ===
+// Mencegah server mati jika terjadi error sistem atau jaringan tak terduga
+process.on('uncaughtException', (err) => {
+  console.error('🛡️ [CRASH GUARD] Uncaught Exception terdeteksi, server tetap aktif & tidak mati:', err.message);
+});
+process.on('unhandledRejection', (reason) => {
+  console.warn('🛡️ [CRASH GUARD] Unhandled Rejection diabaikan agar server tetap berjalan:', (reason && reason.message) || reason);
+});
+
+// === INTERNET CONNECTIVITY WATCHDOG ===
+let isInternetOnline = true;
+let offlineNotified = false;
+
+async function checkInternetConnection() {
+  try {
+    await Promise.race([
+      dns.lookup('google.com'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('DNS Timeout')), 4000))
+    ]);
+    if (!isInternetOnline) {
+      isInternetOnline = true;
+      offlineNotified = false;
+      console.log('🌐 [INTERNET WATCHDOG] Koneksi internet PULIH KEMBALI! Melanjutkan antrean otomatis...');
+    }
+    return true;
+  } catch (err) {
+    if (isInternetOnline || !offlineNotified) {
+      console.warn('⚠️ [INTERNET WATCHDOG] Koneksi internet terputus/router sedang reboot. Server tetap siaga dan akan terus mencoba menghubungkan kembali setiap 10 detik...');
+      offlineNotified = true;
+    }
+    isInternetOnline = false;
+    return false;
+  }
+}
+
+// Cek koneksi internet berkala setiap 10 detik
+setInterval(async () => {
+  await checkInternetConnection();
+}, 10000);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1151,6 +1192,11 @@ function getDashboardData() {
       lastStatus: getSetting('META_LAST_STATUS', 'Belum disinkronkan'),
       lastError: getSetting('META_LAST_ERROR', '')
     },
+    internet: {
+      online: isInternetOnline,
+      status: isInternetOnline ? 'ONLINE' : 'OFFLINE',
+      message: isInternetOnline ? 'Terhubung normal' : 'Menunggu koneksi internet tersambung kembali...'
+    },
     summary: {
       videos: media.length,
       queued: jobs.filter(j => j.status === 'READY').length,
@@ -1931,14 +1977,38 @@ async function publishJob(jobId) {
 
   } catch (err) {
     console.error(`[PUBLISH ERROR] Job ${jobId} failed:`, err.message);
-    db.prepare(`
-      UPDATE jobs SET
-        status = 'FAILED',
-        last_error = ?,
-        attempts = attempts + 1,
-        updated_at = ?
-      WHERE job_id = ?
-    `).run(err.message, isoNow(), jobId);
+    const msg = (err.message || '').toLowerCase();
+    const isNetError = msg.includes('fetch failed') ||
+                       msg.includes('enotfound') ||
+                       msg.includes('econnreset') ||
+                       msg.includes('etimedout') ||
+                       msg.includes('und_err') ||
+                       msg.includes('network') ||
+                       msg.includes('socket hang up') ||
+                       msg.includes('dns timeout') ||
+                       msg.includes('connection');
+
+    if (isNetError) {
+      console.warn(`⚠️ [PUBLISH NETWORK PAUSE] Internet terputus saat upload job ${jobId}. Job dikembalikan ke status 'READY' dan akan otomatis dicoba lagi begitu internet kembali online.`);
+      isInternetOnline = false;
+      db.prepare(`
+        UPDATE jobs SET
+          status = 'READY',
+          last_error = 'Koneksi internet terputus saat upload. Otomatis menunggu internet pulih...',
+          attempts = attempts + 1,
+          updated_at = ?
+        WHERE job_id = ?
+      `).run(isoNow(), jobId);
+    } else {
+      db.prepare(`
+        UPDATE jobs SET
+          status = 'FAILED',
+          last_error = ?,
+          attempts = attempts + 1,
+          updated_at = ?
+        WHERE job_id = ?
+      `).run(err.message, isoNow(), jobId);
+    }
     throw err;
   } finally {
     if (tempMixedFile && fs.existsSync(tempMixedFile)) {
@@ -1952,6 +2022,10 @@ async function publishJob(jobId) {
 
 // 7. Sync Insights from Meta Graph API (High-Speed Parallel Execution)
 async function sinkronkanPerformaWeb() {
+  if (!isInternetOnline) {
+    console.log('[INSIGHTS] Internet sedang offline, menunda sinkronisasi performa...');
+    return getDashboardData();
+  }
   console.log('[INSIGHTS] Syncing Meta Insights in parallel for all published jobs...');
 
   const accounts = db.prepare("SELECT * FROM accounts WHERE token IS NOT NULL AND token != ''").all();
@@ -2108,6 +2182,10 @@ async function sinkronkanPerformaWeb() {
 
 // 8. Sync Meta Creator Studio Schedules
 async function syncMetaCalendar() {
+  if (!isInternetOnline) {
+    console.log('[META CALENDAR] Internet sedang offline, menunda sinkronisasi kalender...');
+    return getDashboardData();
+  }
   console.log('[META CALENDAR] Syncing Meta Creator Studio scheduled posts...');
   const accounts = db.prepare("SELECT * FROM accounts WHERE platform = 'FACEBOOK' AND aktif = 'TRUE' AND token IS NOT NULL").all();
 
@@ -2201,6 +2279,12 @@ setInterval(async () => {
 
     // Otomatis jadwalkan video yang sudah memiliki caption
     autoScheduleUnscheduledMedia();
+
+    // Verifikasi koneksi internet sebelum mencoba publikasi video
+    if (!isInternetOnline) {
+      await checkInternetConnection();
+      if (!isInternetOnline) return; // Menunggu internet pulih
+    }
 
     const nowIso = isoNow();
     const readyJobs = db.prepare(`
