@@ -323,8 +323,12 @@ function setSetting(key, value, keterangan = '') {
 
 // Auto-Sync Local Folders (Runs automatically on every data request and in background)
 function autoSyncLocalFolders() {
+  let totalAdded = 0;
+  let totalRemoved = 0;
+  let nichesCount = 0;
   try {
     const niches = db.prepare('SELECT niche_id, nama, folder_path, mode_caption FROM niches').all();
+    nichesCount = niches.length;
     const videoExts = new Set(['.mp4', '.mov', '.mkv', '.avi', '.webm', '.m4v']);
 
     for (const niche of niches) {
@@ -383,6 +387,7 @@ function autoSyncLocalFolders() {
           kontenId, mediaId, niche.niche_id, niche.mode_caption || 'MANUAL',
           captionToUse, '', '', '', hashtagsToUse, '', lockedToUse, 'READY', isoNow()
         );
+        totalAdded++;
       }
 
       // Hapus media di DB yang sudah tidak ada di disk
@@ -392,12 +397,22 @@ function autoSyncLocalFolders() {
           db.prepare('DELETE FROM media WHERE media_id = ?').run(m.media_id);
           db.prepare("DELETE FROM posts WHERE media_id = ? AND manual_locked != 'TRUE'").run(m.media_id);
           db.prepare("DELETE FROM jobs WHERE media_id = ? AND status NOT IN ('PUBLISHED', 'UPLOADING')").run(m.media_id);
+          totalRemoved++;
         }
       }
     }
   } catch (err) {
     console.error('[AUTO SYNC ERROR]', err.message);
   }
+
+  const totalActive = db.prepare('SELECT count(*) as count FROM media').get().count;
+  return {
+    success: true,
+    totalAdded,
+    totalRemoved,
+    totalActive,
+    nichesCount
+  };
 }
 
 // === Auto-Scheduling Engine ===
@@ -1778,7 +1793,15 @@ function scanDrive(nicheId) {
     }
 
     console.log(`[SCAN] Niche "${niche.nama}": Added ${addedCount}, Removed ${removedCount} missing videos.`);
-    return getDashboardData();
+    const dash = getDashboardData();
+    dash.scanReport = {
+      nicheName: niche.nama,
+      addedCount,
+      removedCount,
+      totalActiveInNiche: currentVideoFiles.size,
+      totalActive: db.prepare('SELECT count(*) as count FROM media').get().count
+    };
+    return dash;
   }
 
   // If path doesn't exist locally, check if it's a Drive URL or ID
@@ -3550,10 +3573,13 @@ app.post('/api/action', async (req, res) => {
         break;
       }
 
-      case 'scanAllVideos':
-        autoSyncLocalFolders();
-        result = getDashboardData();
+      case 'scanAllVideos': {
+        const syncReport = autoSyncLocalFolders();
+        const dash = getDashboardData();
+        dash.syncReport = syncReport;
+        result = dash;
         break;
+      }
 
       // Storage Cleaner Action
       case 'cleanStorageTemp': {
@@ -3611,23 +3637,51 @@ app.post('/api/action', async (req, res) => {
       case 'testGeminiApiKey': {
         const payload = args[0] || {};
         const testKey = String(payload.apiKey || '').trim() || getSetting('GEMINI_API_KEY', '') || process.env.GEMINI_API_KEY || '';
-        const testModel = String(payload.model || '').trim() || getSetting('GEMINI_MODEL', 'gemini-1.5-flash');
+        let testModel = String(payload.model || '').trim() || getSetting('GEMINI_MODEL', 'gemini-2.5-flash');
         if (!testKey) {
           throw new Error('API Key belum diisi. Masukkan Google Gemini API Key Anda.');
         }
-        const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/${testModel}:generateContent?key=${testKey}`;
-        const testResp = await fetch(testUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: 'Halo Gemini, konfirmasi 1 kata: Aktif' }] }]
-          })
-        });
-        const testData = await testResp.json();
-        if (testData.error) {
-          throw new Error(testData.error.message || JSON.stringify(testData.error));
+
+        // Try selected model, with auto-fallback across known models
+        const modelsToTry = [testModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].filter((m, i, arr) => m && arr.indexOf(m) === i);
+        let lastErr = null;
+        let successModel = null;
+
+        for (const m of modelsToTry) {
+          try {
+            const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent?key=${testKey}`;
+            const testResp = await fetch(testUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ role: 'user', parts: [{ text: 'Halo Gemini, konfirmasi 1 kata bahwa API ini aktif: Aktif' }] }]
+              })
+            });
+            const testData = await testResp.json();
+            if (testData.error) {
+              const msg = testData.error.message || JSON.stringify(testData.error);
+              lastErr = msg;
+              if (msg.includes('API key not valid')) {
+                throw new Error('Kunci API tidak valid. Pastikan Anda menyalin API Key yang benar dari Google AI Studio.');
+              }
+              continue; // try next model
+            }
+            if (testData.candidates && testData.candidates.length > 0) {
+              successModel = m;
+              break;
+            }
+          } catch (e) {
+            if (e.message && e.message.includes('Kunci API tidak valid')) throw e;
+            lastErr = e.message;
+          }
         }
-        result = { success: true, message: `✅ Sukses! Model ${testModel} aktif dan siap digunakan untuk generate caption AI.` };
+
+        if (!successModel) {
+          throw new Error(lastErr || 'Koneksi ke Gemini AI gagal. Periksa API Key dan koneksi internet Anda.');
+        }
+
+        setSetting('GEMINI_MODEL', successModel, 'Model Gemini yang digunakan');
+        result = { success: true, model: successModel, message: `✅ Sukses! Model ${successModel} aktif dan siap digunakan untuk generate caption AI.` };
         break;
       }
 

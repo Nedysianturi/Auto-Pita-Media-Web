@@ -706,6 +706,20 @@
       to { transform: translateX(0); opacity: 1; }
     }
 
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(0, 0, 0, 0.15);
+      border-radius: 50%;
+      border-top-color: currentColor;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     .font-mono {
       font-family: 'JetBrains Mono', monospace;
     }
@@ -1578,6 +1592,9 @@
                 </select>
               </div>
             </div>
+
+            <!-- Live Status Alert Box inside Card -->
+            <div id="settingsAiStatusAlert" style="display: none; margin-bottom: 14px; padding: 12px 14px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; line-height: 1.45; animation: slideIn 0.2s ease;"></div>
           </div>
 
           <!-- Actions -->
@@ -2609,17 +2626,19 @@
       sheetUrl: '#'
     };
 
-    function showToast(msg, type = 'info') {
+    function showToast(msg, type = 'info', duration = 4500) {
       const container = document.getElementById('toast-container');
+      if (!container) return;
       const toast = document.createElement('div');
       toast.className = `toast toast-${type}`;
-      toast.innerHTML = `<span>${escapeHtml(msg)}</span>`;
+      const content = msg.includes('<') ? msg : escapeHtml(msg).replace(/\n/g, '<br>');
+      toast.innerHTML = `<div style="line-height: 1.45;">${content}</div>`;
       container.appendChild(toast);
       setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(100%)';
         setTimeout(() => toast.remove(), 250);
-      }, 4000);
+      }, duration);
     }
 
     function escapeHtml(text) {
@@ -3053,25 +3072,47 @@
       const input = document.getElementById('settingsGeminiApiKey');
       const modelSelect = document.getElementById('settingsGeminiModel');
       const btn = document.getElementById('btnSaveGeminiKey');
+      const alertBox = document.getElementById('settingsAiStatusAlert');
       const apiKey = (input ? input.value : '').trim();
       const model = (modelSelect ? modelSelect.value : 'gemini-1.5-flash').trim();
 
       if (!apiKey) {
+        if (alertBox) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#fef2f2';
+          alertBox.style.border = '1px solid #fecaca';
+          alertBox.style.color = '#991b1b';
+          alertBox.innerHTML = '⚠️ <b>Kunci API Masih Kosong:</b> Silakan tempelkan Google Gemini API Key Anda pada kolom di atas sebelum menyimpan.';
+        }
         return showToast('Masukkan Google Gemini API Key Anda!', 'error');
       }
 
       const origText = btn ? btn.innerHTML : 'Simpan';
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = 'Menyimpan...';
+        btn.innerHTML = '<span class="spinner" style="margin-right: 5px;"></span> Menyimpan...';
       }
 
       try {
         const res = await callBackend('saveGeminiSettings', { apiKey, model });
         if (res && res.error) throw new Error(res.error);
+        if (alertBox) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#ecfdf5';
+          alertBox.style.border = '1px solid #a7f3d0';
+          alertBox.style.color = '#065f46';
+          alertBox.innerHTML = `<div><div style="font-weight: 700; font-size: 0.88rem; margin-bottom: 2px;">✅ PENGATURAN AI BERHASIL DISIMPAN!</div><div style="font-size: 0.78rem; font-weight: 500;">Kunci API dan Model <b>${escapeHtml(model)}</b> telah tersimpan aman di database lokal.</div></div>`;
+        }
         showToast('🎉 Kunci API Gemini & Model berhasil disimpan!', 'success');
         renderSettingsView();
       } catch(err) {
+        if (alertBox) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#fef2f2';
+          alertBox.style.border = '1px solid #fecaca';
+          alertBox.style.color = '#991b1b';
+          alertBox.innerHTML = `<div><div style="font-weight: 700; font-size: 0.88rem; margin-bottom: 2px;">❌ GAGAL MENYIMPAN PENGATURAN</div><div style="font-size: 0.78rem; font-weight: 500;">${escapeHtml(err.message)}</div></div>`;
+        }
         showToast('Gagal menyimpan API Key: ' + err.message, 'error');
       } finally {
         if (btn) {
@@ -3085,31 +3126,88 @@
       const input = document.getElementById('settingsGeminiApiKey');
       const modelSelect = document.getElementById('settingsGeminiModel');
       const btn = document.getElementById('btnTestGeminiKey');
+      const alertBox = document.getElementById('settingsAiStatusAlert');
       const apiKey = (input ? input.value : '').trim();
       const model = (modelSelect ? modelSelect.value : 'gemini-1.5-flash').trim();
 
       if (!apiKey) {
+        if (alertBox) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#fef2f2';
+          alertBox.style.border = '1px solid #fecaca';
+          alertBox.style.color = '#991b1b';
+          alertBox.innerHTML = '⚠️ <b>Kunci API Belum Diisi:</b> Tempelkan Google Gemini API Key Anda terlebih dahulu pada kolom di atas untuk melakukan pengujian koneksi.';
+        }
         return showToast('Isi API Key terlebih dahulu sebelum tes!', 'error');
       }
 
       const origText = btn ? btn.innerHTML : 'Tes';
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = 'Menguji...';
+        btn.innerHTML = '<span class="spinner" style="margin-right: 5px;"></span> Menguji...';
       }
 
+      if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#eff6ff';
+        alertBox.style.border = '1px solid #bfdbfe';
+        alertBox.style.color = '#1d4ed8';
+        alertBox.innerHTML = `<div style="display: flex; align-items: center; gap: 8px;"><span class="spinner" style="border-top-color: #1d4ed8;"></span><span><b>Sedang Menguji Koneksi...</b> Menghubungi server Google Gemini AI (Model: <i>${escapeHtml(model)}</i>)...</span></div>`;
+      }
+
+      showToast('Menguji koneksi ke Google Gemini AI...', 'info', 3000);
+
       try {
-        showToast('Menguji koneksi ke Google Gemini AI...', 'info');
         const res = await callBackend('testGeminiApiKey', { apiKey, model });
         if (res && res.error) throw new Error(res.error);
-        showToast(res.message || '✅ Koneksi Gemini AI Sukses! API Key valid.', 'success');
+        
+        if (alertBox) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#ecfdf5';
+          alertBox.style.border = '1.5px solid #34d399';
+          alertBox.style.color = '#065f46';
+          alertBox.innerHTML = `
+            <div>
+              <div style="font-weight: 700; font-size: 0.92rem; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                <span>✅ KONEKSI AI BERHASIL & LANCAR!</span>
+              </div>
+              <div style="font-size: 0.8rem; font-weight: 500; color: #047857; margin-bottom: 2px;">
+                Server Google Gemini merespons dengan cepat. Kunci API valid dan model <b>${escapeHtml(model)}</b> aktif dan siap menghasilkan caption AI.
+              </div>
+            </div>`;
+        }
+
+        showToast(`✅ Koneksi Gemini AI (${model}) Berhasil & Lancar!`, 'success', 5000);
         const badge = document.getElementById('settingsAiBadge');
         if (badge) {
           badge.className = 'badge badge-success';
           badge.textContent = '🟢 Aktif & Terverifikasi';
         }
       } catch(err) {
-        showToast('❌ Gagal terhubung ke Gemini: ' + err.message, 'error');
+        if (alertBox) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#fef2f2';
+          alertBox.style.border = '1.5px solid #f87171';
+          alertBox.style.color = '#991b1b';
+          alertBox.innerHTML = `
+            <div>
+              <div style="font-weight: 700; font-size: 0.92rem; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+                <span>❌ KONEKSI AI GAGAL / TIDAK DAPAT DIAKSES</span>
+              </div>
+              <div style="font-size: 0.8rem; font-weight: 500; color: #b91c1c; margin-bottom: 4px;">
+                ${escapeHtml(err.message)}
+              </div>
+              <div style="font-size: 0.72rem; color: #7f1d1d; font-weight: 600;">
+                💡 Solusi: Periksa kembali apakah kunci API telah disalin dengan lengkap dari Google AI Studio dan kuota API Anda aktif.
+              </div>
+            </div>`;
+        }
+        showToast('❌ Gagal terhubung ke Gemini: ' + err.message, 'error', 6000);
+        const badge = document.getElementById('settingsAiBadge');
+        if (badge) {
+          badge.className = 'badge badge-danger';
+          badge.textContent = '🔴 Gagal Terhubung';
+        }
       } finally {
         if (btn) {
           btn.disabled = false;
@@ -3869,14 +3967,28 @@
     }
 
     function scanDriveForNiche(nicheId) {
-      showToast('Memindai video di folder komputer lokal...', 'info');
+      showToast('🔍 Memindai folder video niche di komputer lokal...', 'info', 3000);
       callBackend('scanDrive', nicheId)
         .then(res => {
           appData = res;
           renderAll();
-          showToast('Pemindaian video lokal selesai!', 'success');
+          const r = res.scanReport || {};
+          const added = r.addedCount || 0;
+          const removed = r.removedCount || 0;
+          const totalInNiche = r.totalActiveInNiche !== undefined ? r.totalActiveInNiche : (appData.media || []).filter(m => m.niche_id === nicheId).length;
+          const nicheName = r.nicheName || 'Niche';
+          
+          let detail = `📁 <b>Pindai Folder Selesai & Lancar!</b><br>`;
+          detail += `• Niche: <b>${escapeHtml(nicheName)}</b><br>`;
+          if (added > 0) detail += `• Video Baru Masuk: <b>+${added} file</b><br>`;
+          if (removed > 0) detail += `• Video Dibersihkan: <b>-${removed} file</b><br>`;
+          detail += `• Total Video Siap di Niche: <b>${totalInNiche} video</b>`;
+
+          showToast(detail, 'success', 5500);
         })
-        .catch(err => showToast('Gagal memindai folder: ' + err.message, 'error'));
+        .catch(err => {
+          showToast(`❌ <b>Gagal Memindai Folder:</b><br>${escapeHtml(err.message)}`, 'error', 6000);
+        });
     }
 
     // 3. ACCOUNTS
@@ -5704,16 +5816,32 @@
         btn.innerHTML = '<span class="spinner" style="width: 12px; height: 12px; margin-right: 4px;"></span> Menyinkronkan...';
         btn.disabled = true;
       }
-      showToast('Memindai folder komputer secara langsung...', 'info');
+      showToast('🔍 Sedang memindai seluruh folder video komputer Anda...', 'info', 3500);
 
       callBackend('scanAllVideos')
         .then(res => {
           appData = res;
           renderAll();
-          showToast('✅ Perpustakaan video berhasil disinkronkan 100%!', 'success');
+          const r = res.syncReport || {};
+          const added = r.totalAdded || 0;
+          const removed = r.totalRemoved || 0;
+          const total = r.totalActive || (appData.media || []).length;
+          
+          let detail = `🎉 <b>Sinkronisasi Folder Selesai & Lancar!</b><br>`;
+          if (added > 0) {
+            detail += `• Video Baru Ditemukan: <b>+${added} file</b><br>`;
+          } else {
+            detail += `• Video Baru: Tidak ada file baru (Semua file sudah sinkron)<br>`;
+          }
+          if (removed > 0) {
+            detail += `• Video Dibersihkan: <b>-${removed} file</b><br>`;
+          }
+          detail += `• Total Video Siap di Studio: <b>${total} video</b>`;
+
+          showToast(detail, 'success', 6000);
         })
         .catch(err => {
-          showToast('Gagal sinkron folder: ' + err.message, 'error');
+          showToast(`❌ <b>Gagal Sinkronisasi Folder:</b><br>${escapeHtml(err.message)}`, 'error', 6000);
         })
         .finally(() => {
           if (btn) {
