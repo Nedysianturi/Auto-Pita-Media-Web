@@ -1232,8 +1232,9 @@
             </button>
           </div>
           <div id="appQueueFilterWrap" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <button type="button" class="btn btn-sm btn-secondary" onclick="cleanupCancelledJobsAction()" style="border-radius: 8px; color: #dc2626; border-color: #fca5a5; background: #fef2f2; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;" title="Bersihkan dan hapus semua antrean yang dibatalkan / gagal">
-              🧹 Bersihkan yang Dibatalkan
+            <button type="button" class="btn btn-sm btn-secondary" onclick="cleanupCancelledJobsAction()" style="border-radius: 8px; color: #dc2626; border-color: #fca5a5; background: #fef2f2; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem;" title="Bersihkan dan hapus semua antrean yang dibatalkan / gagal">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 13px; height: 13px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              Bersihkan yang Dibatalkan
             </button>
             <select id="filterJobStatus" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem; font-weight: 600;" onchange="renderJobs()">
               <option value="ACTIVE" selected>⚡ Antrean Aktif (Menunggu)</option>
@@ -3333,7 +3334,7 @@
         if (filter === 'ACTIVE') {
           emptyTitle = "Tidak Ada Antrean Aktif (READY / UPLOADING)";
           emptyDesc = cancelledJobs.length > 0 
-            ? `Terdapat ${cancelledJobs.length} antrean yang dibatalkan sebelumnya. Anda dapat membersihkannya dengan 1 klik tombol "🧹 Bersihkan yang Dibatalkan" di atas.`
+            ? `Terdapat ${cancelledJobs.length} antrean yang dibatalkan sebelumnya. Anda dapat membersihkannya dengan 1 klik tombol "Bersihkan yang Dibatalkan" di atas.`
             : `Semua jadwal tayang sudah terbit atau belum ada video baru yang dijadwalkan.`;
         } else if (filter === 'CANCELLED') {
           emptyTitle = "Tidak Ada Antrean Dibatalkan";
@@ -3359,8 +3360,9 @@
                   ✅ Buka Riwayat Terposting (${publishedJobsAll.length})
                 </button>
                 ${cancelledJobs.length > 0 ? `
-                  <button class="btn btn-sm btn-secondary" onclick="cleanupCancelledJobsAction()" style="color: #dc2626; border-color: #fca5a5; background: #fef2f2; font-weight: 700;">
-                    🧹 Bersihkan yang Dibatalkan (${cancelledJobs.length})
+                  <button class="btn btn-sm btn-secondary" onclick="cleanupCancelledJobsAction()" style="color: #dc2626; border-color: #fca5a5; background: #fef2f2; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 13px; height: 13px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Bersihkan yang Dibatalkan (${cancelledJobs.length})
                   </button>
                 ` : ''}
               </div>
