@@ -32,6 +32,25 @@ Aplikasi otomatisasi publikasi video cerdas dan studio multi-platform untuk **Fa
    - Pembuatan hook, caption bercerita, dan rekomendasi hashtag otomatis per niche.
    - Kunci caption manual untuk menjaga teks yang sudah disunting.
 
+6. **🎵 Audio Cerdas 3-Lapisan (Vokal + BGM 15% + SFX Hook 60%):**
+   - **BGM Ducking Halus (~15%):** Musik latar trending bebas royalti dipadukan secara proporsional di detik ke-0 tanpa menutupi kejernihan suara vokal asli.
+   - **SFX Hook Pembuka 3 Detik Pertama (~60%):** Efek suara kejutan (Whoosh, Impact, Heartbeat Riser, Shimmer Ding, Pop) menghentak lembut di awal video untuk mencegah penonton men-scroll cepat (meningkatkan retensi FYP).
+
+7. **🔔 Outro Follower Call-To-Action (Ajakan Follow 3 Detik Terakhir):**
+   - Menyisipkan stempel visual ajakan follow elegan di 3 detik terakhir video secara otomatis.
+   - Default per channel:
+     - `@PitaMisteri.tv`: `🔔 "Suka cerita ini? Follow @PitaMisteri.tv untuk kisah berikutnya!"`
+     - `@Pitarekaman.tv`: `🔔 "Suka video ini? Follow @Pitarekaman.tv untuk obrolan seru lainnya!"`
+   - Dapat disesuaikan di modal jadwal dan pengaturan niche.
+
+8. **🛡️ AI Anti-Shadowban (Kamus Internal 87 Kata Terlarang):**
+   - Kamus internal otomatis mendeteksi dan mensterilkan kata-kata sensitif dan berisiko tinggi (kematian, kekerasan, senjata, narkoba, asusila, kata kasar) menjadi variasi yang ramah algoritma sebelum diposting ke Facebook Reels, Instagram Reels, dan TikTok.
+   - Mencegah penalti akun, pembatasan jangkauan (*shadowban*), dan *community guidelines strike*.
+
+9. **🛡️ 24/7 Silent Watchdog Daemon (Windows):**
+   - Didukung oleh `PitaMedia-Daemon-Watchdog.vbs` yang memantau server di latar belakang tanpa jendela hitam.
+   - Jika komputer restart atau server crash, otomatis hidup kembali dalam 2 detik.
+
 ---
 
 ## 🛠️ Instalasi & Menjalankan Aplikasi
