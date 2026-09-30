@@ -493,8 +493,8 @@
     /* Niche Card Grid */
     .niche-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 20px;
     }
 
     .niche-card-item {
@@ -1062,9 +1062,14 @@
         <h1 class="page-title" id="pageTitleText">Manajemen Niche</h1>
         <div class="page-subtitle" id="pageSubtitleText">Kelola saluran publikasi, jadwal otomatis, dan folder video komputer per niche.</div>
       </div>
-      <div class="top-actions" style="display: flex; gap: 8px; align-items: center;">
-        <button class="btn btn-sm btn-secondary" onclick="cleanStorageAction()" style="border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem;" title="Bersihkan file video sementara di folder temp_mixed">
-          🧹 Bersihkan Cache (<span id="badgeStorageCache">0 MB</span>)
+      <div class="top-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <span class="badge" id="internetStatusBadge" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; padding: 5px 12px; border-radius: 999px; font-size: 0.74rem; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">
+          <span id="internetStatusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
+          <span id="internetStatusText">Internet Online</span>
+        </span>
+        <button class="btn btn-sm btn-secondary" onclick="cleanStorageAction()" style="border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; color: #334155;" title="Bersihkan file video sementara di folder temp_mixed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Bersihkan Cache (<span id="badgeStorageCache">0 MB</span>)
         </button>
         <span class="badge badge-info" id="lastSyncText">Terakhir Sinkron: Memuat...</span>
       </div>
@@ -2469,6 +2474,29 @@
         if (cacheEl) cacheEl.textContent = `${appData.storage.tempSizeMb || 0} MB`;
       }
 
+      // Update Internet Status Badge
+      const netBadge = document.getElementById('internetStatusBadge');
+      const netDot = document.getElementById('internetStatusDot');
+      const netText = document.getElementById('internetStatusText');
+      if (netBadge && netDot && netText) {
+        const isOnline = (appData.internet ? appData.internet.online : true) && navigator.onLine;
+        if (isOnline) {
+          netBadge.style.background = '#ecfdf5';
+          netBadge.style.color = '#047857';
+          netBadge.style.border = '1px solid #a7f3d0';
+          netDot.style.background = '#10b981';
+          netDot.style.boxShadow = '0 0 6px #10b981';
+          netText.textContent = 'Internet Online';
+        } else {
+          netBadge.style.background = '#fef2f2';
+          netBadge.style.color = '#b91c1c';
+          netBadge.style.border = '1px solid #fecaca';
+          netDot.style.background = '#ef4444';
+          netDot.style.boxShadow = '0 0 6px #ef4444';
+          netText.textContent = 'Internet Offline';
+        }
+      }
+
       if (appData.sheetUrl) {
         document.getElementById('btnSheetLink').href = appData.sheetUrl;
       }
@@ -2502,65 +2530,161 @@
         const isAutoJadwal = String(n.auto_jadwal).toUpperCase() === 'TRUE';
         const isAutoPublikasi = String(n.auto_publikasi).toUpperCase() === 'TRUE';
 
+        // 1. Stok & Statistik Produksi Niche
+        const nMedia = (appData.media || []).filter(m => m.niche_id === n.niche_id);
+        const nJobs = (appData.jobs || []).filter(j => j.niche_id === n.niche_id);
+        const countMedia = nMedia.length;
+        const countReady = nJobs.filter(j => j.status === 'READY').length;
+        const countPublished = nJobs.filter(j => j.status === 'PUBLISHED').length;
+
+        // 2. Akun Sosial Media Tertaut
+        const nAccounts = (appData.accounts || []).filter(a => {
+          return String(a.niche_id || '').trim().toUpperCase() === String(n.niche_id || '').trim().toUpperCase();
+        });
+
+        // 3. Jadwal Tayang Terdekat
+        const nextJob = nJobs
+          .filter(j => j.status === 'READY' && j.scheduled_at)
+          .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))[0];
+
+        let nextScheduleText = 'Semua antrean hari ini telah tayang';
+        if (nextJob) {
+          const d = new Date(nextJob.scheduled_at);
+          const timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+          const isToday = d.toDateString() === new Date().toDateString();
+          const dayStr = isToday ? 'Hari ini' : d.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' });
+          nextScheduleText = `⏰ <b>${dayStr}, ${timeStr}</b> (${nextJob.platform} - ${escapeHtml(nextJob.media_id)})`;
+        }
+
+        const rawFolder = (n.folder_path || n.folder_id || '').trim();
+
         return `
-          <div class="niche-card-item">
+          <div class="niche-card-item" style="border: 1px solid var(--border-color); border-radius: 16px; padding: 22px; background: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between;">
             <div>
-              <div class="niche-header">
+              <!-- Header -->
+              <div class="niche-header" style="margin-bottom: 14px;">
                 <div>
-                  <div class="niche-name">${escapeHtml(n.nama)}</div>
-                  <div class="niche-id">${escapeHtml(n.niche_id)}</div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.25rem;">📺</span>
+                    <span class="niche-name" style="font-size: 1.15rem; font-weight: 800; color: #0f172a;">${escapeHtml(n.nama)}</span>
+                  </div>
+                  <div class="niche-id" style="margin-top: 2px;">${escapeHtml(n.niche_id)}</div>
                 </div>
-                <span class="badge ${isAktif ? 'badge-success' : 'badge-neutral'}">
-                  ${isAktif ? 'AKTIF' : 'NONAKTIF'}
+                <span class="badge ${isAktif ? 'badge-success' : 'badge-neutral'}" style="font-size: 0.74rem; padding: 4px 10px;">
+                  ${isAktif ? '● AKTIF' : '○ NONAKTIF'}
                 </span>
               </div>
-              <div class="niche-meta-rows" style="margin-top: 14px;">
-                <div class="niche-row" style="align-items: flex-start;">
-                  <span style="color: var(--text-muted); min-width: 90px;">Folder Lokal:</span>
-                  ${(n.folder_path || n.folder_id) ? `
-                    <span class="font-mono" style="color: var(--primary); font-weight: 600; font-size: 0.74rem; word-break: break-all; line-height: 1.35; max-width: 220px;" title="${escapeHtml(n.folder_path || n.folder_id)}">
-                      📁 ${escapeHtml(n.folder_path || n.folder_id)}
-                    </span>
-                  ` : `
-                    <a href="javascript:void(0)" onclick="openModalEditNiche('${escapeHtml(n.niche_id)}')" style="color: #ef4444; text-decoration: underline; font-weight: 600; font-size: 0.76rem;">
-                      ⚠️ Belum diatur (Klik untuk atur)
+
+              <!-- Mini-Statistik Stok & Produksi -->
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px;">
+                <div style="text-align: center;">
+                  <div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 600;">Stok Video</div>
+                  <div style="font-size: 1.05rem; font-weight: 800; color: #1e293b;">${countMedia}</div>
+                </div>
+                <div style="text-align: center; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">
+                  <div style="font-size: 0.68rem; color: #4f46e5; font-weight: 600;">Antrean Siap</div>
+                  <div style="font-size: 1.05rem; font-weight: 800; color: #4f46e5;">${countReady}</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="font-size: 0.68rem; color: #059669; font-weight: 600;">Sudah Tayang</div>
+                  <div style="font-size: 1.05rem; font-weight: 800; color: #059669;">${countPublished}</div>
+                </div>
+              </div>
+
+              <!-- Folder Lokal (Clean Bar with Open Button) -->
+              <div style="margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                  <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Folder Master Video:</span>
+                  ${rawFolder ? `
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="openFolderInExplorerAction('${escapeHtml(rawFolder.replace(/\\/g, '\\\\'))}')" style="padding: 2px 8px; font-size: 0.68rem; border-radius: 5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Buka folder ini langsung di File Explorer Windows">
+                      📂 Buka Folder
+                    </button>
+                  ` : ''}
+                </div>
+                ${rawFolder ? `
+                  <div class="font-mono" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; font-size: 0.74rem; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(rawFolder)}">
+                    📁 ${escapeHtml(rawFolder)}
+                  </div>
+                ` : `
+                  <div style="background: #fef2f2; border: 1px dashed #fca5a5; border-radius: 8px; padding: 6px 10px;">
+                    <a href="javascript:void(0)" onclick="openModalEditNiche('${escapeHtml(n.niche_id)}')" style="color: #ef4444; font-weight: 700; font-size: 0.74rem; text-decoration: none;">
+                      ⚠️ Belum ada folder video komputer (Klik untuk atur)
                     </a>
-                  `}
+                  </div>
+                `}
+              </div>
+
+              <!-- Akun Sosial Terhubung -->
+              <div style="margin-bottom: 12px; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px;">
+                <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">Akun Sosial Terhubung:</div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  ${nAccounts.length > 0 ? nAccounts.map(a => {
+                    const icon = a.platform === 'INSTAGRAM' ? '📸' : (a.platform === 'FACEBOOK' ? '📘' : '🎵');
+                    const isTokenActive = a.token_status !== 'EXPIRED' && a.token;
+                    return `
+                      <span style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 8px; font-size: 0.7rem; display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: #334155;" title="${a.platform}: ${escapeHtml(a.nama_akun)}">
+                        <span>${icon}</span>
+                        <span>${escapeHtml(a.nama_akun)}</span>
+                        <span style="width: 6px; height: 6px; border-radius: 50%; background: ${isTokenActive ? '#22c55e' : '#ef4444'};" title="${isTokenActive ? 'Token Aktif' : 'Token Perlu Diperbarui'}"></span>
+                      </span>
+                    `;
+                  }).join('') : `<span style="font-size: 0.7rem; color: var(--text-muted); font-style: italic;">Belum ada akun sosial ditautkan ke niche ini</span>`}
                 </div>
-                <div class="niche-row">
-                  <span style="color: var(--text-muted);">Auto Jadwal:</span>
-                  <button class="btn btn-sm ${isAutoJadwal ? 'btn-success' : 'btn-secondary'}" onclick="toggleAutoJadwal('${escapeHtml(n.niche_id)}', ${!isAutoJadwal})">
-                    ${isAutoJadwal ? 'AKTIF' : 'MATI'}
-                  </button>
+              </div>
+
+              <!-- Jadwal Tayang Terdekat -->
+              <div style="margin-bottom: 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 7px 12px; font-size: 0.75rem; color: #1e40af;">
+                <div style="font-size: 0.68rem; font-weight: 700; color: #3b82f6; text-transform: uppercase; margin-bottom: 2px;">Jadwal Tayang Terdekat:</div>
+                <div>${nextScheduleText}</div>
+              </div>
+
+              <!-- Mode & Otomasi Badges -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid var(--border-color); margin-bottom: 14px;">
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">Otomasi:</span>
+                  <span class="badge ${isAutoJadwal ? 'badge-success' : 'badge-neutral'}" style="font-size: 0.68rem; padding: 2px 6px;">Jadwal ${isAutoJadwal ? 'ON' : 'OFF'}</span>
+                  <span class="badge ${isAutoPublikasi ? 'badge-success' : 'badge-neutral'}" style="font-size: 0.68rem; padding: 2px 6px;">Posting ${isAutoPublikasi ? 'ON' : 'OFF'}</span>
                 </div>
-                <div class="niche-row">
-                  <span style="color: var(--text-muted);">Auto Publikasi:</span>
-                  <button class="btn btn-sm ${isAutoPublikasi ? 'btn-success' : 'btn-secondary'}" onclick="toggleAutoPublikasi('${escapeHtml(n.niche_id)}', ${!isAutoPublikasi})">
-                    ${isAutoPublikasi ? 'AKTIF' : 'MATI'}
-                  </button>
-                </div>
-                <div class="niche-row">
-                  <span style="color: var(--text-muted);">Mode Jadwal:</span>
-                  <span style="font-weight: 700; color: #10b981; font-size: 0.78rem;">
-                    ${(n.mode_jadwal || 'GOLDEN_SLOTS') === 'GOLDEN_SLOTS' ? '🌟 Slot Jam Emas (07:15, 11:30, 16:30, 19:00, 21:15)' : `⏰ ${escapeHtml(n.jam_awal || '08:00')} - ${escapeHtml(n.jam_akhir || '23:00')} (${n.interval_menit || 90} mnt)`}
-                  </span>
+                <div style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
+                  ${(n.mode_jadwal || 'GOLDEN_SLOTS') === 'GOLDEN_SLOTS' ? '🌟 Slot Jam Emas' : '⏰ Interval Rutin'}
                 </div>
               </div>
             </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; pt-3; border-top: 1px solid var(--border-color);">
-              <button class="btn btn-sm btn-secondary" onclick="openModalEditNiche('${escapeHtml(n.niche_id)}')">
-                Edit
+
+            <!-- Action Buttons -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border-color); align-items: center;">
+              <button class="btn btn-sm btn-primary" onclick="openModalEditNiche('${escapeHtml(n.niche_id)}')" style="display: inline-flex; align-items: center; gap: 4px;">
+                ✏️ Edit Niche
               </button>
-              <button class="btn btn-sm btn-secondary" onclick="scanDriveForNiche('${escapeHtml(n.niche_id)}')">
-                🔄 Scan Folder
+              <button class="btn btn-sm btn-secondary" onclick="scanDriveForNiche('${escapeHtml(n.niche_id)}')" style="display: inline-flex; align-items: center; gap: 4px;">
+                🔄 Scan Video
               </button>
-              <button class="btn btn-sm btn-danger" onclick="deleteNicheAction('${escapeHtml(n.niche_id)}', '${escapeHtml(n.nama)}')">
+              <button class="btn btn-sm btn-danger" onclick="deleteNicheAction('${escapeHtml(n.niche_id)}', '${escapeHtml(n.nama)}')" style="margin-left: auto;">
                 Hapus
               </button>
             </div>
           </div>
         `;
       }).join('');
+    }
+
+    async function openFolderInExplorerAction(folderPath) {
+      if (!folderPath) return;
+      try {
+        const resp = await fetch('/api/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'openFolderInExplorer',
+            args: [folderPath]
+          })
+        });
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+        showToast('📂 Membuka folder di File Explorer...', 'info');
+      } catch (err) {
+        showToast('Gagal membuka folder: ' + err.message, 'danger');
+      }
     }
 
     function openModalAddNiche() {

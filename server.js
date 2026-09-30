@@ -3291,6 +3291,19 @@ app.post('/api/action', async (req, res) => {
         break;
       }
 
+      case 'openFolderInExplorer': {
+        const folderPath = (args[0] || '').trim();
+        if (folderPath && fs.existsSync(folderPath)) {
+          const { spawn } = require('child_process');
+          const child = spawn('explorer.exe', [folderPath], { detached: true, stdio: 'ignore' });
+          child.unref();
+          result = { success: true, message: 'Membuka folder di File Explorer...', path: folderPath };
+        } else {
+          throw new Error('Folder tidak ditemukan di komputer: ' + folderPath);
+        }
+        break;
+      }
+
       case 'scanAllVideos':
         autoSyncLocalFolders();
         result = getDashboardData();
