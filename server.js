@@ -1872,10 +1872,18 @@ async function publishJob(jobId) {
         try {
           const checkResp = await fetch(`https://graph.facebook.com/v21.0/${prevId}?fields=status_code&access_token=${acc.token}`);
           const checkData = await checkResp.json();
-          if (checkData.status_code === 'FINISHED' || checkData.status_code === 'IN_PROGRESS') {
-            console.log(`[IG UPLOAD] Menggunakan kembali container ${prevId} (status: ${checkData.status_code})...`);
+          if (checkData.status_code === 'FINISHED') {
+            console.log(`[IG UPLOAD] Container sebelumnya ${prevId} sudah siap (FINISHED). Langsung publikasi...`);
             containerId = prevId;
             alreadyUploaded = true;
+          } else if (checkData.status_code === 'IN_PROGRESS' && (job.attempts || 0) < 2) {
+            console.log(`[IG UPLOAD] Menggunakan kembali container ${prevId} (status: IN_PROGRESS, attempt ${job.attempts || 0})...`);
+            containerId = prevId;
+            alreadyUploaded = true;
+          } else {
+            console.warn(`[IG UPLOAD] Container lama ${prevId} status: ${checkData.status_code || 'STUCK'} (attempts: ${job.attempts || 0}). Membuat container baru yang segar...`);
+            containerId = null;
+            alreadyUploaded = false;
           }
         } catch (pe) {
           console.warn('[IG RECHECK] Gagal cek status container lama:', pe.message);

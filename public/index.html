@@ -3086,16 +3086,30 @@
 
         let progressHtml = '';
         if (j.status === 'UPLOADING' || j.status === 'PROCESSING') {
-          progressHtml = `
+          const isMetaCloud = j.platform_publish_id || (j.last_error && (j.last_error.includes('Instagram') || j.last_error.includes('transcode') || j.last_error.includes('server')));
+          if (isMetaCloud) {
+            progressHtml = `
+            <div style="margin-top: 6px; min-width: 145px;">
+              <div style="background: #e2e8f0; height: 6px; border-radius: 999px; overflow: hidden; position: relative;">
+                <div style="background: linear-gradient(90deg, #f59e0b, #ec4899); height: 100%; width: 88%;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #d97706; margin-top: 2px; font-weight: 600;">
+                <span>⚙️ Transcode Meta Cloud</span>
+                <span>Diproses Server...</span>
+              </div>
+            </div>`;
+          } else {
+            progressHtml = `
             <div style="margin-top: 6px; min-width: 130px;">
               <div style="background: #e2e8f0; height: 6px; border-radius: 999px; overflow: hidden;">
-                <div style="background: linear-gradient(90deg, #4f46e5, #06b6d4); height: 100%; width: ${pct || 35}%; transition: width 0.3s ease;"></div>
+                <div style="background: linear-gradient(90deg, #4f46e5, #06b6d4); height: 100%; width: ${pct || 40}%; transition: width 0.3s ease;"></div>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
-                <span style="font-weight: 700; color: var(--primary);">${pct}% Uploaded</span>
+                <span style="font-weight: 700; color: var(--primary);">${pct > 0 ? pct + '% Terkirim' : 'Mengunggah...'}</span>
                 <span>${hasSession ? `${uploadedMb}/${totalMb} MB` : 'Mengirim...'}</span>
               </div>
             </div>`;
+          }
         }
 
         return `
