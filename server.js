@@ -109,6 +109,8 @@ try { db.exec("ALTER TABLE accounts ADD COLUMN token_status TEXT DEFAULT 'ACTIVE
 try { db.exec("ALTER TABLE accounts ADD COLUMN token_expires_at TEXT DEFAULT 'PERMANENT'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE accounts ADD COLUMN token_checked_at TEXT"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE accounts ADD COLUMN token_info TEXT DEFAULT '🟢 Token Aktif Permanen (Never Expires)'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE jobs ADD COLUMN smart_reason TEXT"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE jobs ADD COLUMN schedule_mode TEXT DEFAULT 'GOLDEN_SLOTS'"); } catch(e) { /* sudah ada */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS niches (
@@ -234,6 +236,21 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS ai_settings (
     kunci TEXT PRIMARY KEY,
     nilai TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS smart_slots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    niche_id TEXT NOT NULL,
+    day_of_week INTEGER NOT NULL,
+    hour INTEGER NOT NULL,
+    score REAL DEFAULT 0,
+    sample_count INTEGER DEFAULT 0,
+    total_views INTEGER DEFAULT 0,
+    total_likes INTEGER DEFAULT 0,
+    total_comments INTEGER DEFAULT 0,
+    total_shares INTEGER DEFAULT 0,
+    last_updated TEXT,
+    UNIQUE(niche_id, day_of_week, hour)
   );
 `);
 
@@ -396,6 +413,7 @@ function getWibDate(date) {
     year: wibTime.getUTCFullYear(),
     month: wibTime.getUTCMonth() + 1,
     day: wibTime.getUTCDate(),
+    dayOfWeek: wibTime.getUTCDay(),
     hour: wibTime.getUTCHours(),
     min: wibTime.getUTCMinutes()
   };
@@ -1002,6 +1020,201 @@ function getNextGoldenSlot(baseDate) {
   return { year: nw.year, month: nw.month, day: nw.day, hour: firstSlot.hour, min: firstSlot.min, utc };
 }
 
+// === SELF-LEARNING SMART SCHEDULING ENGINE ===
+const BASELINE_HOURS_HOROR = [21, 19, 16, 11, 7];
+const BASELINE_HOURS_GENERAL = [19, 12, 17, 7, 21];
+
+function recalculateSmartSlots(targetNicheId) {
+  try {
+    const perfRows = db.prepare(`
+      SELECT p.perf_id, a.niche_id, p.platform, p.posted_at,
+             p.views_24h, p.views_3d, p.views_7d, p.likes, p.comments, p.shares
+      FROM performance p
+      JOIN accounts a ON p.akun_id = a.akun_id
+      WHERE p.posted_at IS NOT NULL
+        ${targetNicheId ? 'AND a.niche_id = ?' : ''}
+    `).all(...(targetNicheId ? [targetNicheId] : []));
+
+    const jobRows = db.prepare(`
+      SELECT j.job_id as perf_id, j.niche_id, j.platform, COALESCE(j.updated_at, j.scheduled_at) as posted_at,
+             0 as views_24h, 0 as views_3d, 0 as views_7d, 0 as likes, 0 as comments, 0 as shares
+      FROM jobs j
+      WHERE j.status = 'PUBLISHED' AND j.job_id NOT IN (SELECT perf_id FROM performance)
+        ${targetNicheId ? 'AND j.niche_id = ?' : ''}
+    `).all(...(targetNicheId ? [targetNicheId] : []));
+
+    const allData = [...perfRows, ...jobRows];
+    if (!allData.length) return;
+
+    const statsMap = new Map();
+
+    for (const row of allData) {
+      if (!row.posted_at || !row.niche_id) continue;
+      const wib = getWibDate(new Date(row.posted_at));
+      const key = `${row.niche_id}_${wib.dayOfWeek}_${wib.hour}`;
+
+      const v24 = Number(row.views_24h || 0);
+      const v3 = Number(row.views_3d || 0);
+      const v7 = Number(row.views_7d || 0);
+      const maxViews = Math.max(v7, v3, v24);
+      const likes = Number(row.likes || 0);
+      const comments = Number(row.comments || 0);
+      const shares = Number(row.shares || 0);
+
+      const score = (maxViews * 1.0) + (likes * 10.0) + (comments * 25.0) + (shares * 50.0);
+
+      if (!statsMap.has(key)) {
+        statsMap.set(key, {
+          niche_id: row.niche_id,
+          day_of_week: wib.dayOfWeek,
+          hour: wib.hour,
+          score_sum: 0,
+          sample_count: 0,
+          total_views: 0,
+          total_likes: 0,
+          total_comments: 0,
+          total_shares: 0
+        });
+      }
+
+      const st = statsMap.get(key);
+      st.score_sum += score;
+      st.sample_count += 1;
+      st.total_views += maxViews;
+      st.total_likes += likes;
+      st.total_comments += comments;
+      st.total_shares += shares;
+    }
+
+    const nowIso = new Date().toISOString();
+    const insertStmt = db.prepare(`
+      INSERT INTO smart_slots (niche_id, day_of_week, hour, score, sample_count, total_views, total_likes, total_comments, total_shares, last_updated)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(niche_id, day_of_week, hour) DO UPDATE SET
+        score = excluded.score,
+        sample_count = excluded.sample_count,
+        total_views = excluded.total_views,
+        total_likes = excluded.total_likes,
+        total_comments = excluded.total_comments,
+        total_shares = excluded.total_shares,
+        last_updated = excluded.last_updated
+    `);
+
+    for (const st of statsMap.values()) {
+      const avgScore = st.sample_count > 0 ? (st.score_sum / st.sample_count) : 0;
+      insertStmt.run(
+        st.niche_id,
+        st.day_of_week,
+        st.hour,
+        avgScore,
+        st.sample_count,
+        st.total_views,
+        st.total_likes,
+        st.total_comments,
+        st.total_shares,
+        nowIso
+      );
+    }
+  } catch (err) {
+    console.warn('[SMART SLOTS RECALC ERROR]:', err.message);
+  }
+}
+
+function getNextSmartSlot(nicheId, baseDate) {
+  const wib = getWibDate(baseDate);
+  const curMins = wib.hour * 60 + wib.min;
+
+  const dayRows = db.prepare(`
+    SELECT hour, score, sample_count, total_views
+    FROM smart_slots
+    WHERE niche_id = ? AND day_of_week = ?
+    ORDER BY score DESC
+  `).all(nicheId, wib.dayOfWeek);
+
+  const isMisteri = String(nicheId).includes('F1E7') || String(nicheId).toLowerCase().includes('misteri');
+  const baseline = isMisteri ? BASELINE_HOURS_HOROR : BASELINE_HOURS_GENERAL;
+
+  let bestHours = [];
+  if (dayRows.length >= 3) {
+    bestHours = dayRows.slice(0, 5).map(r => r.hour);
+  }
+  for (const bh of baseline) {
+    if (!bestHours.includes(bh) && bestHours.length < 5) {
+      bestHours.push(bh);
+    }
+  }
+  bestHours.sort((a, b) => a - b);
+
+  const minuteOffsets = [15, 30, 20, 45, 10];
+
+  for (let i = 0; i < bestHours.length; i++) {
+    const hr = bestHours[i];
+    const mn = minuteOffsets[i % minuteOffsets.length];
+    const slotMins = hr * 60 + mn;
+    if (slotMins >= curMins) {
+      const utc = fromWib(wib.year, wib.month, wib.day, hr, mn);
+      const scoreObj = dayRows.find(r => r.hour === hr);
+      const reason = scoreObj && scoreObj.sample_count > 0
+        ? `AI Peak Slot (Skor ${Math.round(scoreObj.score)}, ${scoreObj.total_views} views)`
+        : `AI Recommended Slot (${hr}:${padZero(mn)} WIB)`;
+      return { year: wib.year, month: wib.month, day: wib.day, hour: hr, min: mn, utc, reason };
+    }
+  }
+
+  const nextDay = new Date(fromWib(wib.year, wib.month, wib.day, 0, 0).getTime() + 24 * 60 * 60 * 1000);
+  const nw = getWibDate(nextDay);
+  const nextDayRows = db.prepare(`
+    SELECT hour, score, sample_count, total_views
+    FROM smart_slots
+    WHERE niche_id = ? AND day_of_week = ?
+    ORDER BY score DESC
+  `).all(nicheId, nw.dayOfWeek);
+
+  let nextHours = [];
+  if (nextDayRows.length >= 3) {
+    nextHours = nextDayRows.slice(0, 5).map(r => r.hour);
+  }
+  for (const bh of baseline) {
+    if (!nextHours.includes(bh) && nextHours.length < 5) {
+      nextHours.push(bh);
+    }
+  }
+  nextHours.sort((a, b) => a - b);
+  const firstHr = nextHours[0];
+  const firstMn = minuteOffsets[0];
+  const utc = fromWib(nw.year, nw.month, nw.day, firstHr, firstMn);
+  const scoreObj = nextDayRows.find(r => r.hour === firstHr);
+  const reason = scoreObj && scoreObj.sample_count > 0
+    ? `AI Peak Slot (Skor ${Math.round(scoreObj.score)}, ${scoreObj.total_views} views)`
+    : `AI Recommended Slot (${firstHr}:${padZero(firstMn)} WIB)`;
+
+  return { year: nw.year, month: nw.month, day: nw.day, hour: firstHr, min: firstMn, utc, reason };
+}
+
+function getSmartHeatmapData(nicheId) {
+  recalculateSmartSlots(nicheId);
+  const rows = db.prepare(`
+    SELECT niche_id, day_of_week, hour, score, sample_count, total_views, total_likes, total_comments, total_shares
+    FROM smart_slots
+    ${nicheId ? 'WHERE niche_id = ?' : ''}
+    ORDER BY day_of_week ASC, hour ASC
+  `).all(...(nicheId ? [nicheId] : []));
+
+  const topRows = db.prepare(`
+    SELECT niche_id, day_of_week, hour, score, sample_count, total_views, total_likes, total_comments, total_shares
+    FROM smart_slots
+    WHERE score > 0 ${nicheId ? 'AND niche_id = ?' : ''}
+    ORDER BY score DESC
+    LIMIT 5
+  `).all(...(nicheId ? [nicheId] : []));
+
+  return {
+    slots: rows,
+    topSlots: topRows,
+    totalSamples: rows.reduce((acc, r) => acc + (r.sample_count || 0), 0)
+  };
+}
+
 function autoScheduleUnscheduledMedia() {
   try {
     const isStopped = getSetting('STOP_GLOBAL', 'FALSE') === 'TRUE';
@@ -1031,8 +1244,8 @@ function autoScheduleUnscheduledMedia() {
 
       const modeJadwal = (niche.mode_jadwal || 'GOLDEN_SLOTS').toUpperCase();
 
-      // MODE 1: SLOT JAM EMAS KHUSUS (07:15, 11:30, 16:30, 19:00, 21:15 WIB)
-      if (modeJadwal === 'GOLDEN_SLOTS') {
+      // MODE 1: SLOT JAM EMAS KHUSUS ATAU SMART AI SELF-LEARNING
+      if (modeJadwal === 'GOLDEN_SLOTS' || modeJadwal === 'SMART_AI') {
         const now = new Date();
         let baseDate;
         if (latestScheduledIso) {
@@ -1056,7 +1269,7 @@ function autoScheduleUnscheduledMedia() {
             continue;
           }
 
-          const slot = getNextGoldenSlot(baseDate);
+          const slot = (modeJadwal === 'SMART_AI') ? getNextSmartSlot(niche.niche_id, baseDate) : getNextGoldenSlot(baseDate);
           const wibStr = formatWibString(slot.year, slot.month, slot.day, slot.hour, slot.min);
           const scheduledIso = slot.utc.toISOString();
 
@@ -1071,15 +1284,15 @@ function autoScheduleUnscheduledMedia() {
           for (const acc of neededAccounts) {
             const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
             db.prepare(`
-              INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id));
+              INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text, schedule_mode, smart_reason)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id), modeJadwal, slot.reason || 'Slot Jam Emas');
           }
 
           db.prepare("UPDATE media SET status = 'TERJADWAL' WHERE media_id = ?").run(media.media_id);
           db.prepare("UPDATE posts SET status = 'SCHEDULED' WHERE konten_id = ?").run(media.konten_id);
 
-          console.log(`[AUTO-SCHEDULER GOLDEN] Scheduled "${media.nama_file}" for ${niche.nama} at ${wibStr} WIB (${neededAccounts.length} platforms).`);
+          console.log(`[AUTO-SCHEDULER ${modeJadwal}] Scheduled "${media.nama_file}" for ${niche.nama} at ${wibStr} WIB (${neededAccounts.length} platforms) - ${slot.reason || ''}.`);
 
           baseDate = new Date(slot.utc.getTime() + 60 * 1000);
         }
@@ -1460,6 +1673,7 @@ function getDashboardData() {
     },
     backups: getBackupList(),
     storage: getStorageInfo(),
+    smartHeatmap: getSmartHeatmapData(),
     summary: {
       videos: media.length,
       queued: jobs.filter(j => j.status === 'READY').length,
@@ -2514,6 +2728,7 @@ async function sinkronkanPerformaWeb() {
   setSetting('META_LAST_STATUS', 'Berhasil disinkronkan', 'Status insight');
 
   console.log('[INSIGHTS] Parallel insights sync complete!');
+  try { recalculateSmartSlots(); } catch(e){}
   return getDashboardData();
 }
 
@@ -3046,6 +3261,29 @@ app.post('/api/action', async (req, res) => {
           db.prepare('DELETE FROM media WHERE niche_id = ?').run(nicheId);
           db.prepare('DELETE FROM posts WHERE niche_id = ?').run(nicheId);
           db.prepare('DELETE FROM jobs WHERE niche_id = ?').run(nicheId);
+        }
+        result = getDashboardData();
+        break;
+      }
+
+      case 'getSmartHeatmap': {
+        const nicheId = args[0] || null;
+        result = getSmartHeatmapData(nicheId);
+        break;
+      }
+
+      case 'recalculateSmartSlots': {
+        const nicheId = args[0] || null;
+        recalculateSmartSlots(nicheId);
+        result = getSmartHeatmapData(nicheId);
+        break;
+      }
+
+      case 'toggleNicheSmartSchedule': {
+        const nicheId = args[0];
+        const targetMode = (args[1] || 'SMART_AI').toUpperCase();
+        if (nicheId) {
+          db.prepare('UPDATE niches SET mode_jadwal = ? WHERE niche_id = ?').run(targetMode, nicheId);
         }
         result = getDashboardData();
         break;

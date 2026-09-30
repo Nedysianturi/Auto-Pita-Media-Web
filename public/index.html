@@ -1470,6 +1470,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
               Tarik Insight Meta
             </button>
+            <button class="btn btn-sm btn-secondary" onclick="openSmartHeatmapModal()" style="border-color: #86efac; color: #15803d; background: #f0fdf4; display: inline-flex; align-items: center; gap: 5px; font-weight: 700;" title="Buka matriks jam tayang pintar yang dipelajari AI dari performa Meta">
+              <span>🧠</span>
+              <span>Peta Jam AI</span>
+            </button>
             <select id="filterPerfNiche" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem; font-weight: 600;" onchange="renderPerformance()">
               <option value="ALL">Semua Niche</option>
             </select>
@@ -1566,11 +1570,12 @@
         <div class="form-group" style="margin-top: 14px;">
           <label class="form-label">Strategi Jadwal Posting</label>
           <select id="editNicheModeJadwal" class="form-control" style="font-weight: 600;">
+            <option value="SMART_AI">🤖 AI Smart Auto-Tune (Belajar Otomatis dari Views Meta)</option>
             <option value="GOLDEN_SLOTS">🌟 Slot Jam Emas Khusus (07:15, 11:30, 16:30, 19:00, 21:15 WIB)</option>
             <option value="INTERVAL">⏱️ Jeda Interval Menit (Custom Jam & Interval)</option>
           </select>
           <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 4px;">
-            Slot Jam Emas membagi video ke 5 waktu puncak audiens Indonesia (pagi, makan siang, sore pulang kerja, prime time malam, dan late night).
+            <b>AI Smart Auto-Tune</b>: Sistem menganalisis jam tayang yang terbukti menghasilkan views dan interaksi terbanyak dari data Meta Insights Anda, lalu menjadwalkan video secara otomatis ke jam puncak tersebut.
           </div>
         </div>
         <div id="wrapCustomIntervalSettings" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
@@ -2209,6 +2214,117 @@
         </button>
       </div>
     </div>
+  <!-- Modal Peta Jam Pintar AI (Self-Learning Heatmap) -->
+  <div class="modal-overlay" id="modalSmartHeatmap">
+    <div class="modal-dialog" style="max-width: 960px; width: 96%;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.5rem;">🧠</span>
+          <div>
+            <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">Peta Jam Emas Pintar AI (Self-Learning Heatmap)</div>
+            <div style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">
+              Sistem mempelajari pola views & interaksi dari Meta Insights untuk menentukan jadwal tayang paling viral.
+            </div>
+          </div>
+        </div>
+        <button class="modal-close" onclick="closeModal('modalSmartHeatmap')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px 24px; max-height: calc(85vh - 120px); overflow-y: auto;">
+        <!-- Top Toolbar: Niche Selector, Status Mode, & Trigger Button -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-main);">Pilih Niche:</label>
+            <select id="smartHeatmapNicheSelect" class="form-control" style="width: auto; min-width: 200px; font-weight: 700; padding: 6px 12px; font-size: 0.82rem;" onchange="onHeatmapNicheChange(this.value)">
+              <!-- Populated dynamically via JS -->
+            </select>
+            <span id="heatmapNicheModeBadge" style="font-size: 0.72rem; padding: 4px 10px; border-radius: 999px; font-weight: 700;"></span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button type="button" id="btnToggleSmartScheduleMode" class="btn btn-sm btn-secondary" onclick="toggleCurrentNicheSmartSchedule()" style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.76rem; font-weight: 700;">
+              🤖 Aktifkan AI Mode
+            </button>
+            <button type="button" id="btnTrainAiNow" class="btn btn-sm btn-primary" onclick="trainAiSmartSlotsNow()" style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.76rem; font-weight: 700; box-shadow: 0 2px 4px rgba(79,70,229,0.2);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              <span>Latih Ulang AI</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3 KPI Cards -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
+          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Sampel Teranalisis</div>
+            <div id="heatmapStatSamples" style="font-size: 1.45rem; font-weight: 800; color: #1e293b; margin-top: 2px;">0</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Data penayangan riil Meta</div>
+          </div>
+          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size: 0.72rem; color: #059669; font-weight: 700; text-transform: uppercase;">Jam Puncak Tertinggi</div>
+            <div id="heatmapStatPeak" style="font-size: 1.45rem; font-weight: 800; color: #059669; margin-top: 2px;">-</div>
+            <div id="heatmapStatPeakSub" style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Skor performa terbaik</div>
+          </div>
+          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="font-size: 0.72rem; color: #4f46e5; font-weight: 700; text-transform: uppercase;">Algoritma Pembobotan</div>
+            <div style="font-size: 0.88rem; font-weight: 800; color: #4f46e5; margin-top: 4px;">Viral Engagement Multiplier</div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">Views x1 • Likes x10 • Komen x25 • Share x50</div>
+          </div>
+        </div>
+
+        <!-- Top 5 Recommended Slots Banner -->
+        <div style="margin-bottom: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 12px 16px;">
+          <div style="font-size: 0.75rem; font-weight: 800; color: #15803d; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+            <span>⭐</span>
+            <span>5 Jam Tayang Paling Direkomendasikan AI (Prioritas Utama Jadwal Otomatis):</span>
+          </div>
+          <div id="heatmapTopSlotsPills" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <!-- Top slots dynamically generated here -->
+          </div>
+        </div>
+
+        <!-- Heatmap Grid (7 Days x 24 Hours) -->
+        <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-size: 0.82rem; font-weight: 800; color: #1e293b;">
+              📅 Matriks Intensitas Performa 7 Hari x 24 Jam (WIB)
+            </div>
+            <!-- Legend -->
+            <div style="display: flex; align-items: center; gap: 12px; font-size: 0.7rem; color: var(--text-muted); flex-wrap: wrap;">
+              <span>Skala:</span>
+              <span style="display: inline-flex; align-items: center; gap: 4px;">
+                <span style="width: 12px; height: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 3px;"></span> Kosong
+              </span>
+              <span style="display: inline-flex; align-items: center; gap: 4px;">
+                <span style="width: 12px; height: 12px; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 3px;"></span> Rendah
+              </span>
+              <span style="display: inline-flex; align-items: center; gap: 4px;">
+                <span style="width: 12px; height: 12px; background: #86efac; border: 1px solid #4ade80; border-radius: 3px;"></span> Sedang
+              </span>
+              <span style="display: inline-flex; align-items: center; gap: 4px;">
+                <span style="width: 12px; height: 12px; background: #22c55e; border: 1px solid #16a34a; border-radius: 3px;"></span> Tinggi
+              </span>
+              <span style="display: inline-flex; align-items: center; gap: 4px;">
+                <span style="width: 12px; height: 12px; background: #047857; border: 1px solid #064e3b; border-radius: 3px;"></span> ⭐ Jam Puncak
+              </span>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px;">
+            <div id="smartHeatmapMatrixGrid" style="min-width: 760px;">
+              <!-- Matrix table generated via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 0.74rem; color: var(--text-muted);">
+          💡 <i>AI otomatis memperbarui data ini setiap kali Anda menekan <b>Tarik Insight Meta</b>.</i>
+        </div>
+        <button class="btn btn-secondary" onclick="closeModal('modalSmartHeatmap')">Tutup</button>
+      </div>
+    </div>
   </div>
 
   <!-- Toast Notification Container -->
@@ -2682,8 +2798,12 @@
                   <span class="badge ${isAutoJadwal ? 'badge-success' : 'badge-neutral'}" style="font-size: 0.68rem; padding: 2px 6px;">Jadwal ${isAutoJadwal ? 'ON' : 'OFF'}</span>
                   <span class="badge ${isAutoPublikasi ? 'badge-success' : 'badge-neutral'}" style="font-size: 0.68rem; padding: 2px 6px;">Posting ${isAutoPublikasi ? 'ON' : 'OFF'}</span>
                 </div>
-                <div style="font-size: 0.72rem; font-weight: 700; color: #10b981;">
-                  ${(n.mode_jadwal || 'GOLDEN_SLOTS') === 'GOLDEN_SLOTS' ? '🌟 Slot Jam Emas' : '⏰ Interval Rutin'}
+                <div>
+                  ${(n.mode_jadwal === 'SMART_AI')
+                    ? `<span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.7rem; font-weight: 700;" title="Sistem belajar otomatis dari views Meta">🤖 AI Smart Auto-Tune</span>`
+                    : ((n.mode_jadwal || 'GOLDEN_SLOTS') === 'GOLDEN_SLOTS'
+                        ? `<span class="badge" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 0.7rem; font-weight: 700;">🌟 Slot Jam Emas</span>`
+                        : `<span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.7rem; font-weight: 700;">⏰ Interval Rutin</span>`)}
                 </div>
               </div>
             </div>
@@ -2692,6 +2812,9 @@
             <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--border-color); align-items: center;">
               <button class="btn btn-sm btn-primary" onclick="openModalEditNiche('${escapeHtml(n.niche_id)}')" style="display: inline-flex; align-items: center; gap: 4px;">
                 ✏️ Edit Niche
+              </button>
+              <button class="btn btn-sm btn-secondary" onclick="openSmartHeatmapModal('${escapeHtml(n.niche_id)}', '${escapeHtml(n.nama)}')" style="display: inline-flex; align-items: center; gap: 4px; border-color: #86efac; color: #15803d; background: #f0fdf4;" title="Lihat Peta Jam Emas Pintar yang dipelajari AI dari performa konten">
+                🧠 Peta Jam AI
               </button>
               <button class="btn btn-sm btn-secondary" onclick="scanDriveForNiche('${escapeHtml(n.niche_id)}')" style="display: inline-flex; align-items: center; gap: 4px;">
                 🔄 Scan Video
@@ -2863,6 +2986,267 @@
           showToast('Auto publikasi diperbarui', 'success');
         })
         .catch(err => showToast('Gagal ubah auto publikasi: ' + err.message, 'error'));
+    }
+
+    // === SMART AI HEATMAP FUNCTIONS ===
+    let currentHeatmapNicheId = null;
+
+    async function openSmartHeatmapModal(nicheId, nicheName) {
+      currentHeatmapNicheId = nicheId || null;
+
+      // Populate Niche Dropdown
+      const select = document.getElementById('smartHeatmapNicheSelect');
+      if (select) {
+        select.innerHTML = '<option value="">-- Semua Niche (Gabungan) --</option>' + 
+          (appData.niches || []).map(n => `<option value="${escapeHtml(n.niche_id)}">${escapeHtml(n.nama)}</option>`).join('');
+        select.value = currentHeatmapNicheId || '';
+      }
+
+      updateHeatmapNicheModeUi();
+      openModal('modalSmartHeatmap');
+      await refreshHeatmapData();
+    }
+
+    function updateHeatmapNicheModeUi() {
+      const badge = document.getElementById('heatmapNicheModeBadge');
+      const toggleBtn = document.getElementById('btnToggleSmartScheduleMode');
+      if (!badge || !toggleBtn) return;
+
+      if (!currentHeatmapNicheId) {
+        badge.style.display = 'none';
+        toggleBtn.style.display = 'none';
+        return;
+      }
+
+      badge.style.display = 'inline-block';
+      toggleBtn.style.display = 'inline-flex';
+
+      const niche = (appData.niches || []).find(n => n.niche_id === currentHeatmapNicheId);
+      const isSmart = niche && niche.mode_jadwal === 'SMART_AI';
+
+      if (isSmart) {
+        badge.style.background = '#ecfdf5';
+        badge.style.color = '#047857';
+        badge.style.border = '1px solid #a7f3d0';
+        badge.textContent = '🤖 AI Auto-Tune AKTIF';
+        toggleBtn.textContent = '🌟 Ganti ke Slot Emas Standar';
+        toggleBtn.className = 'btn btn-sm btn-secondary';
+      } else {
+        badge.style.background = '#fffbeb';
+        badge.style.color = '#b45309';
+        badge.style.border = '1px solid #fde68a';
+        badge.textContent = '🌟 Slot Jam Emas / Interval';
+        toggleBtn.textContent = '🤖 Aktifkan AI Auto-Tune';
+        toggleBtn.className = 'btn btn-sm btn-primary';
+      }
+    }
+
+    async function onHeatmapNicheChange(nicheId) {
+      currentHeatmapNicheId = nicheId || null;
+      updateHeatmapNicheModeUi();
+      await refreshHeatmapData();
+    }
+
+    async function toggleCurrentNicheSmartSchedule() {
+      if (!currentHeatmapNicheId) {
+        showToast('Pilih niche terlebih dahulu untuk mengubah strategi jadwal!', 'warning');
+        return;
+      }
+      const niche = (appData.niches || []).find(n => n.niche_id === currentHeatmapNicheId);
+      const currentMode = niche ? (niche.mode_jadwal || 'GOLDEN_SLOTS') : 'GOLDEN_SLOTS';
+      const targetMode = currentMode === 'SMART_AI' ? 'GOLDEN_SLOTS' : 'SMART_AI';
+
+      showToast(`Mengalihkan mode jadwal ke ${targetMode === 'SMART_AI' ? 'AI Smart Auto-Tune' : 'Slot Jam Emas'}...`, 'info');
+      try {
+        const res = await callBackend('toggleNicheSmartSchedule', currentHeatmapNicheId, targetMode);
+        appData = res;
+        renderAll();
+        updateHeatmapNicheModeUi();
+        showToast(`Mode jadwal untuk "${niche?.nama || currentHeatmapNicheId}" berhasil diubah!`, 'success');
+      } catch (err) {
+        showToast('Gagal mengubah mode jadwal: ' + err.message, 'error');
+      }
+    }
+
+    async function refreshHeatmapData() {
+      const grid = document.getElementById('smartHeatmapMatrixGrid');
+      if (grid) {
+        grid.innerHTML = '<div style="text-align: center; padding: 36px; color: var(--text-muted);">Sedang membaca matriks performa AI...</div>';
+      }
+      try {
+        const res = await callBackend('getSmartHeatmap', currentHeatmapNicheId);
+        renderHeatmapMatrix(res, currentHeatmapNicheId);
+      } catch (err) {
+        if (grid) grid.innerHTML = `<div style="text-align: center; padding: 24px; color: var(--danger);">Gagal memuat peta jam AI: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    async function trainAiSmartSlotsNow() {
+      const btn = document.getElementById('btnTrainAiNow');
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳ Melatih...</span>';
+      }
+      showToast('🧠 Mempelajari seluruh riwayat performa Meta Insights & memperbarui skor...', 'info');
+
+      try {
+        const res = await callBackend('recalculateSmartSlots', currentHeatmapNicheId);
+        renderHeatmapMatrix(res, currentHeatmapNicheId);
+        showToast('🎉 Berhasil! AI telah selesai mempelajari pola penonton terbaru.', 'success');
+      } catch (err) {
+        showToast('Gagal melatih AI: ' + err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+        }
+      }
+    }
+
+    function renderHeatmapMatrix(data, activeNicheId) {
+      const slots = (data && data.slots) || [];
+      const topSlots = (data && data.topSlots) || [];
+      const totalSamples = (data && data.totalSamples) || slots.reduce((acc, r) => acc + (r.sample_count || 0), 0);
+
+      // 1. KPI Samples
+      const statSamplesEl = document.getElementById('heatmapStatSamples');
+      if (statSamplesEl) statSamplesEl.textContent = `${totalSamples} Penayangan`;
+
+      // 2. KPI Peak Slot
+      const statPeakEl = document.getElementById('heatmapStatPeak');
+      const statPeakSubEl = document.getElementById('heatmapStatPeakSub');
+      const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+      if (topSlots.length > 0 && statPeakEl) {
+        const top = topSlots[0];
+        const dayLabel = dayNames[top.day_of_week] || 'Hari';
+        const hrStr = String(top.hour).padStart(2, '0') + ':00 WIB';
+        statPeakEl.textContent = `${dayLabel}, ${hrStr}`;
+        if (statPeakSubEl) {
+          statPeakSubEl.textContent = `Skor ${Math.round(top.score)} (${Number(top.total_views||0).toLocaleString('id-ID')} views • ${top.sample_count} sampel)`;
+        }
+      } else if (statPeakEl) {
+        statPeakEl.textContent = '19:00 WIB (Default)';
+        if (statPeakSubEl) statPeakSubEl.textContent = 'Menunggu data penayangan Meta pertama';
+      }
+
+      // 3. Top 5 Recommended Slots Pills
+      const pillsContainer = document.getElementById('heatmapTopSlotsPills');
+      if (pillsContainer) {
+        if (!topSlots.length) {
+          pillsContainer.innerHTML = '<div style="font-size: 0.76rem; color: var(--text-muted); font-style: italic;">Belum ada riwayat postingan dengan views. Sistem memprioritaskan jam emas default (07:15, 11:30, 16:30, 19:00, 21:15 WIB).</div>';
+        } else {
+          const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+          pillsContainer.innerHTML = topSlots.map((s, idx) => {
+            const dayLabel = dayNames[s.day_of_week] || 'Hari';
+            const hrStr = String(s.hour).padStart(2, '0') + ':00 WIB';
+            const viewsFormatted = Number(s.total_views || 0).toLocaleString('id-ID');
+            return `
+              <div style="background: #ffffff; border: 1px solid #86efac; border-radius: 8px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                <span style="font-size: 1.1rem;">${medals[idx] || '⭐'}</span>
+                <div>
+                  <div style="font-size: 0.78rem; font-weight: 800; color: #15803d;">${dayLabel} ${hrStr}</div>
+                  <div style="font-size: 0.68rem; color: #64748b;">${viewsFormatted} views • Skor ${Math.round(s.score)}</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // 4. Matrix Grid (7 Days x 24 Hours)
+      const gridContainer = document.getElementById('smartHeatmapMatrixGrid');
+      if (!gridContainer) return;
+
+      const slotMap = new Map();
+      let maxScore = 1;
+      slots.forEach(s => {
+        const key = `${s.day_of_week}_${s.hour}`;
+        slotMap.set(key, s);
+        if (s.score > maxScore) maxScore = s.score;
+      });
+
+      // Days order: Senin(1), Selasa(2), Rabu(3), Kamis(4), Jumat(5), Sabtu(6), Minggu(0)
+      const dayOrder = [
+        { dow: 1, label: 'Senin' },
+        { dow: 2, label: 'Selasa' },
+        { dow: 3, label: 'Rabu' },
+        { dow: 4, label: 'Kamis' },
+        { dow: 5, label: 'Jumat' },
+        { dow: 6, label: 'Sabtu' },
+        { dow: 0, label: 'Minggu' }
+      ];
+
+      let hoursHeaderHtml = '<th style="width: 70px; text-align: left; padding: 6px 8px; font-size: 0.7rem; color: var(--text-muted);">Hari</th>';
+      for (let h = 0; h < 24; h++) {
+        hoursHeaderHtml += `<th style="width: 28px; text-align: center; padding: 4px 1px; font-size: 0.66rem; color: var(--text-muted); font-family: monospace;">${String(h).padStart(2, '0')}</th>`;
+      }
+
+      let rowsHtml = '';
+      dayOrder.forEach(d => {
+        let cellsHtml = `<td style="font-weight: 700; font-size: 0.74rem; color: #1e293b; padding: 4px 6px; white-space: nowrap;">${d.label}</td>`;
+        for (let h = 0; h < 24; h++) {
+          const key = `${d.dow}_${h}`;
+          const s = slotMap.get(key);
+          const score = (s && s.score) || 0;
+          const sampleCount = (s && s.sample_count) || 0;
+          const totalViews = (s && s.total_views) || 0;
+          const totalLikes = (s && s.total_likes) || 0;
+          const totalComments = (s && s.total_comments) || 0;
+          const totalShares = (s && s.total_shares) || 0;
+
+          let bg = '#f8fafc';
+          let border = '#f1f5f9';
+          let color = '#cbd5e1';
+          let content = '·';
+          let isPeak = false;
+
+          if (sampleCount > 0 && score > 0) {
+            const ratio = score / maxScore;
+            if (ratio >= 0.75) {
+              bg = '#047857';
+              border = '#064e3b';
+              color = '#ffffff';
+              content = '★';
+              isPeak = true;
+            } else if (ratio >= 0.40) {
+              bg = '#22c55e';
+              border = '#16a34a';
+              color = '#ffffff';
+              content = '●';
+            } else if (ratio >= 0.15) {
+              bg = '#86efac';
+              border = '#4ade80';
+              color = '#14532d';
+              content = '●';
+            } else {
+              bg = '#dcfce7';
+              border = '#bbf7d0';
+              color = '#166534';
+              content = '·';
+            }
+          }
+
+          const tooltip = `${d.label} Jam ${String(h).padStart(2, '0')}:00 WIB\n-------------------------\nSkor AI: ${Math.round(score)}\nSampel Tayang: ${sampleCount}\nTotal Views: ${totalViews.toLocaleString('id-ID')}\nLikes: ${totalLikes}\nKomentar: ${totalComments}\nShares: ${totalShares}`;
+
+          cellsHtml += `
+            <td style="padding: 2px 1px; text-align: center;">
+              <div title="${tooltip}" style="width: 25px; height: 25px; line-height: 23px; margin: 0 auto; background: ${bg}; border: 1px solid ${border}; border-radius: 5px; color: ${color}; font-size: ${isPeak ? '0.78rem' : '0.68rem'}; font-weight: 800; cursor: pointer; transition: transform 0.15s ease;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
+                ${content}
+              </div>
+            </td>
+          `;
+        }
+        rowsHtml += `<tr>${cellsHtml}</tr>`;
+      });
+
+      gridContainer.innerHTML = `
+        <table style="width: 100%; border-collapse: separate; border-spacing: 2px;">
+          <thead><tr>${hoursHeaderHtml}</tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      `;
     }
 
     // 2. DRIVE SOURCES
@@ -3512,6 +3896,13 @@
                 ${j.scheduled_at ? '⏰ ' + new Date(j.scheduled_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB' : ''}
               </div>
               ${countdownBadge}
+              ${(j.schedule_mode === 'SMART_AI' || j.smart_reason) ? `
+                <div style="margin-top: 3px;">
+                  <span class="badge" style="background: #ecfdf5; color: #047857; font-size: 0.65rem; padding: 1px 6px; border: 1px solid #a7f3d0; font-weight: 700;" title="${escapeHtml(j.smart_reason || 'AI Peak Slot')}">
+                    🤖 AI Smart Slot
+                  </span>
+                </div>
+              ` : ''}
             </td>
             <td style="text-align: center;">
               <span class="badge ${statusBadgeClass}">
@@ -3600,6 +3991,13 @@
               <div style="font-size: 0.78rem; color: var(--text-muted);">
                 ${j.updated_at ? new Date(j.updated_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB' : (j.scheduled_at ? new Date(j.scheduled_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB' : '-')}
               </div>
+              ${(j.schedule_mode === 'SMART_AI' || j.smart_reason) ? `
+                <div style="margin-top: 2px;">
+                  <span class="badge" style="background: #ecfdf5; color: #047857; font-size: 0.64rem; padding: 1px 6px; border: 1px solid #a7f3d0; font-weight: 700;" title="${escapeHtml(j.smart_reason || 'AI Peak Slot')}">
+                    🤖 AI Smart Slot
+                  </span>
+                </div>
+              ` : ''}
             </td>
             <td style="text-align: center;">
               <span class="font-mono" style="font-size: 0.75rem; background: #f1f5f9; padding: 3px 6px; border-radius: 4px; color: var(--text-main);">
