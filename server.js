@@ -104,6 +104,10 @@ try { db.exec("ALTER TABLE posts ADD COLUMN outro_enabled TEXT DEFAULT 'TRUE'");
 try { db.exec("ALTER TABLE posts ADD COLUMN outro_text TEXT"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE niches ADD COLUMN default_outro_enabled TEXT DEFAULT 'TRUE'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE niches ADD COLUMN default_outro_text TEXT"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE accounts ADD COLUMN token_status TEXT DEFAULT 'ACTIVE'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE accounts ADD COLUMN token_expires_at TEXT DEFAULT 'PERMANENT'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE accounts ADD COLUMN token_checked_at TEXT"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE accounts ADD COLUMN token_info TEXT DEFAULT '🟢 Token Aktif Permanen (Never Expires)'"); } catch(e) { /* sudah ada */ }
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS niches (
@@ -1108,15 +1112,126 @@ function autoScheduleUnscheduledMedia() {
   }
 }
 
+// === AUTO-BACKUP DATABASE (SAFETY NET) ===
+function getBackupList() {
+  const backupDir = path.join(__dirname, 'backups');
+  if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+  const files = fs.readdirSync(backupDir).filter(f => f.endsWith('.sqlite'));
+  return files.map(f => {
+    const full = path.join(backupDir, f);
+    const stat = fs.statSync(full);
+    return {
+      filename: f,
+      size_bytes: stat.size,
+      size_kb: Math.round(stat.size / 1024),
+      created_at: stat.mtime.toISOString()
+    };
+  }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
+function backupDatabase(isManual = false) {
+  const backupDir = path.join(__dirname, 'backups');
+  if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10);
+  const timeStr = isManual ? '_' + now.toTimeString().slice(0, 8).replace(/:/g, '') : '';
+  const filename = `pitamedia_backup_${dateStr}${timeStr}.sqlite`;
+  const destPath = path.join(backupDir, filename).replace(/\\/g, '/');
+
+  if (!isManual && fs.existsSync(destPath)) {
+    return { success: true, message: 'Cadangan hari ini sudah ada', filename, backups: getBackupList() };
+  }
+
+  try {
+    db.exec(`VACUUM INTO '${destPath}';`);
+    console.log(`[BACKUP SAFETY NET] Cadangan database berhasil dibuat: ${filename}`);
+
+    // Otomatis bersihkan cadangan yang berumur > 14 hari
+    const all = getBackupList();
+    const fourteenDaysAgo = Date.now() - (14 * 24 * 3600 * 1000);
+    for (const b of all) {
+      if (new Date(b.created_at).getTime() < fourteenDaysAgo) {
+        try {
+          fs.unlinkSync(path.join(backupDir, b.filename));
+          console.log(`[BACKUP CLEANUP] Menghapus cadangan lama (>14 hari): ${b.filename}`);
+        } catch(e) {}
+      }
+    }
+
+    return { success: true, message: 'Cadangan berhasil disimpan', filename, backups: getBackupList() };
+  } catch (err) {
+    console.error('[BACKUP ERROR]:', err.message);
+    throw new Error('Gagal mencadangkan database: ' + err.message);
+  }
+}
+
+// === TOKEN EXPIRY INSPECTOR (EARLY WARNING) ===
+async function inspectAccountTokens() {
+  if (!isInternetOnline) return;
+  const accounts = db.prepare("SELECT * FROM accounts WHERE token IS NOT NULL AND token != ''").all();
+  for (const acc of accounts) {
+    try {
+      if (acc.platform === 'FACEBOOK' || acc.platform === 'INSTAGRAM') {
+        const url = `https://graph.facebook.com/debug_token?input_token=${encodeURIComponent(acc.token)}&access_token=${encodeURIComponent(acc.token)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data && data.data) {
+          const d = data.data;
+          const isValid = Boolean(d.is_valid);
+          const expiresAt = d.expires_at; // 0 = never expires
+          let status = isValid ? 'ACTIVE' : 'EXPIRED';
+          let info = '🟢 Token Aktif Permanen (Never Expires)';
+          let expDate = 'PERMANENT';
+
+          if (expiresAt && expiresAt > 0) {
+            const expMs = expiresAt * 1000;
+            const diffDays = Math.round((expMs - Date.now()) / (24 * 3600 * 1000));
+            expDate = new Date(expMs).toISOString();
+            if (diffDays <= 0) {
+              status = 'EXPIRED';
+              info = '🔴 Token Kedaluwarsa! Harap perbarui token.';
+            } else if (diffDays <= 14) {
+              status = 'WARNING';
+              info = `⚠️ Sisa ${diffDays} hari lagi (Berakhir ${expDate.slice(0, 10)})`;
+            } else {
+              status = 'ACTIVE';
+              info = `🟢 Aktif normal (Sisa ${diffDays} hari)`;
+            }
+          }
+
+          db.prepare(`
+            UPDATE accounts SET
+              token_status = ?,
+              token_expires_at = ?,
+              token_checked_at = ?,
+              token_info = ?
+            WHERE akun_id = ?
+          `).run(status, expDate, isoNow(), info, acc.akun_id);
+        }
+      }
+    } catch(e) {
+      console.warn(`[TOKEN INSPECT] Gagal cek token ${acc.nama_akun}:`, e.message);
+    }
+  }
+  console.log(`[TOKEN INSPECT] Selesai memeriksa status masa aktif ${accounts.length} token akun.`);
+}
+
 // 1. Dashboard Data
 function getDashboardData() {
   autoSyncLocalFolders();
   autoScheduleUnscheduledMedia();
   const niches = db.prepare('SELECT * FROM niches').all();
-  const accounts = db.prepare('SELECT * FROM accounts').all().map(a => ({
-    ...a,
-    tokenReady: Boolean(a.token && a.token.trim().length > 10)
-  }));
+  const accounts = db.prepare('SELECT * FROM accounts').all().map(a => {
+    const isTokenReady = Boolean(a.token && a.token.trim().length > 10);
+    return {
+      ...a,
+      tokenReady: isTokenReady,
+      token_status: a.token_status || (isTokenReady ? 'ACTIVE' : 'NO_TOKEN'),
+      token_expires_at: a.token_expires_at || (isTokenReady ? 'PERMANENT' : ''),
+      token_info: a.token_info || (isTokenReady ? '🟢 Token Aktif Permanen (Never Expires)' : 'Belum ada token'),
+      token_checked_at: a.token_checked_at || ''
+    };
+  });
   const rawMedia = db.prepare('SELECT * FROM media ORDER BY rowid DESC LIMIT 500').all();
   const media = rawMedia.map(m => {
     const pubInfo = getPublishedMediaInfo(m.media_id, m.nama_file);
@@ -1197,6 +1312,7 @@ function getDashboardData() {
       status: isInternetOnline ? 'ONLINE' : 'OFFLINE',
       message: isInternetOnline ? 'Terhubung normal' : 'Menunggu koneksi internet tersambung kembali...'
     },
+    backups: getBackupList(),
     summary: {
       videos: media.length,
       queued: jobs.filter(j => j.status === 'READY').length,
@@ -2866,6 +2982,28 @@ app.post('/api/action', async (req, res) => {
         result = await syncMetaCalendar();
         break;
 
+      case 'backupDatabaseNow': {
+        const bResult = backupDatabase(true);
+        result = { ...getDashboardData(), backupResult: bResult };
+        break;
+      }
+
+      case 'inspectTokensWeb': {
+        await inspectAccountTokens();
+        result = getDashboardData();
+        break;
+      }
+
+      case 'openBackupFolder': {
+        const backupDir = path.join(__dirname, 'backups');
+        if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+        const { spawn } = require('child_process');
+        const child = spawn('explorer.exe', [backupDir], { detached: true, stdio: 'ignore' });
+        child.unref();
+        result = { success: true, message: 'Membuka folder cadangan di File Explorer...', path: backupDir };
+        break;
+      }
+
       case 'deleteJobWeb': {
         const jobId = args[0];
         if (jobId) {
@@ -2974,4 +3112,26 @@ app.listen(PORT, () => {
   console.log(`📁 Database: SQLite (data.sqlite)`);
   console.log('========================================================');
   setupFolderWatchers();
+
+  // 1. Auto-Backup Database saat server startup (Safety Net)
+  try {
+    backupDatabase(false);
+  } catch(e) {
+    console.warn('[BACKUP STARTUP WARNING]:', e.message);
+  }
+
+  // 2. Token Expiry Inspector saat startup (Background)
+  setTimeout(() => {
+    inspectAccountTokens().catch(e => console.warn('[TOKEN INSPECT ERROR]:', e.message));
+  }, 2000);
 });
+
+// Daily Routine: Auto-Backup dan Token Expiry Inspector (Setiap 24 Jam)
+setInterval(() => {
+  try {
+    backupDatabase(false);
+    inspectAccountTokens().catch(e => console.warn('[TOKEN INSPECT ERROR]:', e.message));
+  } catch(e) {
+    console.warn('[DAILY ROUTINE ERROR]:', e.message);
+  }
+}, 24 * 60 * 60 * 1000);

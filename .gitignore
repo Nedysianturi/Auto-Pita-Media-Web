@@ -36,3 +36,4 @@ recover_captions.py
 .DS_Store
 Thumbs.db
 temp_mixed/
+backups/

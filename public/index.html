@@ -1042,13 +1042,13 @@
         Selaraskan Google Sheet
       </button>
 
-      <button class="btn btn-secondary" style="width: 100%;" onclick="showToast('Database aktif: data.sqlite (SQLite Mandiri)', 'info')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <button class="btn btn-secondary" style="width: 100%; border-color: rgba(99, 102, 241, 0.4);" onclick="openModalDatabaseBackup()" title="Buka Pengelola Cadangan Database">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
           <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
           <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
         </svg>
-        Database SQLite Aktif
+        💾 Database & Cadangan
       </button>
     </div>
   </aside>
@@ -1175,10 +1175,16 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line></svg>
             Akun Media Sosial Terhubung (Meta API)
           </div>
-          <button class="btn btn-primary" onclick="openModalAddAccount()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Tambah Akun Baru
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="inspectTokensAction()" title="Periksa sisa masa aktif token akun ke Meta API">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              Periksa Masa Aktif Token
+            </button>
+            <button class="btn btn-primary" onclick="openModalAddAccount()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Tambah Akun Baru
+            </button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -2038,6 +2044,62 @@
     </div>
   </div>
 
+  <!-- Modal Database & Cadangan Otomatis (Safety Net) -->
+  <div class="modal-overlay" id="modalDatabaseBackup">
+    <div class="modal-dialog" style="max-width: 640px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <span>💾</span>
+          <span>Database & Cadangan Otomatis (Safety Net)</span>
+        </div>
+        <button class="modal-close" onclick="closeModal('modalDatabaseBackup')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem;">Database Aktif: SQLite</div>
+            <span class="badge badge-success">🟢 Normal & Sehat</span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+            File: <code>data.sqlite</code> di folder aplikasi.<br>
+            Sistem otomatis mencadangkan database setiap hari ke folder <code>backups/</code> dan otomatis membersihkan file cadangan yang lebih tua dari 14 hari.
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+          <button class="btn btn-primary" style="flex: 1;" onclick="backupDatabaseNowAction()" id="btnBackupNow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            Cadangkan Database Sekarang
+          </button>
+          <button class="btn btn-secondary" onclick="openBackupFolderAction()">
+            📁 Buka Folder Cadangan
+          </button>
+        </div>
+
+        <div style="font-weight: 700; font-size: 0.88rem; color: #1e293b; margin-bottom: 8px;">Riwayat Cadangan Tersimpan (14 Hari Terakhir):</div>
+        <div class="table-wrap" style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+          <table style="width: 100%; font-size: 0.8rem;">
+            <thead>
+              <tr style="background: #f1f5f9; position: sticky; top: 0;">
+                <th style="padding: 8px 12px;">Nama File Cadangan</th>
+                <th style="padding: 8px 12px;">Ukuran</th>
+                <th style="padding: 8px 12px;">Tanggal Dibuat</th>
+              </tr>
+            </thead>
+            <tbody id="backupTableBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalDatabaseBackup')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container"></div>
 
@@ -2622,9 +2684,19 @@
             <td class="font-mono" style="font-size: 0.75rem;">${escapeHtml(a.platform_user_id)}</td>
             <td>${escapeHtml(nicheName)}</td>
             <td>
-              <span class="badge ${isTokenReady ? 'badge-success' : 'badge-danger'}">
-                ${isTokenReady ? 'TOKEN SIAP' : 'BELUM ADA'}
-              </span>
+              ${(() => {
+                const tokenStatus = a.token_status || 'ACTIVE';
+                const tokenInfo = a.token_info || (isTokenReady ? 'Token Aktif' : 'Belum ada token');
+                if (!isTokenReady) {
+                  return `<span class="badge badge-danger">BELUM ADA</span>`;
+                } else if (tokenStatus === 'WARNING') {
+                  return `<span class="badge" style="background: rgba(234, 179, 8, 0.15); color: #a16207; border: 1px solid #facc15; font-weight: 700;">⚠️ PERIKSA</span><div style="font-size: 0.7rem; color: #a16207; margin-top: 3px;">${escapeHtml(tokenInfo)}</div>`;
+                } else if (tokenStatus === 'EXPIRED') {
+                  return `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #b91c1c; border: 1px solid #ef4444; font-weight: 700;">🔴 KEDALUWARSA</span><div style="font-size: 0.7rem; color: #b91c1c; margin-top: 3px;">${escapeHtml(tokenInfo)}</div>`;
+                } else {
+                  return `<span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.3);">🟢 AKTIF</span><div style="font-size: 0.7rem; color: #15803d; margin-top: 3px;">${escapeHtml(tokenInfo)}</div>`;
+                }
+              })()}
             </td>
             <td>
               <span class="badge ${isAktif ? 'badge-success' : 'badge-neutral'}">
@@ -2759,6 +2831,71 @@
           showToast(`Koneksi SUKSES: Akun "${res.nama_akun || accountId}" terhubung normal ke Graph API!`, 'success');
         })
         .catch(err => showToast('Koneksi GAGAL: ' + err.message, 'error'));
+    }
+
+    // === BACKUP & TOKEN HANDLERS ===
+    function openModalDatabaseBackup() {
+      renderBackupTable();
+      openModal('modalDatabaseBackup');
+    }
+
+    function renderBackupTable() {
+      const tbody = document.getElementById('backupTableBody');
+      if (!tbody) return;
+      const backups = appData.backups || [];
+      if (!backups.length) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">Belum ada file cadangan. Klik 'Cadangkan Database Sekarang' di atas.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = backups.map(b => {
+        const d = new Date(b.created_at);
+        const dateStr = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        return `
+          <tr>
+            <td style="font-weight: 600; font-family: monospace;">${escapeHtml(b.filename)}</td>
+            <td>${b.size_kb} KB</td>
+            <td style="color: var(--text-muted);">${escapeHtml(dateStr)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function backupDatabaseNowAction() {
+      const btn = document.getElementById('btnBackupNow');
+      if (btn) btn.disabled = true;
+      showToast('Sedang membuat cadangan database...', 'info');
+      try {
+        const res = await callBackend('backupDatabaseNow');
+        if (res) {
+          appData = res;
+          renderBackupTable();
+          showToast('✅ Berhasil! Cadangan database baru telah disimpan.', 'success');
+        }
+      } catch(err) {
+        showToast('Gagal mencadangkan: ' + err.message, 'error');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function openBackupFolderAction() {
+      callBackend('openBackupFolder')
+        .then(() => showToast('Membuka folder backups di File Explorer...', 'info'))
+        .catch(err => showToast('Gagal membuka folder: ' + err.message, 'error'));
+    }
+
+    async function inspectTokensAction() {
+      showToast('Memeriksa masa aktif token akun ke Meta API...', 'info');
+      try {
+        const res = await callBackend('inspectTokensWeb');
+        if (res) {
+          appData = res;
+          renderAccounts();
+          showToast('✅ Status masa aktif token berhasil diperbarui!', 'success');
+        }
+      } catch(err) {
+        showToast('Gagal memeriksa token: ' + err.message, 'error');
+      }
     }
 
     // 4. QUEUE & JOBS
