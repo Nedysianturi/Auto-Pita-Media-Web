@@ -753,7 +753,9 @@ async function mixVideoWithAudio(videoPath, bgmAudioPath = null, volumeMusic = 0
       '-map', '[aout]',
       '-c:v', 'libx264',
       '-preset', 'ultrafast',
-      '-crf', '20',
+      '-crf', '22',
+      '-pix_fmt', 'yuv420p',
+      '-movflags', '+faststart',
       '-c:a', 'aac',
       '-b:a', '192k',
       '-shortest',
@@ -765,7 +767,9 @@ async function mixVideoWithAudio(videoPath, bgmAudioPath = null, volumeMusic = 0
       '-vf', drawtextFilter,
       '-c:v', 'libx264',
       '-preset', 'ultrafast',
-      '-crf', '20',
+      '-crf', '22',
+      '-pix_fmt', 'yuv420p',
+      '-movflags', '+faststart',
       '-c:a', 'copy',
       outputPath
     );
@@ -776,6 +780,7 @@ async function mixVideoWithAudio(videoPath, bgmAudioPath = null, volumeMusic = 0
       '-map', '0:v',
       '-map', '[aout]',
       '-c:v', 'copy',
+      '-movflags', '+faststart',
       '-c:a', 'aac',
       '-b:a', '192k',
       '-shortest',
@@ -1858,52 +1863,73 @@ async function publishJob(jobId) {
       const fileStats = fs.statSync(filePath);
       const fileSize = fileStats.size;
 
-      console.log(`[IG UPLOAD] Creating Reels container for ${media.nama_file} (${Math.round(fileSize/1024/1024)} MB, Cover: ${job.cover_offset_ms || 1800}ms)...`);
+      let containerId = null;
+      let alreadyUploaded = false;
 
-      // 1. Create Reels Container for Resumable Upload
-      const initUrl = `https://graph.facebook.com/v21.0/${igUserId}/media`;
-      const initResp = await fetch(initUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          media_type: 'REELS',
-          upload_type: 'resumable',
-          caption: captionText,
-          share_to_feed: true,
-          thumb_offset: job.cover_offset_ms || 1800,
-          access_token: acc.token
-        })
-      });
-      const initData = await initResp.json();
-      if (initData.error) throw new Error('IG Container: ' + (initData.error.message || JSON.stringify(initData.error)));
+      // 0. Cek apakah container sebelumnya sudah pernah diunggah & masih dalam antrean Meta
+      if (job.platform_publish_id && /^\d+$/.test(String(job.platform_publish_id).trim())) {
+        const prevId = String(job.platform_publish_id).trim();
+        try {
+          const checkResp = await fetch(`https://graph.facebook.com/v21.0/${prevId}?fields=status_code&access_token=${acc.token}`);
+          const checkData = await checkResp.json();
+          if (checkData.status_code === 'FINISHED' || checkData.status_code === 'IN_PROGRESS') {
+            console.log(`[IG UPLOAD] Menggunakan kembali container ${prevId} (status: ${checkData.status_code})...`);
+            containerId = prevId;
+            alreadyUploaded = true;
+          }
+        } catch (pe) {
+          console.warn('[IG RECHECK] Gagal cek status container lama:', pe.message);
+        }
+      }
 
-      const containerId = initData.id;
-      const uploadUri = initData.uri || `https://rupload.facebook.com/ig-api-upload/v21.0/${containerId}`;
+      if (!alreadyUploaded) {
+        console.log(`[IG UPLOAD] Creating Reels container for ${media.nama_file} (${Math.round(fileSize/1024/1024)} MB, Cover: ${job.cover_offset_ms || 1800}ms)...`);
 
-      // 2. Transfer binary to rupload
-      console.log(`[IG UPLOAD] Transferring video binary...`);
-      const fileBuffer = fs.readFileSync(filePath);
-      const transferResp = await fetch(uploadUri, {
-        method: 'POST',
-        headers: {
-          'Authorization': `OAuth ${acc.token}`,
-          'offset': '0',
-          'file_size': String(fileSize),
-          'Content-Type': 'application/octet-stream'
-        },
-        body: fileBuffer
-      });
-      const transferData = await transferResp.json();
-      if (transferData.error) throw new Error('IG Transfer: ' + (transferData.error.message || JSON.stringify(transferData.error)));
+        // 1. Create Reels Container for Resumable Upload
+        const initUrl = `https://graph.facebook.com/v21.0/${igUserId}/media`;
+        const initResp = await fetch(initUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            media_type: 'REELS',
+            upload_type: 'resumable',
+            caption: captionText,
+            share_to_feed: true,
+            thumb_offset: job.cover_offset_ms || 1800,
+            access_token: acc.token
+          })
+        });
+        const initData = await initResp.json();
+        if (initData.error) throw new Error('IG Container: ' + (initData.error.message || JSON.stringify(initData.error)));
+
+        containerId = initData.id;
+        const uploadUri = initData.uri || `https://rupload.facebook.com/ig-api-upload/v21.0/${containerId}`;
+
+        // 2. Transfer binary to rupload
+        console.log(`[IG UPLOAD] Transferring video binary...`);
+        const fileBuffer = fs.readFileSync(filePath);
+        const transferResp = await fetch(uploadUri, {
+          method: 'POST',
+          headers: {
+            'Authorization': `OAuth ${acc.token}`,
+            'offset': '0',
+            'file_size': String(fileSize),
+            'Content-Type': 'application/octet-stream'
+          },
+          body: fileBuffer
+        });
+        const transferData = await transferResp.json();
+        if (transferData.error) throw new Error('IG Transfer: ' + (transferData.error.message || JSON.stringify(transferData.error)));
+      }
 
       // 3. Wait for container processing (poll status)
       console.log(`[IG UPLOAD] Processing Reels container ${containerId}...`);
       let isReady = false;
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 60; i++) {
         await new Promise(r => setTimeout(r, 5000));
         const statusResp = await fetch(`https://graph.facebook.com/v21.0/${containerId}?fields=status_code&access_token=${acc.token}`);
         const statusData = await statusResp.json();
-        console.log(`[IG UPLOAD] Container status: ${statusData.status_code || JSON.stringify(statusData)} (${i+1}/40)`);
+        console.log(`[IG UPLOAD] Container status: ${statusData.status_code || JSON.stringify(statusData)} (${i+1}/60)`);
         if (statusData.status_code === 'FINISHED') {
           isReady = true;
           break;
@@ -1914,7 +1940,16 @@ async function publishJob(jobId) {
       }
 
       if (!isReady) {
-        throw new Error('Video sedang diproses (transcoding) oleh Instagram Meta. Silakan klik tombol Jalankan Antrean / Coba Lagi dalam 1 menit.');
+        console.warn(`[IG UPLOAD PAUSE] Container ${containerId} masih ditranscode oleh Meta. Job tetap siaga di status 'READY' dan akan otomatis melanjutkan begitu siap.`);
+        db.prepare(`
+          UPDATE jobs SET
+            status = 'READY',
+            platform_publish_id = ?,
+            last_error = 'Sedang diproses oleh server Instagram (antrean otomatis melanjutkan begitu selesai)...',
+            updated_at = ?
+          WHERE job_id = ?
+        `).run(containerId, isoNow(), jobId);
+        return getDashboardData();
       }
 
       // 4. Publish Container
