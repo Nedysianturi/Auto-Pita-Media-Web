@@ -1119,6 +1119,8 @@ function getDashboardData() {
     stopped: getSetting('STOP_GLOBAL', 'FALSE') === 'TRUE',
     niches: niches.map(n => ({
       ...n,
+      folder_path: n.folder_path || '',
+      folder_id: n.folder_path || '',
       aktif: n.aktif === 'TRUE' ? 'TRUE' : 'FALSE',
       auto_jadwal: n.auto_jadwal === 'TRUE' ? 'TRUE' : 'FALSE',
       auto_publikasi: n.auto_publikasi === 'TRUE' ? 'TRUE' : 'FALSE'
@@ -1134,8 +1136,9 @@ function getDashboardData() {
     performance,
     driveSources: niches.map(n => ({
       niche_id: n.niche_id,
-      folder_id: n.folder_path,
-      status: 'AKTIF'
+      folder_id: n.folder_path || '',
+      folder_path: n.folder_path || '',
+      status: n.folder_path && fs.existsSync(n.folder_path) ? 'AKTIF' : (n.folder_path ? 'TERHUBUNG' : 'NONAKTIF')
     })),
     uploadSessions: [],
     metaSchedules,
