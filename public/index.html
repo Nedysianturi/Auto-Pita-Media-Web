@@ -2725,16 +2725,27 @@
 
     function loadData(silent = false) {
       const btn = document.getElementById('btnRefresh');
-      if (btn && !silent) btn.innerHTML = 'Memuat...';
+      if (btn && !silent) btn.innerHTML = '<span class="spinner" style="width: 12px; height: 12px; margin-right: 5px;"></span> Menyinkronkan...';
       
       callBackend('dashboard')
         .then(data => {
           appData = data;
           renderAll();
-          if (!silent) showToast('Data berhasil disinkronkan', 'success');
+          if (!silent) {
+            const readyCount = (data.jobs || []).filter(j => j.status === 'READY').length;
+            const mediaCount = (data.media || []).length;
+            const accountsCount = (data.accounts || []).length;
+            let msg = `✅ <b>Sinkronisasi Data AKTIF & BERJALAN LANCAR!</b><br>`;
+            msg += `• Basis Data & Sistem: <b>🟢 Normal & Terhubung</b><br>`;
+            msg += `• Akun Terkoneksi: <b>${accountsCount} akun</b><br>`;
+            msg += `• Koleksi Video: <b>${mediaCount} video</b> • Antrean Siap: <b>${readyCount} jadwal</b>`;
+            showToast(msg, 'success', 5000);
+          }
         })
         .catch(err => {
-          if (!silent) showToast('Gagal memuat data: ' + err.message, 'error');
+          if (!silent) {
+            showToast(`❌ <b>Sinkronisasi Data TIDAK AKTIF / GAGAL:</b><br>${escapeHtml(err.message)}`, 'error', 6000);
+          }
         })
         .finally(() => {
           if (btn && !silent) btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg> Sinkronkan Data';
@@ -2748,20 +2759,22 @@
 
     function runQueueWeb() {
       const btn = document.getElementById('btnRunQueue');
-      btn.innerHTML = 'Memproses...';
+      btn.innerHTML = '<span class="spinner" style="width: 13px; height: 13px; margin-right: 6px;"></span> Memproses Antrean...';
       btn.disabled = true;
+
+      showToast('🚀 <b>Menjalankan Antrean:</b> Memeriksa jadwal video yang siap tayang...', 'info', 3000);
 
       callBackend('jalankanAntreanWeb')
         .then(res => {
           appData = res;
           renderAll();
-          showToast('Antrean berhasil diproses!', 'success');
+          showToast(`✅ <b>Antrean Berhasil Diproses!</b><br>Sistem telah mengeksekusi antrean sesuai jadwal dan slot jam emas.`, 'success', 5000);
         })
         .catch(err => {
-          showToast('Eksekusi antrean gagal: ' + err.message, 'error');
+          showToast(`❌ <b>Gagal Memproses Antrean:</b><br>${escapeHtml(err.message)}`, 'error', 6000);
         })
         .finally(() => {
-          btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Jalankan Antrean';
+          btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 17px; height: 17px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> <span>Jalankan Antrean Sekarang</span>';
           btn.disabled = false;
         });
     }
@@ -4049,7 +4062,7 @@
                     Login TikTok
                   </button>
                 ` : ''}
-                <button class="btn btn-sm btn-secondary" onclick="testAccountConnection('${escapeHtml(a.akun_id)}')">
+                <button class="btn btn-sm btn-secondary" onclick="testAccountConnection('${escapeHtml(a.akun_id)}', this)">
                   Tes
                 </button>
                 <button class="btn btn-sm btn-secondary" onclick="openModalEditAccount('${escapeHtml(a.akun_id)}', '${escapeHtml(a.nama_akun)}', '${escapeHtml(a.platform_user_id)}')">
@@ -4163,13 +4176,65 @@
         .catch(err => showToast('Gagal menghapus akun: ' + err.message, 'error'));
     }
 
-    function testAccountConnection(accountId) {
-      showToast('Menguji koneksi akun ke Meta API...', 'info');
+    function testAccountConnection(accountId, btn) {
+      const origText = btn ? btn.innerHTML : 'Tes';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="width: 11px; height: 11px; border-width: 1.5px; margin-right: 4px;"></span> Menguji...';
+      }
+
+      showToast('🔍 Menguji koneksi akun ke API resmi...', 'info', 3000);
+
       callBackend('testMetaAccountConnection', accountId)
         .then(res => {
-          showToast(`Koneksi SUKSES: Akun "${res.nama_akun || accountId}" terhubung normal ke Graph API!`, 'success');
+          const acc = (appData.accounts || []).find(a => a.akun_id === accountId);
+          const accName = res.nama_akun || (acc ? acc.nama_akun : accountId);
+          const platform = acc ? acc.platform : 'Meta';
+
+          let msg = `✅ <b>Koneksi Akun AKTIF & BERJALAN LANCAR!</b><br>`;
+          msg += `• Nama Akun: <b>${escapeHtml(accName)}</b><br>`;
+          msg += `• Platform: <b>${escapeHtml(platform)}</b><br>`;
+          msg += `• Status Token: <b>🟢 AKTIF (Valid & Siap Unggah)</b><br>`;
+          msg += `• Respon API: Terverifikasi normal ke server resmi.`;
+
+          showToast(msg, 'success', 6000);
+
+          if (btn) {
+            btn.innerHTML = '✅ Aktif';
+            btn.style.color = '#15803d';
+            btn.style.borderColor = '#86efac';
+            setTimeout(() => {
+              btn.innerHTML = origText;
+              btn.style.color = '';
+              btn.style.borderColor = '';
+              btn.disabled = false;
+            }, 3000);
+          }
         })
-        .catch(err => showToast('Koneksi GAGAL: ' + err.message, 'error'));
+        .catch(err => {
+          const acc = (appData.accounts || []).find(a => a.akun_id === accountId);
+          const accName = acc ? acc.nama_akun : accountId;
+
+          let msg = `❌ <b>Koneksi Akun TIDAK AKTIF / GAGAL!</b><br>`;
+          msg += `• Akun: <b>${escapeHtml(accName)}</b><br>`;
+          msg += `• Status Token: <b>🔴 TIDAK AKTIF (Bermasalah)</b><br>`;
+          msg += `• Penyebab: ${escapeHtml(err.message)}<br>`;
+          msg += `• Solusi: Token login kedaluwarsa atau izin ditolak. Silakan login atau perbarui token akun.`;
+
+          showToast(msg, 'error', 7000);
+
+          if (btn) {
+            btn.innerHTML = '❌ Gagal';
+            btn.style.color = '#b91c1c';
+            btn.style.borderColor = '#fca5a5';
+            setTimeout(() => {
+              btn.innerHTML = origText;
+              btn.style.color = '';
+              btn.style.borderColor = '';
+              btn.disabled = false;
+            }, 3500);
+          }
+        });
     }
 
     // === BACKUP & TOKEN HANDLERS ===
