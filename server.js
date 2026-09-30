@@ -3585,8 +3585,49 @@ app.post('/api/action', async (req, res) => {
           tempCount: tempFiles.length,
           globalStop: getSetting('STOP_GLOBAL', 'FALSE') === 'TRUE',
           sheetUrl: getSetting('GOOGLE_SHEET_URL', '#'),
-          internetOnline: isInternetOnline
+          internetOnline: isInternetOnline,
+          geminiApiKey: getSetting('GEMINI_API_KEY', '') || process.env.GEMINI_API_KEY || '',
+          geminiModel: getSetting('GEMINI_MODEL', 'gemini-1.5-flash')
         };
+        break;
+      }
+
+      // Gemini AI Settings & Testing
+      case 'saveGeminiSettings': {
+        const payload = args[0] || {};
+        const apiKey = String(payload.apiKey !== undefined ? payload.apiKey : '').trim();
+        const model = String(payload.model || 'gemini-1.5-flash').trim();
+        if (apiKey) {
+          setSetting('GEMINI_API_KEY', apiKey, 'Google Gemini API Key untuk AI Caption');
+        }
+        if (model) {
+          setSetting('GEMINI_MODEL', model, 'Model Gemini yang digunakan');
+        }
+        console.log(`[SETTINGS] Gemini API Key & Model (${model}) berhasil disimpan.`);
+        result = { success: true, message: 'Kunci API Gemini & Model AI berhasil disimpan!' };
+        break;
+      }
+
+      case 'testGeminiApiKey': {
+        const payload = args[0] || {};
+        const testKey = String(payload.apiKey || '').trim() || getSetting('GEMINI_API_KEY', '') || process.env.GEMINI_API_KEY || '';
+        const testModel = String(payload.model || '').trim() || getSetting('GEMINI_MODEL', 'gemini-1.5-flash');
+        if (!testKey) {
+          throw new Error('API Key belum diisi. Masukkan Google Gemini API Key Anda.');
+        }
+        const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/${testModel}:generateContent?key=${testKey}`;
+        const testResp = await fetch(testUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: 'Halo Gemini, konfirmasi 1 kata: Aktif' }] }]
+          })
+        });
+        const testData = await testResp.json();
+        if (testData.error) {
+          throw new Error(testData.error.message || JSON.stringify(testData.error));
+        }
+        result = { success: true, message: `✅ Sukses! Model ${testModel} aktif dan siap digunakan untuk generate caption AI.` };
         break;
       }
 
