@@ -1062,7 +1062,10 @@
         <h1 class="page-title" id="pageTitleText">Manajemen Niche</h1>
         <div class="page-subtitle" id="pageSubtitleText">Kelola saluran publikasi, jadwal otomatis, dan folder video komputer per niche.</div>
       </div>
-      <div class="top-actions">
+      <div class="top-actions" style="display: flex; gap: 8px; align-items: center;">
+        <button class="btn btn-sm btn-secondary" onclick="cleanStorageAction()" style="border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem;" title="Bersihkan file video sementara di folder temp_mixed">
+          🧹 Bersihkan Cache (<span id="badgeStorageCache">0 MB</span>)
+        </button>
         <span class="badge badge-info" id="lastSyncText">Terakhir Sinkron: Memuat...</span>
       </div>
     </div>
@@ -2098,6 +2101,72 @@
         <button class="btn btn-secondary" onclick="closeModal('modalDatabaseBackup')">Tutup</button>
       </div>
     </div>
+  <!-- Modal Pemilih Sampul Visual (Cover Frame Selector) -->
+  <div class="modal-overlay" id="modalCoverSelector">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <span>🖼️</span>
+          <span>Pemilih Sampul Visual Reels (Cover Frame)</span>
+        </div>
+        <button class="modal-close" onclick="closeCoverModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 18px 24px;">
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <span id="coverModalMediaTitle" style="font-weight: 700; color: #1e293b; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+          <span class="badge badge-info" id="coverModalJobBadge">JOB</span>
+        </div>
+
+        <!-- Frame Preview Box (9:16 Aspect Ratio) -->
+        <div style="width: 100%; max-width: 240px; height: 380px; margin: 0 auto 16px auto; background: #0f172a; border-radius: 12px; overflow: hidden; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; border: 2px solid var(--border-color);">
+          <img id="coverModalImg" src="" alt="Pratinjau Frame Sampul" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+          <div id="coverModalLoader" style="display: none; position: absolute; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(2px); color: #fff; font-size: 0.75rem; font-weight: 700; align-items: center; justify-content: center; gap: 6px;">
+            <div class="spinner-small" style="width: 18px; height: 18px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+            Memuat frame...
+          </div>
+          <!-- Time Badge on Preview -->
+          <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.75); color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; font-family: monospace;" id="coverPreviewTimeOverlay">1.8s</div>
+        </div>
+
+        <!-- Controls -->
+        <div style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-weight: 700; font-size: 0.85rem; color: #334155;">Posisi Waktu Sampul:</label>
+            <span style="font-size: 0.95rem; font-weight: 800; color: var(--primary);" id="coverSecText">1.8 Detik</span>
+          </div>
+          <input type="range" id="coverSlider" min="0" max="60" step="0.5" value="1.8" oninput="onCoverSliderChange(this.value)" style="width: 100%; accent-color: var(--primary); cursor: pointer;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+            <span>0.0s (Awal)</span>
+            <span>15.0s</span>
+            <span>30.0s</span>
+            <span>45.0s</span>
+            <span>60.0s</span>
+          </div>
+        </div>
+
+        <!-- Preset Buttons -->
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">Lompat Cepat ke Momen Populer:</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setCoverSliderPreset(0.5)" style="padding: 2px 8px; font-size: 0.72rem;">0.5s</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setCoverSliderPreset(1.8)" style="padding: 2px 8px; font-size: 0.72rem; border-color: var(--primary); color: var(--primary); font-weight: 700;">1.8s (Standar)</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setCoverSliderPreset(3.0)" style="padding: 2px 8px; font-size: 0.72rem;">3.0s (Hook)</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setCoverSliderPreset(5.0)" style="padding: 2px 8px; font-size: 0.72rem;">5.0s</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setCoverSliderPreset(8.0)" style="padding: 2px 8px; font-size: 0.72rem;">8.0s</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setCoverSliderPreset(12.0)" style="padding: 2px 8px; font-size: 0.72rem;">12.0s</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="setCoverSliderPreset(18.0)" style="padding: 2px 8px; font-size: 0.72rem;">18.0s</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-secondary" onclick="closeCoverModal()">Batal</button>
+        <button class="btn btn-primary" onclick="saveCoverOffsetAction()" id="btnSaveCover" style="display: inline-flex; align-items: center; gap: 6px;">
+          💾 Simpan Frame Sampul
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Toast Notification Container -->
@@ -2278,6 +2347,115 @@
         });
     }
 
+    // === COVER FRAME SELECTOR STATE & LOGIC ===
+    let currentCoverJobId = null;
+    let currentCoverMediaId = null;
+    let coverDebounceTimer = null;
+
+    function openCoverSelector(jobId, mediaId, currentOffsetMs = 1800) {
+      currentCoverJobId = jobId;
+      currentCoverMediaId = mediaId;
+      const sec = Math.max(0, (currentOffsetMs / 1000)).toFixed(1);
+
+      document.getElementById('coverModalMediaTitle').textContent = mediaId || 'Video Reels';
+      document.getElementById('coverModalJobBadge').textContent = jobId || '';
+      document.getElementById('coverSlider').value = sec;
+      document.getElementById('coverSecText').textContent = sec + ' Detik (' + currentOffsetMs + ' ms)';
+      document.getElementById('coverPreviewTimeOverlay').textContent = sec + 's';
+
+      updateCoverPreviewImage(currentOffsetMs);
+      openModal('modalCoverSelector');
+    }
+
+    function closeCoverModal() {
+      closeModal('modalCoverSelector');
+    }
+
+    function onCoverSliderChange(val) {
+      const sec = parseFloat(val).toFixed(1);
+      const ms = Math.round(sec * 1000);
+      document.getElementById('coverSecText').textContent = sec + ' Detik (' + ms + ' ms)';
+      document.getElementById('coverPreviewTimeOverlay').textContent = sec + 's';
+
+      clearTimeout(coverDebounceTimer);
+      coverDebounceTimer = setTimeout(() => {
+        updateCoverPreviewImage(ms);
+      }, 140);
+    }
+
+    function setCoverSliderPreset(sec) {
+      document.getElementById('coverSlider').value = sec;
+      onCoverSliderChange(sec);
+    }
+
+    function updateCoverPreviewImage(ms) {
+      if (!currentCoverJobId) return;
+      const loader = document.getElementById('coverModalLoader');
+      if (loader) loader.style.display = 'flex';
+      const img = document.getElementById('coverModalImg');
+      const newImg = new Image();
+      newImg.onload = () => {
+        img.src = newImg.src;
+        if (loader) loader.style.display = 'none';
+      };
+      newImg.onerror = () => {
+        if (loader) loader.style.display = 'none';
+      };
+      newImg.src = `/api/jobs/${encodeURIComponent(currentCoverJobId)}/frame?offset_ms=${ms}&_t=${Date.now()}`;
+    }
+
+    async function saveCoverOffsetAction() {
+      if (!currentCoverJobId) return;
+      const sec = parseFloat(document.getElementById('coverSlider').value);
+      const ms = Math.round(sec * 1000);
+      const btn = document.getElementById('btnSaveCover');
+      const origText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = 'Menyimpan...';
+
+      try {
+        const resp = await fetch('/api/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'updateJobCoverOffset',
+            args: [{ jobId: currentCoverJobId, cover_offset_ms: ms }]
+          })
+        });
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+
+        showToast(`✅ Frame sampul berhasil diperbarui ke detik ${sec}s!`, 'success');
+        closeCoverModal();
+        if (data.result) renderDashboard(data.result);
+      } catch (err) {
+        showToast('Gagal mengubah sampul: ' + err.message, 'danger');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
+    }
+
+    // === STORAGE CLEANER ACTION ===
+    async function cleanStorageAction() {
+      if (!confirm('Bersihkan file video sementara di folder temp_mixed untuk menghemat ruang disk komputer?')) return;
+      try {
+        const resp = await fetch('/api/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'cleanStorageTemp' })
+        });
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+
+        const r = data.result || {};
+        showToast(`✅ Cache dibersihkan! Menghapus ${r.cleanedFiles || 0} file sementara (${r.freedMb || 0} MB dibebaskan).`, 'success');
+        if (r.dashboard) renderDashboard(r.dashboard);
+      } catch (err) {
+        showToast('Gagal membersihkan cache: ' + err.message, 'danger');
+      }
+    }
+
     function renderAll() {
       // Summary stats
       document.getElementById('statVideos').textContent = (appData.summary && appData.summary.videos) || (appData.media ? appData.media.length : 0);
@@ -2285,6 +2463,11 @@
       document.getElementById('statUploading').textContent = (appData.summary && appData.summary.uploading) || 0;
       document.getElementById('statPublished').textContent = (appData.summary && appData.summary.published) || 0;
       document.getElementById('statAttention').textContent = (appData.summary && appData.summary.attention) || 0;
+
+      if (appData.storage) {
+        const cacheEl = document.getElementById('badgeStorageCache');
+        if (cacheEl) cacheEl.textContent = `${appData.storage.tempSizeMb || 0} MB`;
+      }
 
       if (appData.sheetUrl) {
         document.getElementById('btnSheetLink').href = appData.sheetUrl;
@@ -3122,6 +3305,7 @@
                 ${(j.bgm_enabled === 'TRUE' || j.bgm_enabled === true) ? `<span style="background: rgba(99, 102, 241, 0.1); color: var(--primary); padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 0.68rem;" title="Musik Latar BGM (${Math.round((j.bgm_volume||0.15)*100)}%)">🎵 BGM ${Math.round((j.bgm_volume||0.15)*100)}%</span>` : ''}
                 ${(j.sfx_enabled === 'TRUE' || j.sfx_enabled === true) ? `<span style="background: rgba(245, 158, 11, 0.12); color: #d97706; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 0.68rem;" title="SFX Hook 3 Detik (${Math.round((j.sfx_volume||0.60)*100)}%)">⚡ Hook ${Math.round((j.sfx_volume||0.60)*100)}%</span>` : ''}
                 ${(j.outro_enabled === 'TRUE' || j.outro_enabled === true || j.outro_enabled === undefined) ? `<span style="background: rgba(16, 185, 129, 0.12); color: #059669; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 0.68rem;" title="Outro Follower CTA: ${escapeHtml(j.outro_text || 'Ajakan Follow')}">🔔 Outro CTA</span>` : ''}
+                <button type="button" onclick="openCoverSelector('${escapeHtml(j.job_id)}', '${escapeHtml(j.media_id)}', ${j.cover_offset_ms || 1800})" style="background: rgba(14, 165, 233, 0.12); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.28); padding: 1px 7px; border-radius: 4px; font-weight: 700; font-size: 0.68rem; cursor: pointer; display: inline-flex; align-items: center; gap: 3px;" title="Pilih Frame Sampul Reels Secara Visual">🖼️ Sampul ${((j.cover_offset_ms || 1800)/1000).toFixed(1)}s</button>
               </div>
             </td>
             <td style="text-align: center;">

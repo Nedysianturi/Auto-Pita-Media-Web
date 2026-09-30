@@ -1196,6 +1196,68 @@ function autoScheduleUnscheduledMedia() {
   }
 }
 
+// === PEMBERSIH FILE SEMENTARA OTOMATIS (AUTO-CLEANER STORAGE) ===
+function getStorageInfo() {
+  let tempBytes = 0;
+  let tempCount = 0;
+  const tempDir = path.join(__dirname, 'temp_mixed');
+  if (fs.existsSync(tempDir)) {
+    try {
+      const files = fs.readdirSync(tempDir);
+      for (const f of files) {
+        if (f.startsWith('.')) continue;
+        try {
+          const s = fs.statSync(path.join(tempDir, f));
+          tempBytes += s.size;
+          tempCount++;
+        } catch(e) {}
+      }
+    } catch(e) {}
+  }
+  return {
+    tempFilesCount: tempCount,
+    tempSizeMb: Number((tempBytes / (1024 * 1024)).toFixed(1)),
+    backupCount: getBackupList().length
+  };
+}
+
+function cleanStorageTempFiles(forceAll = false) {
+  const tempDir = path.join(__dirname, 'temp_mixed');
+  if (!fs.existsSync(tempDir)) return { cleanedFiles: 0, freedMb: 0 };
+
+  let cleanedFiles = 0;
+  let freedBytes = 0;
+  const now = Date.now();
+  // Jika manual (forceAll): bersihkan file yang tidak aktif (> 15 detik)
+  // Jika otomatis berkala: bersihkan file yang usianya > 2 jam
+  const maxAgeMs = forceAll ? (15 * 1000) : (2 * 60 * 60 * 1000);
+
+  try {
+    const files = fs.readdirSync(tempDir);
+    for (const f of files) {
+      if (f.startsWith('.')) continue;
+      const fPath = path.join(tempDir, f);
+      try {
+        const stats = fs.statSync(fPath);
+        if (now - stats.mtimeMs > maxAgeMs) {
+          freedBytes += stats.size;
+          fs.unlinkSync(fPath);
+          cleanedFiles++;
+          console.log(`[STORAGE CLEANER] File sementara dihapus: ${f} (${(stats.size/1024/1024).toFixed(1)} MB)`);
+        }
+      } catch (fe) {}
+    }
+  } catch (err) {
+    console.warn('[STORAGE CLEANER ERROR]', err.message);
+  }
+
+  const freedMb = Number((freedBytes / (1024 * 1024)).toFixed(1));
+  if (cleanedFiles > 0) {
+    console.log(`[STORAGE CLEANER SUMMARY] Berhasil membersihkan ${cleanedFiles} file sementara (${freedMb} MB ruang disk dibebaskan).`);
+  }
+  return { cleanedFiles, freedMb, storage: getStorageInfo() };
+}
+
 // === AUTO-BACKUP DATABASE (SAFETY NET) ===
 function getBackupList() {
   const backupDir = path.join(__dirname, 'backups');
@@ -1397,6 +1459,7 @@ function getDashboardData() {
       message: isInternetOnline ? 'Terhubung normal' : 'Menunggu koneksi internet tersambung kembali...'
     },
     backups: getBackupList(),
+    storage: getStorageInfo(),
     summary: {
       videos: media.length,
       queued: jobs.filter(j => j.status === 'READY').length,
@@ -2592,6 +2655,15 @@ setInterval(async () => {
   }
 }, 10 * 60 * 1000);
 
+// Background Auto-Cleaner Storage (Setiap 1 jam membersihkan file sampah temp > 2 jam)
+setInterval(() => {
+  try {
+    cleanStorageTempFiles(false);
+  } catch(e) {
+    console.warn('[STORAGE CLEANER INTERVAL ERROR]', e.message);
+  }
+}, 60 * 60 * 1000);
+
 // 9. Sync From Google Sheet (Bidirectional Alignment)
 async function syncGoogleSheet() {
   const sheetId = '10KkDyeiTMOAkLi1m0B0D7ZMyPc5V1VZqH6idWTZjMCE';
@@ -3224,6 +3296,39 @@ app.post('/api/action', async (req, res) => {
         result = getDashboardData();
         break;
 
+      // Storage Cleaner Action
+      case 'cleanStorageTemp': {
+        const report = cleanStorageTempFiles(true);
+        result = { success: true, ...report, dashboard: getDashboardData() };
+        break;
+      }
+
+      // Cover Frame Selector Actions
+      case 'updateJobCoverOffset': {
+        const payload = args[0] || {};
+        const jobId = payload.jobId || payload.job_id;
+        const ms = Math.max(0, parseInt(payload.cover_offset_ms || 1800, 10));
+        if (jobId) {
+          db.prepare('UPDATE jobs SET cover_offset_ms = ?, updated_at = ? WHERE job_id = ?').run(ms, isoNow(), jobId);
+          console.log(`[COVER] Job ${jobId} cover offset diubah -> ${ms}ms (${(ms/1000).toFixed(1)}s)`);
+        }
+        result = getDashboardData();
+        break;
+      }
+
+      case 'updateMediaCoverOffset': {
+        const payload = args[0] || {};
+        const mediaId = payload.mediaId || payload.media_id;
+        const ms = Math.max(0, parseInt(payload.cover_offset_ms || 1800, 10));
+        if (mediaId) {
+          db.prepare('UPDATE media SET cover_offset_ms = ? WHERE media_id = ?').run(ms, mediaId);
+          db.prepare("UPDATE jobs SET cover_offset_ms = ?, updated_at = ? WHERE media_id = ? AND status = 'READY'").run(ms, isoNow(), mediaId);
+          console.log(`[COVER] Media ${mediaId} cover offset diubah -> ${ms}ms`);
+        }
+        result = getDashboardData();
+        break;
+      }
+
       default:
         console.warn('[ROUTER] Unknown action:', action);
         result = getDashboardData();
@@ -3233,6 +3338,76 @@ app.post('/api/action', async (req, res) => {
   } catch (err) {
     console.error(`[ERROR API] ${action}:`, err.message);
     res.status(400).json({ error: err.message });
+  }
+});
+
+// === PEMILIH SAMPUL VISUAL (STREAM FRAME DARI VIDEO MASTER) ===
+app.get('/api/media/:mediaId/frame', (req, res) => {
+  try {
+    const { mediaId } = req.params;
+    const offsetMs = Math.max(0, parseInt(req.query.offset_ms || 1800, 10));
+    const offsetSec = (offsetMs / 1000).toFixed(2);
+
+    const media = db.prepare('SELECT file_path FROM media WHERE media_id = ?').get(mediaId);
+    if (!media || !media.file_path || !fs.existsSync(media.file_path)) {
+      return res.status(404).send('Media video tidak ditemukan');
+    }
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=120');
+
+    const proc = spawn('ffmpeg', [
+      '-ss', offsetSec,
+      '-i', media.file_path,
+      '-vframes', '1',
+      '-q:v', '3',
+      '-f', 'image2',
+      'pipe:1'
+    ]);
+
+    proc.stdout.pipe(res);
+    proc.stderr.on('data', () => {});
+    proc.on('error', () => {
+      if (!res.headersSent) res.status(500).send('Gagal mengekstrak frame sampul');
+    });
+  } catch (err) {
+    if (!res.headersSent) res.status(500).send(err.message);
+  }
+});
+
+app.get('/api/jobs/:jobId/frame', (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = db.prepare('SELECT media_id, cover_offset_ms FROM jobs WHERE job_id = ?').get(jobId);
+    if (!job) return res.status(404).send('Job tidak ditemukan');
+
+    const offsetMs = req.query.offset_ms !== undefined ? Math.max(0, parseInt(req.query.offset_ms, 10)) : (job.cover_offset_ms || 1800);
+    const offsetSec = (offsetMs / 1000).toFixed(2);
+
+    const media = db.prepare('SELECT file_path FROM media WHERE media_id = ?').get(job.media_id);
+    if (!media || !media.file_path || !fs.existsSync(media.file_path)) {
+      return res.status(404).send('Media video tidak ditemukan');
+    }
+
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=120');
+
+    const proc = spawn('ffmpeg', [
+      '-ss', offsetSec,
+      '-i', media.file_path,
+      '-vframes', '1',
+      '-q:v', '3',
+      '-f', 'image2',
+      'pipe:1'
+    ]);
+
+    proc.stdout.pipe(res);
+    proc.stderr.on('data', () => {});
+    proc.on('error', () => {
+      if (!res.headersSent) res.status(500).send('Gagal mengekstrak frame sampul');
+    });
+  } catch (err) {
+    if (!res.headersSent) res.status(500).send(err.message);
   }
 });
 
