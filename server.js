@@ -5,6 +5,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const dns = require('dns').promises;
 const { DatabaseSync } = require('node:sqlite');
+const { spawn, execSync } = require('child_process');
 
 // === RESILIENT CRASH GUARDS ===
 // Mencegah server mati jika terjadi error sistem atau jaringan tak terduga
@@ -774,12 +775,15 @@ async function mixVideoWithAudio(videoPath, bgmAudioPath = null, volumeMusic = 0
       outputPath
     );
   } else if (!hasOutro && audioFilter) {
-    // Audio mixing only, video copied directly (ultra fast)
+    // Audio mixing only - pastikan video selalu berformat libx264 yuv420p + faststart standar Meta & TikTok
     args.push(
       '-filter_complex', audioFilter,
       '-map', '0:v',
       '-map', '[aout]',
-      '-c:v', 'copy',
+      '-c:v', 'libx264',
+      '-preset', 'ultrafast',
+      '-crf', '22',
+      '-pix_fmt', 'yuv420p',
       '-movflags', '+faststart',
       '-c:a', 'aac',
       '-b:a', '192k',
@@ -801,6 +805,81 @@ async function mixVideoWithAudio(videoPath, bgmAudioPath = null, volumeMusic = 0
     });
     proc.on('error', err => reject(err));
   });
+}
+
+// === PILAR 1 & 2: UNIVERSAL PRE-FLIGHT VIDEO SANITIZER ===
+// Memastikan semua video untuk Instagram Reels, Facebook Reels, dan TikTok memenuhi Standar Emas:
+// 1. Codec: H.264
+// 2. Pixel Format: Strictly yuv420p (bukan yuvj420p atau HDR)
+// 3. Metadata Moov Atom di awal: -movflags +faststart
+// 4. Audio: AAC stereo 192k
+async function sanitizeVideoForPlatform(inputVideoPath) {
+  if (!inputVideoPath || !fs.existsSync(inputVideoPath)) {
+    throw new Error(`File video tidak ditemukan di komputer: ${inputVideoPath}`);
+  }
+
+  let probeData = null;
+  try {
+    const probeCmd = `ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,pix_fmt -show_entries format=duration -of json "${inputVideoPath}"`;
+    const probeOut = execSync(probeCmd, { encoding: 'utf8', timeout: 6000 });
+    probeData = JSON.parse(probeOut);
+  } catch (err) {
+    console.warn('[SANITIZER PROBE WARNING] ffprobe gagal mendeteksi info video, melanjutkan:', err.message);
+    return inputVideoPath;
+  }
+
+  const vStream = (probeData && probeData.streams && probeData.streams[0]) || {};
+  const codecName = (vStream.codec_name || '').toLowerCase();
+  const pixFmt = (vStream.pix_fmt || '').toLowerCase();
+
+  const isCodecOk = codecName === 'h264';
+  const isPixFmtOk = pixFmt === 'yuv420p';
+  const isInTempMixed = inputVideoPath.includes('temp_mixed');
+
+  // Jika file sudah diproses oleh enhancer dengan yuv420p & faststart di temp_mixed, sudah 100% aman
+  if (isCodecOk && isPixFmtOk && isInTempMixed) {
+    return inputVideoPath;
+  }
+
+  const tempDir = path.join(__dirname, 'temp_mixed');
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+  const sanitizedPath = path.join(tempDir, `sanitized_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp4`);
+
+  console.log(`[VIDEO SANITIZER] Menyelaraskan profil video "${path.basename(inputVideoPath)}" (${codecName}, ${pixFmt} -> h264, yuv420p, +faststart)...`);
+
+  const ffmpegArgs = [
+    '-y',
+    '-i', inputVideoPath,
+    '-c:v', 'libx264',
+    '-preset', 'ultrafast',
+    '-crf', '22',
+    '-pix_fmt', 'yuv420p',
+    '-movflags', '+faststart',
+    '-c:a', 'aac',
+    '-b:a', '192k',
+    sanitizedPath
+  ];
+
+  await new Promise((resolve) => {
+    const proc = spawn('ffmpeg', ffmpegArgs);
+    let errOutput = '';
+    proc.stderr.on('data', d => { errOutput += d.toString(); });
+    proc.on('close', code => {
+      if (code === 0 && fs.existsSync(sanitizedPath)) {
+        console.log(`[VIDEO SANITIZER] Sukses sanitasi video: ${path.basename(sanitizedPath)}`);
+        resolve(sanitizedPath);
+      } else {
+        console.warn(`[VIDEO SANITIZER WARNING] Normalisasi gagal, menggunakan file asli: ${errOutput.slice(-200)}`);
+        resolve(inputVideoPath);
+      }
+    });
+    proc.on('error', err => {
+      console.warn(`[VIDEO SANITIZER ERROR] ${err.message}`);
+      resolve(inputVideoPath);
+    });
+  });
+
+  return fs.existsSync(sanitizedPath) ? sanitizedPath : inputVideoPath;
 }
 
 
@@ -1764,6 +1843,13 @@ async function publishJob(jobId) {
 
     let publishResult = null;
 
+    // === PILAR 1 & 2: UNIVERSAL PRE-FLIGHT VIDEO SANITIZER ===
+    const sanitizedPath = await sanitizeVideoForPlatform(activeFilePath);
+    if (sanitizedPath && sanitizedPath !== activeFilePath) {
+      if (!tempMixedFile) tempMixedFile = sanitizedPath;
+      activeFilePath = sanitizedPath;
+    }
+
     if (job.platform === 'FACEBOOK') {
       const pageId = acc.platform_user_id;
       const filePath = activeFilePath;
@@ -1933,11 +2019,11 @@ async function publishJob(jobId) {
       // 3. Wait for container processing (poll status)
       console.log(`[IG UPLOAD] Processing Reels container ${containerId}...`);
       let isReady = false;
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 20; i++) {
         await new Promise(r => setTimeout(r, 5000));
         const statusResp = await fetch(`https://graph.facebook.com/v21.0/${containerId}?fields=status_code&access_token=${acc.token}`);
         const statusData = await statusResp.json();
-        console.log(`[IG UPLOAD] Container status: ${statusData.status_code || JSON.stringify(statusData)} (${i+1}/60)`);
+        console.log(`[IG UPLOAD] Container status: ${statusData.status_code || JSON.stringify(statusData)} (${i+1}/20)`);
         if (statusData.status_code === 'FINISHED') {
           isReady = true;
           break;
@@ -1948,15 +2034,16 @@ async function publishJob(jobId) {
       }
 
       if (!isReady) {
-        console.warn(`[IG UPLOAD PAUSE] Container ${containerId} masih ditranscode oleh Meta. Job tetap siaga di status 'READY' dan akan otomatis melanjutkan begitu siap.`);
+        console.warn(`[IG UPLOAD TIMEOUT] Container ${containerId} belum selesai dalam 100 detik di server Meta. Mereset tiket antrean agar tidak terjebak...`);
         db.prepare(`
           UPDATE jobs SET
             status = 'READY',
-            platform_publish_id = ?,
-            last_error = 'Sedang diproses oleh server Instagram (antrean otomatis melanjutkan begitu selesai)...',
+            platform_publish_id = NULL,
+            attempts = attempts + 1,
+            last_error = 'Server Instagram sempat tertunda (tiket antrean otomatis di-reset agar tidak terjebak)...',
             updated_at = ?
           WHERE job_id = ?
-        `).run(containerId, isoNow(), jobId);
+        `).run(isoNow(), jobId);
         return getDashboardData();
       }
 
@@ -2042,29 +2129,57 @@ async function publishJob(jobId) {
         })
       });
 
-      const initData = await initResp.json();
-      if (initData.error && initData.error.code !== 'ok') {
+      let finalInitData = await initResp.json();
+      if (finalInitData.error && finalInitData.error.code !== 'ok') {
         const currentAppIdx = acc.tt_app_index || 0;
         const currentApp = getTikTokApp(currentAppIdx);
-        const nextIdx = getNextTikTokAppIndex(currentAppIdx);
-        const nextApp = getTikTokApp(nextIdx);
         
-        console.error(`[TIKTOK ERROR] Code: ${initData.error.code}, Msg: ${initData.error.message}`);
+        console.error(`[TIKTOK ERROR] Code: ${finalInitData.error.code}, Msg: ${finalInitData.error.message}`);
         
-        if (initData.error.code === 'unaudited_client_can_only_post_to_private_accounts') {
-          throw new Error(`TikTok Unaudited App (${currentApp.label}): Aplikasi belum lolos review TikTok, hanya boleh posting ke "Akun Privat". Silahkan ubah akun TikTok di HP ke "Akun Privat" sementara waktu, atau ajukan Review/Audit di TikTok Developer.`);
+        // Auto-fallback: Jika aplikasi developer belum lolos review TikTok, otomatis beralih ke mode privat agar upload tetap sukses
+        if (finalInitData.error.code === 'unaudited_client_can_only_post_to_private_accounts' && privacyLevel !== 'SELF_ONLY') {
+          console.warn('[TIKTOK FALLBACK] Mengalihkan ke mode privat (SELF_ONLY) agar upload tetap berhasil...');
+          const retryInitResp = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${acc.token}`,
+              'Content-Type': 'application/json; charset=UTF-8'
+            },
+            body: JSON.stringify({
+              post_info: {
+                title: (post.caption_tiktok || post.caption_utama || '').slice(0, 2200),
+                privacy_level: 'SELF_ONLY',
+                disable_duet: false,
+                disable_stitch: false,
+                disable_comment: false,
+                video_cover_timestamp_ms: job.cover_offset_ms || 1800
+              },
+              source_info: {
+                source: 'FILE_UPLOAD',
+                video_size: fileSize,
+                chunk_size: fileSize,
+                total_chunk_count: 1
+              }
+            })
+          });
+          const retryData = await retryInitResp.json();
+          if (retryData.data && retryData.data.upload_url) {
+            finalInitData = retryData;
+            console.log('[TIKTOK FALLBACK] Berhasil inisiasi upload dalam mode privat (SELF_ONLY)!');
+          }
         }
 
-        // Update account to suggest next app for re-auth
-        try {
-          db.prepare("UPDATE accounts SET tt_app_index = ? WHERE akun_id = ?").run(nextIdx, acc.akun_id);
-        } catch(e) {}
-        
-        throw new Error(`TikTok Init Error [${initData.error.code || 'FAIL'}] (${currentApp.label}): ${initData.error.message || JSON.stringify(initData.error)} — Silahkan re-otorisasi.`);
+        if (finalInitData.error && finalInitData.error.code !== 'ok') {
+          const nextIdx = getNextTikTokAppIndex(currentAppIdx);
+          try {
+            db.prepare("UPDATE accounts SET tt_app_index = ? WHERE akun_id = ?").run(nextIdx, acc.akun_id);
+          } catch(e) {}
+          throw new Error(`TikTok Init Error [${finalInitData.error.code || 'FAIL'}] (${currentApp.label}): ${finalInitData.error.message || JSON.stringify(finalInitData.error)}`);
+        }
       }
 
-      const publishId = initData.data ? initData.data.publish_id : null;
-      const uploadUrl = initData.data ? initData.data.upload_url : null;
+      const publishId = finalInitData.data ? finalInitData.data.publish_id : null;
+      const uploadUrl = finalInitData.data ? finalInitData.data.upload_url : null;
       if (!uploadUrl) {
         throw new Error('TikTok tidak memberikan upload_url');
       }
