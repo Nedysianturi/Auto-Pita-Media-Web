@@ -421,7 +421,8 @@ function verifyLicenseKey(licenseKey, hwid) {
   }
   const plan = parts[1];
   const expectedKey = generateLicenseKey(cleanHwid, plan);
-  if (cleanKey === expectedKey) {
+  const expectedKey5 = expectedKey.split('-').slice(0, 5).join('-');
+  if (cleanKey === expectedKey || cleanKey === expectedKey5) {
     return {
       valid: true,
       hwid: cleanHwid,
