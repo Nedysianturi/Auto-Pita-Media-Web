@@ -1676,6 +1676,25 @@
               <span>💬 Salin Format Pesan WhatsApp Pembeli</span>
             </button>
           </div>
+
+          <!-- Pengaturan Master Google Sheets Telemetry Webhook (Khusus Developer) -->
+          <div style="margin-top: 18px; padding-top: 16px; border-top: 1.5px dashed #d8b4fe;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <span style="font-size: 0.8rem; font-weight: 800; color: #4c1d95;">📡 Master Google Sheets Tracking (Database Pembeli):</span>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="openAppsScriptGuideModal()" style="font-size: 0.7rem; font-weight: 700; padding: 2px 8px;">
+                📖 Panduan Script
+              </button>
+            </div>
+            <div style="font-size: 0.72rem; color: #6b21a8; margin-bottom: 8px; line-height: 1.4;">
+              Hubungkan ke Google Spreadsheet baru khusus Anda. Setiap pembeli aktivasi di komputer mereka, datanya otomatis tercatat rapi di Google Sheet Anda.
+            </div>
+            <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+              <input type="text" id="devMasterWebhookUrl" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" style="font-family: monospace; font-size: 0.78rem;" />
+              <button type="button" class="btn btn-sm btn-primary" onclick="saveMasterWebhookUrlAction()" style="font-weight: 700; white-space: nowrap;">💾 Simpan</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="testMasterWebhookAction()" style="font-weight: 700; white-space: nowrap;">🧪 Test Ping</button>
+            </div>
+            <div id="masterWebhookStatusHint" style="font-size: 0.7rem; color: #047857; font-weight: 700;"></div>
+          </div>
         </div>
 
         <!-- 0. Konfigurasi AI & Kunci API (Google Gemini) -->
@@ -2279,9 +2298,9 @@
       <div class="modal-header">
         <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 1.3rem;">🔐</span>
-          <span>Aktivasi Lisensi PitaMedia Studio</span>
+          <span>Login & Aktivasi Lisensi PitaMedia Studio</span>
         </div>
-        <button class="modal-close" onclick="closeModal('modalLicenseActivation')">
+        <button class="modal-close" onclick="tryCloseLicenseModal()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
@@ -2289,35 +2308,83 @@
         <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.8rem; color: #166534; display: flex; align-items: flex-start; gap: 10px;">
           <span style="font-size: 1.4rem; line-height: 1;">🛡️</span>
           <div>
-            <b>Sistem Lisensi 1 Komputer (Machine-Locked):</b>
-            <div style="margin-top: 2px; color: #15803d;">Satu lisensi hanya berlaku untuk 1 perangkat. Masukkan kode lisensi resmi yang didaftarkan khusus untuk Machine ID komputer Anda di bawah ini.</div>
+            <b>Aktivasi Terikat 1 Komputer (Machine-Locked):</b>
+            <div style="margin-top: 2px; color: #15803d;">Masukkan data diri dan Kunci Lisensi resmi yang terikat ke Machine ID komputer ini untuk membuka akses penuh aplikasi.</div>
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Machine ID Komputer Anda</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Nama Lengkap Pembeli *</label>
+            <input type="text" id="licenseModalOwner" class="form-control" placeholder="Contoh: Budi Santoso" />
+          </div>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Alamat Email Pembeli *</label>
+            <input type="email" id="licenseModalEmail" class="form-control" placeholder="Contoh: budi@gmail.com" />
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Machine ID Komputer Anda (Otomatis Terdeteksi)</label>
           <div style="display: flex; gap: 8px;">
             <input type="text" id="licenseModalHwid" class="form-control" readonly style="font-family: monospace; font-weight: 800; background: #f8fafc; color: #4338ca; letter-spacing: 0.05em;" />
             <button type="button" class="btn btn-secondary" onclick="copyMachineId()" style="font-weight: 700; white-space: nowrap;">📋 Salin</button>
           </div>
-          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">Kirimkan kode Machine ID ini ke admin/penjual untuk mendapatkan Kunci Lisensi.</div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">Kirimkan Machine ID ini saat membeli lisensi untuk mendapatkan Kunci Lisensi resmi.</div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom: 8px;">
           <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Kunci Lisensi Resmi (License Key) *</label>
-          <input type="text" id="licenseModalKey" class="form-control" placeholder="Contoh: PITA-LIFETIME-XXXX-XXXX-XXXX" style="font-family: monospace; font-weight: 700;" />
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Nama Pembeli / Pemilik</label>
-          <input type="text" id="licenseModalOwner" class="form-control" placeholder="Nama Anda atau Studio" />
+          <input type="text" id="licenseModalKey" class="form-control" placeholder="Contoh: PITA-LIFETIME-XXXX-XXXX-XXXX atau PITA-TRIAL-..." style="font-family: monospace; font-weight: 700;" />
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal('modalLicenseActivation')">Tutup</button>
+        <button class="btn btn-secondary" onclick="tryCloseLicenseModal()">Tutup</button>
         <button class="btn btn-primary" onclick="submitActivateLicense()" style="font-weight: 800; background: linear-gradient(135deg, #4f46e5, #4338ca); box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);">
-          ✅ Aktivasi Lisensi Sekarang
+          🚀 Verifikasi & Masuk ke Aplikasi
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Panduan Google Apps Script Telemetry (Developer) -->
+  <div class="modal-overlay" id="modalAppsScriptGuide">
+    <div class="modal-dialog" style="max-width: 650px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.3rem;">📡</span>
+          <span>Panduan Memasang Google Sheet Tracking Pembeli</span>
+        </div>
+        <button class="modal-close" onclick="closeModal('modalAppsScriptGuide')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-dark);">
+        <p style="margin-bottom: 12px;">Ikuti 5 langkah mudah berikut untuk menghubungkan software ke Spreadsheet pribadi Anda (Hanya 2 Menit):</p>
+        
+        <ol style="padding-left: 20px; margin-bottom: 16px;">
+          <li style="margin-bottom: 8px;">Buka <b><a href="https://sheets.google.com/" target="_blank" style="color: var(--primary);">sheets.google.com ↗</a></b> dan buat <b>Spreadsheet Baru</b> (Beri judul: <i>Database Pembeli &amp; Lisensi PitaMedia</i>).</li>
+          <li style="margin-bottom: 8px;">Di menu atas spreadsheet Anda, klik: <b>Ekstensi (Extensions) &gt; Apps Script</b>.</li>
+          <li style="margin-bottom: 8px;">Hapus semua teks default di Apps Script, lalu <b>Tempel (Paste) Kode Script di bawah ini</b>.</li>
+          <li style="margin-bottom: 8px;">Klik tombol biru <b>Terapkan (Deploy) &gt; Penerapan baru (New deployment)</b>:
+            <ul style="margin-top: 4px; padding-left: 20px;">
+              <li>Pilih jenis: <b>Aplikasi Web (Web App)</b></li>
+              <li>Siapa yang memiliki akses: <b>Siapa saja (Anyone)</b> <i>(Wajib agar aplikasi pembeli bisa mengirim data aktivasi)</i></li>
+            </ul>
+          </li>
+          <li style="margin-bottom: 8px;">Klik <b>Terapkan (Deploy)</b>, berikan izin akses Google Anda, lalu <b>Salin URL Aplikasi Web</b> yang diberikan dan tempelkan ke kolom Master Webhook di tab Pengaturan aplikasi ini.</li>
+        </ol>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <b>📜 Kode Google Apps Script:</b>
+          <button type="button" class="btn btn-sm btn-primary" onclick="copyAppsScriptCode()" style="font-weight: 700;">
+            📋 Salin Seluruh Kode Script
+          </button>
+        </div>
+        <textarea id="appsScriptCodeArea" class="form-control" readonly style="height: 160px; font-family: monospace; font-size: 0.72rem; background: #f8fafc; color: #334155; line-height: 1.4;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalAppsScriptGuide')">Tutup</button>
       </div>
     </div>
   </div>
@@ -3476,6 +3543,13 @@
       const devCard = document.getElementById('developerLicenseStudioCard');
       if (devCard) {
         devCard.style.display = isDev ? 'block' : 'none';
+        if (isDev) {
+          const webhookInput = document.getElementById('devMasterWebhookUrl');
+          const hint = document.getElementById('masterWebhookStatusHint');
+          const masterUrl = (appData.settings && appData.settings.find(s => s.key === 'MASTER_LICENSE_WEBHOOK_URL'))?.value || '';
+          if (webhookInput && !webhookInput.value) webhookInput.value = masterUrl;
+          if (hint) hint.textContent = masterUrl ? '🟢 Webhook Terhubung Aktif' : '⚪ Webhook belum diisi';
+        }
       }
 
       // Populate Modal Fields
@@ -3485,6 +3559,8 @@
       if (modalKey && !modalKey.value && isLicensed) modalKey.value = key;
       const modalOwner = document.getElementById('licenseModalOwner');
       if (modalOwner && !modalOwner.value && isLicensed) modalOwner.value = owner;
+      const modalEmail = document.getElementById('licenseModalEmail');
+      if (modalEmail && !modalEmail.value && isLicensed) modalEmail.value = lic.customerEmail || '';
 
       // Auto popup activation modal if not licensed
       if (!isLicensed) {
@@ -3529,7 +3605,17 @@
       const lic = appData.license || {};
       const modalHwid = document.getElementById('licenseModalHwid');
       if (modalHwid) modalHwid.value = lic.hwid || '';
+      const modalEmail = document.getElementById('licenseModalEmail');
+      if (modalEmail) modalEmail.value = lic.customerEmail || '';
       openModal('modalLicenseActivation');
+    }
+
+    function tryCloseLicenseModal() {
+      const isLic = appData.license && appData.license.isLicensed;
+      if (!isLic) {
+        return showToast('Aplikasi terkunci. Harap aktivasi lisensi untuk melanjutkan.', 'warning');
+      }
+      closeModal('modalLicenseActivation');
     }
 
     function copyMachineId() {
@@ -3542,22 +3628,91 @@
 
     function submitActivateLicense() {
       const licenseKey = (document.getElementById('licenseModalKey') ? document.getElementById('licenseModalKey').value : '').trim();
-      const customerName = (document.getElementById('licenseModalOwner') ? document.getElementById('licenseModalOwner').value : '').trim() || 'Pembeli';
+      const customerName = (document.getElementById('licenseModalOwner') ? document.getElementById('licenseModalOwner').value : '').trim();
+      const customerEmail = (document.getElementById('licenseModalEmail') ? document.getElementById('licenseModalEmail').value : '').trim().toLowerCase();
 
-      if (!licenseKey) return showToast('Masukkan kode lisensi!', 'error');
+      if (!customerName) return showToast('Harap masukkan nama lengkap Anda!', 'error');
+      if (!customerEmail || !customerEmail.includes('@') || !customerEmail.includes('.')) {
+        return showToast('Harap masukkan alamat email pembeli yang valid (contoh: nama@gmail.com)!', 'error');
+      }
+      if (!licenseKey) return showToast('Harap masukkan Kunci Lisensi!', 'error');
 
-      showToast('Memverifikasi lisensi komputer...', 'info');
-      callBackend('activateLicense', { licenseKey, customerName })
+      showToast('Memverifikasi lisensi komputer & sinkronisasi...', 'info');
+      callBackend('activateLicense', { licenseKey, customerName, customerEmail })
         .then(res => {
           appData = res.dashboard || appData;
           if (res.license) appData.license = res.license;
           renderAll();
           closeModal('modalLicenseActivation');
-          showToast('🎉 Selamat! Lisensi komputer berhasil diaktivasi.', 'success');
+          showToast(res.message || '🎉 Selamat! Lisensi berhasil diaktivasi.', 'success');
         })
         .catch(err => {
           showToast('Aktivasi gagal: ' + err.message, 'error');
         });
+    }
+
+    // Google Sheets Telemetry Webhook Management (Developer Authority)
+    function saveMasterWebhookUrlAction() {
+      const url = (document.getElementById('devMasterWebhookUrl') ? document.getElementById('devMasterWebhookUrl').value : '').trim();
+      callBackend('saveMasterTelemetryUrl', { url })
+        .then(res => {
+          showToast('✅ URL Webhook Master Google Sheets berhasil disimpan!', 'success');
+          const hint = document.getElementById('masterWebhookStatusHint');
+          if (hint) hint.textContent = url ? '🟢 Webhook Terhubung Aktif' : '⚪ Webhook belum diatur';
+        })
+        .catch(err => showToast('Gagal menyimpan URL: ' + err.message, 'error'));
+    }
+
+    function testMasterWebhookAction() {
+      showToast('Mengirim sinyal uji coba ke Google Sheets Master...', 'info');
+      callBackend('testMasterTelemetryWebhook')
+        .then(res => {
+          showToast('🎉 Uji coba terkirim! Silakan periksa Google Sheet Anda.', 'success');
+        })
+        .catch(err => showToast('Uji coba gagal: ' + err.message, 'error'));
+    }
+
+    const APPS_SCRIPT_SNIPPET = `function doPost(e) {
+  try {
+    var rawData = e.postData.contents;
+    var data = JSON.parse(rawData);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Aktivasi Pembeli");
+    if (!sheet) {
+      sheet = ss.insertSheet("Aktivasi Pembeli");
+      var headers = ["Waktu Aktivasi (WIB)", "Nama Pembeli", "Email Pembeli", "Machine ID Komputer", "Tipe Lisensi", "Kunci Lisensi", "Status", "Batas Kadaluwarsa", "Sistem Operasi", "Versi App"];
+      sheet.appendRow(headers);
+      var headerRange = sheet.getRange(1, 1, 1, headers.length);
+      headerRange.setBackground("#4338ca");
+      headerRange.setFontColor("#ffffff");
+      headerRange.setFontWeight("bold");
+      headerRange.setHorizontalAlignment("center");
+      sheet.setFrozenRows(1);
+    }
+    var nowWib = Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
+    var expFormatted = data.expires_at === "PERMANENT" ? "PERMANEN (Selamanya)" : data.expires_at;
+    var newRow = [nowWib, data.customer_name || "-", data.customer_email || "-", data.hwid || "-", data.plan || "LIFETIME", data.license_key || "-", data.status || "ACTIVE", expFormatted, data.os_info || "-", data.app_version || "2.5.0"];
+    sheet.appendRow(newRow);
+    for (var i = 1; i <= newRow.length; i++) { sheet.autoResizeColumn(i); }
+    return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Recorded" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+function doGet(e) {
+  return ContentService.createTextOutput("PitaMedia Studio Master Telemetry Webhook is ONLINE!");
+}`;
+
+    function openAppsScriptGuideModal() {
+      const ta = document.getElementById('appsScriptCodeArea');
+      if (ta) ta.value = APPS_SCRIPT_SNIPPET;
+      openModal('modalAppsScriptGuide');
+    }
+
+    function copyAppsScriptCode() {
+      navigator.clipboard.writeText(APPS_SCRIPT_SNIPPET).then(() => {
+        showToast('📋 Seluruh kode Google Apps Script berhasil disalin!', 'success');
+      });
     }
 
     // === SETTINGS & SYSTEM MAINTENANCE ===

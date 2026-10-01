@@ -456,6 +456,7 @@ function getLicenseStatus() {
               licenseKey: row.license_key,
               plan: 'TRIAL',
               customerName: row.customer_name || 'Pengguna Trial',
+              customerEmail: row.customer_email || '',
               activatedAt: row.activated_at,
               expiresAt: row.expires_at,
               daysRemaining: 0,
@@ -474,6 +475,7 @@ function getLicenseStatus() {
             licenseKey: row.license_key,
             plan: 'TRIAL',
             customerName: row.customer_name || 'Pengguna Trial',
+            customerEmail: row.customer_email || '',
             activatedAt: row.activated_at,
             expiresAt: row.expires_at,
             daysRemaining,
@@ -491,6 +493,7 @@ function getLicenseStatus() {
           licenseKey: row.license_key,
           plan: isDev ? 'DEVELOPER' : 'LIFETIME',
           customerName: row.customer_name || (isDev ? 'Pengembang (Developer Master)' : 'Owner'),
+          customerEmail: row.customer_email || '',
           activatedAt: row.activated_at,
           expiresAt: 'PERMANENT',
           daysRemaining: null,
@@ -509,11 +512,49 @@ function getLicenseStatus() {
     licenseKey: '',
     plan: 'NONE',
     customerName: '',
+    customerEmail: '',
     activatedAt: '',
     expiresAt: '',
     daysRemaining: 0,
     status: 'UNLICENSED'
   };
+}
+
+// Background Telemetry: Kirim Data Aktivasi Pembeli ke Google Sheets Pribadi Pengembang
+async function sendActivationTelemetry(payload) {
+  try {
+    const webhookUrl = getSetting('MASTER_LICENSE_WEBHOOK_URL', process.env.MASTER_LICENSE_WEBHOOK_URL || '');
+    if (!webhookUrl || !webhookUrl.startsWith('http')) {
+      console.log('[TELEMETRY] Webhook URL Master belum dikonfigurasi. Data aktivasi tersimpan lokal.');
+      return;
+    }
+
+    const postData = {
+      action: 'log_activation',
+      hwid: payload.hwid,
+      customer_name: payload.customerName,
+      customer_email: payload.customerEmail,
+      plan: payload.plan,
+      license_key: payload.licenseKey,
+      status: 'ACTIVE',
+      activated_at: payload.activatedAt || isoNow(),
+      expires_at: payload.expiresAt || 'PERMANENT',
+      os_info: `${os.type()} ${os.release()} (${os.arch()})`,
+      app_version: '2.5.0-Desktop'
+    };
+
+    console.log(`[TELEMETRY] Mengirim data pembeli "${payload.customerName}" ke Master Google Sheets...`);
+    const resp = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(postData),
+      redirect: 'follow'
+    });
+    const txt = await resp.text();
+    console.log('[TELEMETRY SUCCESS] Respons Master Google Sheet:', txt.slice(0, 100));
+  } catch (err) {
+    console.warn('[TELEMETRY NOTICE]:', err.message);
+  }
 }
 
 function initLicenseSystem() {
@@ -525,6 +566,7 @@ function initLicenseSystem() {
         license_key TEXT NOT NULL,
         plan TEXT DEFAULT 'LIFETIME',
         customer_name TEXT DEFAULT 'Owner',
+        customer_email TEXT DEFAULT '',
         status TEXT DEFAULT 'ACTIVE',
         activated_at TEXT,
         expires_at TEXT,
@@ -532,12 +574,16 @@ function initLicenseSystem() {
       );
     `);
 
+    try {
+      db.exec(`ALTER TABLE licenses ADD COLUMN customer_email TEXT DEFAULT ''`);
+    } catch(e) {}
+
     const currentHwid = getHardwareId();
     // Berikan Lisensi DEVELOPER MASTER otomatis untuk komputer pengembang saat ini
     const devKey = 'PITA-DEV-MASTER-9999-DEVELOPER-UNLIMITED';
     db.prepare(`
-      INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, status, activated_at, expires_at, last_verified_at)
-      VALUES (?, ?, 'DEVELOPER', 'Pengembang (Lead Developer)', 'ACTIVE', ?, 'PERMANENT', ?)
+      INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, customer_email, status, activated_at, expires_at, last_verified_at)
+      VALUES (?, ?, 'DEVELOPER', 'Pengembang (Lead Developer)', 'developer@pitamedia.local', 'ACTIVE', ?, 'PERMANENT', ?)
     `).run(currentHwid, devKey, isoNow(), isoNow());
     console.log(`[LICENSE] Aktif sebagai 👑 DEVELOPER MASTER LICENSE untuk HWID: ${currentHwid}`);
   } catch(e) {
@@ -4392,9 +4438,17 @@ app.post('/api/action', async (req, res) => {
       case 'activateLicense': {
         const payload = args[0] || {};
         const key = String(payload.licenseKey || '').trim().toUpperCase();
-        const customerName = String(payload.customerName || 'Pengguna').trim();
+        const customerName = String(payload.customerName || '').trim();
+        const customerEmail = String(payload.customerEmail || '').trim().toLowerCase();
         const currentHwid = getHardwareId();
         
+        if (!customerName) {
+          throw new Error('Nama lengkap pembeli harus diisi');
+        }
+        if (!customerEmail || !customerEmail.includes('@') || !customerEmail.includes('.')) {
+          throw new Error('Harap masukkan alamat email pembeli yang valid (contoh: nama@gmail.com)');
+        }
+
         const verification = verifyLicenseKey(key, currentHwid);
         if (!verification.valid) {
           throw new Error(verification.reason || 'Kunci lisensi tidak valid untuk komputer ini');
@@ -4407,10 +4461,22 @@ app.post('/api/action', async (req, res) => {
           expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
         }
 
+        const now = isoNow();
         db.prepare(`
-          INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, status, activated_at, expires_at, last_verified_at)
-          VALUES (?, ?, ?, ?, 'ACTIVE', ?, ?, ?)
-        `).run(currentHwid, key, plan, customerName, isoNow(), expiresAt, isoNow());
+          INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, customer_email, status, activated_at, expires_at, last_verified_at)
+          VALUES (?, ?, ?, ?, ?, 'ACTIVE', ?, ?, ?)
+        `).run(currentHwid, key, plan, customerName, customerEmail, now, expiresAt, now);
+
+        // Kirim sinkronisasi ke Google Sheets Master Developer (Background Telemetry)
+        sendActivationTelemetry({
+          hwid: currentHwid,
+          customerName,
+          customerEmail,
+          plan,
+          licenseKey: key,
+          activatedAt: now,
+          expiresAt
+        });
 
         result = {
           success: true,
@@ -4420,6 +4486,29 @@ app.post('/api/action', async (req, res) => {
           license: getLicenseStatus(),
           dashboard: getDashboardData()
         };
+        break;
+      }
+
+      case 'saveMasterTelemetryUrl': {
+        const payload = args[0] || {};
+        const url = String(payload.url || '').trim();
+        setSetting('MASTER_LICENSE_WEBHOOK_URL', url);
+        result = { success: true, message: 'URL Webhook Google Sheets Master berhasil disimpan!', url };
+        break;
+      }
+
+      case 'testMasterTelemetryWebhook': {
+        const currentHwid = getHardwareId();
+        await sendActivationTelemetry({
+          hwid: currentHwid,
+          customerName: 'Tester Developer (Uji Koneksi)',
+          customerEmail: 'developer-test@pitamedia.local',
+          plan: 'DEVELOPER',
+          licenseKey: 'PITA-DEV-TEST-PING',
+          activatedAt: isoNow(),
+          expiresAt: 'PERMANENT'
+        });
+        result = { success: true, message: 'Pengujian Webhook terkirim! Silakan periksa baris baru di Google Sheet Anda.' };
         break;
       }
 
