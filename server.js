@@ -545,7 +545,9 @@ async function sendActivationTelemetry(payload, customUrl = null) {
     const roleFormatted = isDev ? '👑 PENGEMBANG (OWNER)' : '🛒 PEMBELI RESMI';
 
     const postData = {
-      action: 'log_activation',
+      action: isDev ? 'log_developer' : 'log_activation',
+      target_sheet: isDev ? 'Developer' : 'Aktivasi Pembeli',
+      sheet_name: isDev ? 'Developer' : 'Aktivasi Pembeli',
       role: roleFormatted,
       tipe_akun: roleFormatted,
       customer_role: roleFormatted,
