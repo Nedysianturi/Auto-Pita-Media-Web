@@ -51,6 +51,11 @@ setInterval(async () => {
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DB_PATH = path.join(__dirname, 'data.sqlite');
+let APP_VERSION = '2.5.0';
+try {
+  APP_VERSION = require('./package.json').version || '2.5.0';
+} catch(e) {}
+const APP_BUILD_DATE = '2026-10-01';
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -2228,6 +2233,44 @@ function getDashboardData() {
   const aiSettings = db.prepare('SELECT * FROM ai_settings').all();
 
   return {
+    appVersion: APP_VERSION,
+    appBuildDate: APP_BUILD_DATE,
+    changelog: [
+      {
+        version: 'v2.5.0',
+        date: '01 Oktober 2026',
+        title: 'Multi-Format Content, Super Fast 40x Loading & Telemetry Tabs',
+        items: [
+          'Dukungan Foto Tunggal (.jpg, .jpeg, .png, .webp) ke Facebook Page & Instagram',
+          'Dukungan Carousel Multi-Foto hingga 10 slide via subfolder atau UI builder',
+          'Fitur Kunci Caption Manual (manual_locked) anti-overwrite AI & sinkronisasi',
+          'Peningkatan Kecepatan 40x Lebih Cepat (In-memory HWID, sync throttling, thumbnail disk cache)',
+          'Penyederhanaan Tab Pengaturan menjadi 1 Master Control Banner terpadu',
+          'Pemisahan tab Google Sheets otomatis: Tab "Developer" dan Tab "Aktivasi Pembeli"',
+          'Paket ZIP portabel siap pakai untuk pembeli 1-klik jalan'
+        ]
+      },
+      {
+        version: 'v2.4.0',
+        date: '28 September 2026',
+        title: 'Sistem Lisensi 1-PC Lock & Master Telemetry Webhook',
+        items: [
+          'Sistem lisensi terikat perangkat keras (Hardware Fingerprint / Machine ID)',
+          'Developer Master Hub dengan panel generator lisensi Lifetime & Trial 7 Hari',
+          'Integrasi Telemetri Webhook ke Master Google Sheets'
+        ]
+      },
+      {
+        version: 'v2.3.0',
+        date: '25 September 2026',
+        title: 'Pemilih Sampul Visual & Kalender Meta Creator Studio',
+        items: [
+          'Ekstraksi frame visual video master secara langsung di Pustaka Media',
+          'Kalender sinkronisasi jadwal terbit dari Meta Creator Studio',
+          'Penyusunan antrean terbit berdasarkan Golden Slots analitik terbaik'
+        ]
+      }
+    ],
     stopped: getSetting('STOP_GLOBAL', 'FALSE') === 'TRUE',
     niches: niches.map(n => ({
       ...n,

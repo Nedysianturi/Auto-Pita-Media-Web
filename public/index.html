@@ -983,8 +983,10 @@
         <div class="brand-title-wrap">
           <span class="brand-title" style="display: flex; align-items: center; gap: 3px; font-weight: 800; letter-spacing: -0.02em;">
             <span style="color: var(--primary);">Auto</span> Pita<span style="color: #dc2626;">Media</span>
-          </span>
-          <span class="brand-status-pill"><span class="status-dot"></span> Studio Mandiri (SQLite)</span>
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 3px;">
+            <span class="brand-status-pill" style="margin-bottom: 0;"><span class="status-dot"></span> Studio Mandiri</span>
+            <span id="appVersionSidebarBadge" class="badge" onclick="openChangelogModal()" style="background: rgba(79, 70, 229, 0.12); color: #4338ca; border: 1px solid rgba(99, 102, 241, 0.25); font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" title="Klik untuk melihat Catatan Rilis & Riwayat Pembaruan">v2.5.0</span>
+          </div>
         </div>
       </div>
 
@@ -1068,6 +1070,10 @@
         <div class="page-subtitle" id="pageSubtitleText">Kelola saluran publikasi, jadwal otomatis, dan folder video komputer per niche.</div>
       </div>
       <div class="top-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <span id="headerVersionPill" class="badge" onclick="openChangelogModal()" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 800; padding: 5px 12px; border-radius: 999px; font-size: 0.74rem; background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 3px rgba(109, 40, 217, 0.15);" title="Lihat Riwayat Versi & Catatan Pembaruan (Changelog)">
+          <span style="font-size: 0.85rem;">📦</span>
+          <span id="headerVersionText">v2.5.0</span>
+        </span>
         <span id="headerLicenseBadge" class="badge" onclick="openLicenseModal()" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700; padding: 5px 12px; border-radius: 999px; font-size: 0.74rem; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; cursor: pointer; box-shadow: 0 1px 3px rgba(16, 185, 129, 0.2);" title="Klik untuk mengelola lisensi komputer (1-PC Locked)">
           <span id="headerLicenseDot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
           <span id="headerLicenseText">🛡️ Lisensi Pro Aktif</span>
@@ -2291,6 +2297,26 @@
         <button class="btn btn-primary" onclick="submitEditDriveFolder()">Simpan Perubahan</button>
       </div>
     </div>
+  <!-- Modal Catatan Pembaruan (Changelog) -->
+  <div class="modal-overlay" id="modalChangelog">
+    <div class="modal-dialog" style="max-width: 620px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.3rem;">🚀</span>
+          <span>Catatan Pembaruan PitaMedia Studio</span>
+        </div>
+        <button class="modal-close" onclick="closeModal('modalChangelog')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="changelogModalBody" style="max-height: 65vh; overflow-y: auto; padding: 18px 20px;">
+        <!-- Filled dynamically by renderChangelogModal() -->
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Auto PitaMedia Studio • Versioned Build</span>
+        <button class="btn btn-primary" onclick="closeModal('modalChangelog')">Tutup</button>
+      </div>
+    </div>
   </div>
 
   <!-- Modal Aktivasi Lisensi (1-PC Lock) -->
@@ -3450,6 +3476,13 @@
       const plan = lic.plan || 'NONE';
       const owner = lic.customerName || 'Pengguna';
 
+      // Update Version Badges
+      const appVer = appData.appVersion || 'v2.5.0';
+      const verPill = document.getElementById('headerVersionText');
+      if (verPill) verPill.textContent = appVer;
+      const verSidebar = document.getElementById('appVersionSidebarBadge');
+      if (verSidebar) verSidebar.textContent = appVer;
+
       // Header Badge
       const headerBadge = document.getElementById('headerLicenseBadge');
       const headerDot = document.getElementById('headerLicenseDot');
@@ -3602,6 +3635,73 @@
     function copyGenWhatsappMsg() {
       if (!lastGeneratedWhatsappMsg) return;
       navigator.clipboard.writeText(lastGeneratedWhatsappMsg).then(() => showToast('💬 Draf pesan WhatsApp lengkap berhasil disalin!', 'success'));
+    }
+
+    function openChangelogModal() {
+      renderChangelogModal();
+      openModal('modalChangelog');
+    }
+
+    function renderChangelogModal() {
+      const container = document.getElementById('changelogModalBody');
+      if (!container) return;
+      const list = (appData && appData.changelog) || [
+        {
+          version: 'v2.5.0',
+          date: '01 Oktober 2026',
+          title: 'Multi-Format Content, Super Fast 40x Loading & Separate Google Sheet Tabs',
+          items: [
+            'Dukungan Foto Tunggal (.jpg, .jpeg, .png, .webp) ke Facebook Page & Instagram',
+            'Dukungan Carousel Multi-Foto hingga 10 slide via subfolder atau UI builder',
+            'Fitur Kunci Caption Manual (manual_locked) anti-overwrite AI & sinkronisasi',
+            'Peningkatan Kecepatan 40x Lebih Cepat (In-memory HWID, sync throttling, thumbnail disk cache)',
+            'Penyederhanaan Tab Pengaturan menjadi 1 Master Control Banner terpadu',
+            'Pemisahan tab Google Sheets otomatis: Tab "Developer" dan Tab "Aktivasi Pembeli"',
+            'Paket ZIP portabel siap pakai untuk pembeli 1-klik jalan'
+          ]
+        },
+        {
+          version: 'v2.4.0',
+          date: '28 September 2026',
+          title: 'Sistem Lisensi 1-PC Lock & Master Telemetry Webhook',
+          items: [
+            'Sistem lisensi terikat perangkat keras (Hardware Fingerprint / Machine ID)',
+            'Developer Master Hub dengan panel generator lisensi Lifetime & Trial 7 Hari',
+            'Integrasi Telemetri Webhook ke Master Google Sheets'
+          ]
+        },
+        {
+          version: 'v2.3.0',
+          date: '25 September 2026',
+          title: 'Pemilih Sampul Visual & Kalender Meta Creator Studio',
+          items: [
+            'Ekstraksi frame visual video master secara langsung di Pustaka Media',
+            'Kalender sinkronisasi jadwal terbit dari Meta Creator Studio',
+            'Penyusunan antrean terbit berdasarkan Golden Slots analitik terbaik'
+          ]
+        }
+      ];
+
+      let html = '';
+      list.forEach((log, idx) => {
+        const isLatest = idx === 0;
+        html += `
+          <div style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: ${idx < list.length - 1 ? '1px dashed #e2e8f0' : 'none'};">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 800; font-size: 1rem; color: #1e1b4b;">${log.version}</span>
+                ${isLatest ? '<span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.65rem; font-weight: 800;">TERBARU</span>' : ''}
+              </div>
+              <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${log.date}</span>
+            </div>
+            <div style="font-size: 0.85rem; font-weight: 700; color: #4338ca; margin-bottom: 8px;">${log.title}</div>
+            <ul style="margin: 0; padding-left: 20px; font-size: 0.8rem; color: #334155; line-height: 1.6;">
+              ${(log.items || []).map(it => `<li>${escapeHtml(it)}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
     }
 
     function openLicenseModal() {
