@@ -1,0 +1,39 @@
+========================================================================
+🚀 PITAMEDIA STUDIO - PANDUAN PENGGUNAAN CEPAT UNTUK PENGGUNA BARU
+========================================================================
+
+Terima kasih telah menggunakan PitaMedia Studio!
+Aplikasi otomatisasi posting video Reels, foto, dan carousel ke Meta (Facebook & Instagram).
+
+------------------------------------------------------------------------
+📌 CARA MENJALANKAN APLIKASI (HANYA 1 KLIK):
+------------------------------------------------------------------------
+1. Pastikan komputer Anda sudah terpasang Node.js (Unduh gratis di https://nodejs.org/ jika belum ada).
+2. Klik 2x (Double Click) file:
+   👉 Mulai-PitaMedia.bat
+3. Aplikasi akan otomatis menyala dan membuka Google Chrome / browser Anda di:
+   http://localhost:3000
+
+------------------------------------------------------------------------
+🔐 CARA AKTIVASI LISENSI:
+------------------------------------------------------------------------
+1. Saat aplikasi pertama kali terbuka di browser, Anda akan melihat jendela aktivasi:
+   "Machine ID Komputer Anda: PM-XXXX-XXXX-XXXX-XXXX"
+2. Klik tombol "📋 Salin" di samping kode Machine ID tersebut.
+3. Kirimkan Machine ID tersebut ke WhatsApp Admin / Penjual.
+4. Admin akan mengirimkan Kunci Lisensi resmi khusus untuk laptop/PC Anda.
+5. Masukkan Nama, Email, dan Kunci Lisensi tersebut di aplikasi, lalu klik:
+   "🚀 Verifikasi & Masuk ke Aplikasi"
+6. Selesai! Seluruh fitur aplikasi langsung terbuka dan aktif selamanya.
+
+------------------------------------------------------------------------
+📁 CARA MENARUH VIDEO & FOTO:
+------------------------------------------------------------------------
+• Buka folder "Master_Media" di dalam folder aplikasi ini.
+• Masukkan video (.mp4) atau foto (.jpg/.png) ke dalam folder niche yang sesuai.
+• Aplikasi PitaMedia Studio akan otomatis mendeteksi dan menjadwalkan postingan Anda!
+
+========================================================================
+Salam sukses,
+Tim Pengembang PitaMedia Studio
+========================================================================

@@ -37,3 +37,4 @@ recover_captions.py
 Thumbs.db
 temp_mixed/
 backups/
+*.zip
