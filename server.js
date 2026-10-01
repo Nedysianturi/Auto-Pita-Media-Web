@@ -119,6 +119,18 @@ try { db.exec("ALTER TABLE accounts ADD COLUMN token_checked_at TEXT"); } catch(
 try { db.exec("ALTER TABLE accounts ADD COLUMN token_info TEXT DEFAULT '🟢 Token Aktif Permanen (Never Expires)'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE jobs ADD COLUMN smart_reason TEXT"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE jobs ADD COLUMN schedule_mode TEXT DEFAULT 'GOLDEN_SLOTS'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE jobs ADD COLUMN nama_file TEXT"); } catch(e) { /* sudah ada */ }
+try {
+  db.exec(`
+    UPDATE jobs SET nama_file = (
+      SELECT nama_file FROM media WHERE media.media_id = jobs.media_id
+    ) WHERE (nama_file IS NULL OR nama_file = '') AND media_id IN (SELECT media_id FROM media);
+
+    UPDATE jobs SET nama_file = (
+      SELECT nama_video FROM performance WHERE performance.perf_id = jobs.job_id
+    ) WHERE (nama_file IS NULL OR nama_file = '') AND job_id IN (SELECT perf_id FROM performance);
+  `);
+} catch(e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS niches (
@@ -390,15 +402,14 @@ function autoSyncLocalFolders() {
         totalAdded++;
       }
 
-      // Hapus media di DB yang sudah tidak ada di disk (kecuali yang sudah berstatus PUBLISHED)
+      // Hapus media di DB yang sudah tidak ada secara fisik di disk komputer
       const dbMedia = db.prepare('SELECT media_id, nama_file, file_path, status FROM media WHERE niche_id = ?').all(niche.niche_id);
       for (const m of dbMedia) {
         if (!diskFilenames.has(m.nama_file) && (!m.file_path || !fs.existsSync(m.file_path))) {
-          if (m.status === 'PUBLISHED') {
-            continue; // Pertahankan riwayat video yang sudah sukses dipublikasi
-          }
+          // File fisik tidak ada di komputer -> hapus dari Pustaka Video aktif (media & posts)
           db.prepare('DELETE FROM media WHERE media_id = ?').run(m.media_id);
-          db.prepare("DELETE FROM posts WHERE media_id = ? AND manual_locked != 'TRUE'").run(m.media_id);
+          db.prepare("DELETE FROM posts WHERE media_id = ?").run(m.media_id);
+          // Hapus antrean yang belum terbit, TAPI pertahankan riwayat PUBLISHED di tabel jobs & performance!
           db.prepare("DELETE FROM jobs WHERE media_id = ? AND status NOT IN ('PUBLISHED', 'UPLOADING')").run(m.media_id);
           totalRemoved++;
         }
@@ -941,9 +952,11 @@ function getPublishedMediaInfo(mediaId, namaFile) {
       WHERE status = 'PUBLISHED'
         AND (
           media_id = ? 
+          OR nama_file = ?
+          OR nama_file LIKE ?
           OR media_id IN (SELECT media_id FROM media WHERE nama_file = ? OR nama_file LIKE ?)
         )
-    `).all(mediaId, rawFile, `%${baseName}%`);
+    `).all(mediaId, rawFile, `%${baseName}%`, rawFile, `%${baseName}%`);
     jobRows.forEach(r => {
       if (r.platform) platforms.add(r.platform.toUpperCase());
       if (r.akun_id) accounts.add(r.akun_id);
@@ -1310,9 +1323,9 @@ function autoScheduleUnscheduledMedia() {
           for (const acc of neededAccounts) {
             const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
             db.prepare(`
-              INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text, schedule_mode, smart_reason)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id), modeJadwal, slot.reason || 'Slot Jam Emas');
+              INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text, schedule_mode, smart_reason, nama_file)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id), modeJadwal, slot.reason || 'Slot Jam Emas', media.nama_file);
           }
 
           db.prepare("UPDATE media SET status = 'TERJADWAL' WHERE media_id = ?").run(media.media_id);
@@ -1410,10 +1423,10 @@ function autoScheduleUnscheduledMedia() {
         for (const acc of neededAccounts) {
           const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
           db.prepare(`
-            INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text, nama_file)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
-            jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id)
+            jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id), media.nama_file
           );
         }
 
@@ -1568,16 +1581,31 @@ function cleanupPublishedMediaFile(mediaId, customMode = null) {
 
   const filePath = media.file_path;
   if (!filePath || !fs.existsSync(filePath)) {
-    return { success: true, action: 'ALREADY_GONE', message: 'File sudah tidak ada di disk' };
+    // Pastikan jobs tetap menyimpan nama file asli
+    try {
+      db.prepare("UPDATE jobs SET nama_file = COALESCE(nama_file, ?) WHERE media_id = ?").run(media.nama_file, mediaId);
+    } catch(e) {}
+    // Bersihkan dari media & posts agar tidak muncul sebagai video hantu di Pustaka Video
+    db.prepare('DELETE FROM media WHERE media_id = ?').run(mediaId);
+    db.prepare('DELETE FROM posts WHERE media_id = ?').run(mediaId);
+    return { success: true, action: 'ALREADY_GONE', message: 'File sudah tidak ada di disk dan dibersihkan dari Pustaka Video' };
   }
 
   try {
     const fileSize = fs.statSync(filePath).size;
     const freedMb = Number((fileSize / (1024 * 1024)).toFixed(1));
 
+    // Amankan nama_file di riwayat jobs sebelum record media dihapus
+    try {
+      db.prepare("UPDATE jobs SET nama_file = COALESCE(nama_file, ?) WHERE media_id = ?").run(media.nama_file, mediaId);
+    } catch(e) {}
+
     if (mode === 'DELETE') {
       fs.unlinkSync(filePath);
-      console.log(`[DISK SAVER] Video "${media.nama_file}" (${freedMb} MB) dihapus permanen dari harddisk setelah sukses terbit.`);
+      // Hapus dari Pustaka Video (tabel media & posts)
+      db.prepare('DELETE FROM media WHERE media_id = ?').run(mediaId);
+      db.prepare('DELETE FROM posts WHERE media_id = ?').run(mediaId);
+      console.log(`[DISK SAVER] Video "${media.nama_file}" (${freedMb} MB) dihapus permanen dari harddisk dan dibersihkan dari Pustaka Video.`);
       return { success: true, action: 'DELETED', freedMb, filename: media.nama_file };
     } 
     
@@ -1593,8 +1621,10 @@ function cleanupPublishedMediaFile(mediaId, customMode = null) {
         : targetPath;
       
       fs.renameSync(filePath, finalTargetPath);
-      db.prepare('UPDATE media SET file_path = ? WHERE media_id = ?').run(finalTargetPath, mediaId);
-      console.log(`[DISK SAVER] Video "${media.nama_file}" dipindahkan ke folder arsip: ${finalTargetPath}`);
+      // Hapus dari Pustaka Video aktif (tabel media & posts) agar fokus hanya pada video baru
+      db.prepare('DELETE FROM media WHERE media_id = ?').run(mediaId);
+      db.prepare('DELETE FROM posts WHERE media_id = ?').run(mediaId);
+      console.log(`[DISK SAVER] Video "${media.nama_file}" dipindahkan ke folder arsip dan dikeluarkan dari Pustaka Video: ${finalTargetPath}`);
       return { success: true, action: 'ARCHIVED', targetPath: finalTargetPath, freedMb: 0, filename: media.nama_file };
     }
   } catch (err) {
@@ -1711,7 +1741,9 @@ function getDashboardData() {
       token_checked_at: a.token_checked_at || ''
     };
   });
-  const rawMedia = db.prepare('SELECT * FROM media ORDER BY rowid DESC LIMIT 500').all();
+  // Pustaka Video HANYA memuat file video yang secara fisik nyata ada di harddisk komputer
+  const rawMedia = db.prepare('SELECT * FROM media ORDER BY rowid DESC LIMIT 500').all()
+    .filter(m => m.file_path && fs.existsSync(m.file_path));
   const media = rawMedia.map(m => {
     const pubInfo = getPublishedMediaInfo(m.media_id, m.nama_file);
     const nicheAccs = accounts.filter(a => {
@@ -1878,15 +1910,16 @@ function scanDrive(nicheId) {
       addedCount++;
     }
 
-    // Hapus file yang sudah dihapus secara fisik di komputer dari database (kecuali yang sudah sukses PUBLISHED)
+    // Hapus file yang sudah dihapus secara fisik di komputer dari database
     const allMediaInNiche = db.prepare('SELECT media_id, nama_file, file_path, status FROM media WHERE niche_id = ?').all(nicheId);
     for (const m of allMediaInNiche) {
       if (!currentVideoFiles.has(m.nama_file) && (!m.file_path || !fs.existsSync(m.file_path))) {
-        if (m.status === 'PUBLISHED') {
-          continue; // Pertahankan riwayat video yang sudah sukses dipublikasi
-        }
+        // Amankan nama_file di jobs sebelum media dibersihkan
+        try {
+          db.prepare("UPDATE jobs SET nama_file = COALESCE(nama_file, ?) WHERE media_id = ?").run(m.nama_file, m.media_id);
+        } catch(e) {}
         db.prepare('DELETE FROM media WHERE media_id = ?').run(m.media_id);
-        db.prepare("DELETE FROM posts WHERE media_id = ? AND manual_locked != 'TRUE'").run(m.media_id);
+        db.prepare("DELETE FROM posts WHERE media_id = ?").run(m.media_id);
         db.prepare("DELETE FROM jobs WHERE media_id = ? AND status NOT IN ('PUBLISHED', 'UPLOADING')").run(m.media_id);
         removedCount++;
       }
@@ -2140,10 +2173,10 @@ function saveScheduleWeb(input) {
   for (const acc of validAccounts) {
     const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
     db.prepare(`
-      INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text, nama_file)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      jobId, jadwalId, post.konten_id, mediaId, media.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume, sfxEnabled, sfxCategory, sfxVolume, outroEnabled, outroText
+      jobId, jadwalId, post.konten_id, mediaId, media.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume, sfxEnabled, sfxCategory, sfxVolume, outroEnabled, outroText, media.nama_file
     );
   }
 
@@ -2629,9 +2662,10 @@ async function publishJob(jobId) {
         status = 'PUBLISHED',
         platform_publish_id = ?,
         post_url = ?,
+        nama_file = COALESCE(nama_file, ?),
         updated_at = ?
       WHERE job_id = ?
-    `).run(publishResult.id, publishResult.url, isoNow(), jobId);
+    `).run(publishResult.id, publishResult.url, media ? media.nama_file : null, isoNow(), jobId);
 
     // Add to Performance
     const perfId = 'PERF-' + crypto.randomUUID().slice(0, 8).toUpperCase();
@@ -2726,7 +2760,7 @@ async function sinkronkanPerformaWeb() {
     const acc = accounts.find(a => a.akun_id === job.akun_id);
     if (!acc || !acc.token || !job.platform_publish_id) return;
     const media = mediaMap.get(job.media_id);
-    const videoName = media ? media.nama_file : job.media_id;
+    const videoName = job.nama_file || (media ? media.nama_file : job.media_id);
 
     try {
       let views = 0, likes = 0, comments = 0, shares = 0;
@@ -3724,7 +3758,15 @@ app.post('/api/action', async (req, res) => {
           geminiStatus: getSetting('GEMINI_STATUS', (getSetting('GEMINI_API_KEY', '') ? 'UNVERIFIED' : 'NOT_SET')),
           geminiStatusMsg: getSetting('GEMINI_STATUS_MSG', ''),
           cleanupPublishedMode: getSetting('CLEANUP_PUBLISHED_MODE', 'KEEP'),
-          publishedMediaCount: db.prepare("SELECT count(DISTINCT m.media_id) as cnt FROM media m WHERE m.status = 'PUBLISHED'").get().cnt
+          publishedMediaCount: db.prepare(`
+            SELECT count(DISTINCT m.media_id) as cnt FROM media m 
+            WHERE (
+              SELECT count(*) FROM jobs j WHERE j.media_id = m.media_id AND j.status NOT IN ('PUBLISHED', 'CANCELLED')
+            ) = 0
+            AND (
+              SELECT count(*) FROM jobs j WHERE j.media_id = m.media_id AND j.status = 'PUBLISHED'
+            ) > 0
+          `).get().cnt
         };
         break;
       }

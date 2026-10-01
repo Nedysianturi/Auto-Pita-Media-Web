@@ -4963,7 +4963,7 @@
           <tr>
             <td>
               <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem; margin-bottom: 2px;">
-                ${escapeHtml(j.media_id)}
+                ${escapeHtml(j.nama_file || j.media_id)}
               </div>
               <div style="font-size: 0.72rem; color: var(--text-muted);">
                 Job ID: <span class="font-mono">${escapeHtml(j.job_id)}</span> • Niche: ${escapeHtml(j.niche_id)}
@@ -5162,7 +5162,7 @@
               niche_id: j.niche_id,
               akun_id: j.akun_id,
               platform: j.platform,
-              nama_video: media ? media.nama_file : j.media_id,
+              nama_video: media ? media.nama_file : (j.nama_file || j.media_id),
               posted_at: j.updated_at || j.scheduled_at,
               post_url: j.post_url,
               views_24h: 0,
