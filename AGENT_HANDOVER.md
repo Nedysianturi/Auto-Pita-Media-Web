@@ -17,7 +17,7 @@ Project ini berada di komputer saya pada folder:
 C:\Users\Cipad\.gemini\antigravity-ide\scratch\pitamedia-studio
 GitHub: https://github.com/Nedysianturi/Auto-Pita-Media-Web.git (branch main)
 
-Tolong baca file `AGENTS.md` dan `AGENT_HANDOVER.md` di root folder project tersebut untuk memahami arsitektur lengkap, fitur-fitur yang sudah selesai dibangun, status lisensi Developer Master aktif: PITA-DEV-MASTER-9999-DEVELOPER-UNLIMITED (kennedi - Cipadata@gmail.com), dan hal yang perlu kita kembangkan selanjutnya.
+Tolong baca file `AGENTS.md` dan `AGENT_HANDOVER.md` di root folder project tersebut untuk memahami arsitektur lengkap, fitur-fitur yang sudah selesai dibangun, status lisensi Developer Master aktif: PITA-DEV-4220-5F16-24F4-C2DD (kennedi - Cipadata@gmail.com), dan hal yang perlu kita kembangkan selanjutnya.
 
 Setelah membaca, beri saya rangkuman singkat dan konfirmasi bahwa kamu siap melanjutkan!
 ```
@@ -43,7 +43,7 @@ Setelah membaca, beri saya rangkuman singkat dan konfirmasi bahwa kamu siap mela
 
 4. **Sistem Lisensi 1-PC Lock & Developer Master:**
    - **Machine ID (HWID):** `PM-1B32-76F9-4D2D-A065`
-   - **Kunci Lisensi Aktif:** `PITA-DEV-MASTER-9999-DEVELOPER-UNLIMITED`
+   - **Kunci Lisensi Aktif:** `PITA-DEV-4220-5F16-24F4-C2DD`
    - **Tipe Paket:** `DEVELOPER MASTER (Akses Penuh Pengembang - Unlimited)`
    - **Nama Pemilik:** `kennedi`
    - **Email Pemilik:** `Cipadata@gmail.com`

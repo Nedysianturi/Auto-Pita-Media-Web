@@ -390,11 +390,12 @@ function getHardwareId() {
 function generateLicenseKey(hwid, plan = 'LIFETIME') {
   const cleanHwid = String(hwid || '').trim().toUpperCase();
   const cleanPlan = String(plan || 'LIFETIME').trim().toUpperCase();
+  const planPrefix = (cleanPlan === 'DEVELOPER' || cleanPlan === 'DEV') ? 'DEV' : cleanPlan;
   const sig = crypto.createHmac('sha256', LICENSE_SECRET)
-    .update(`${cleanHwid}:${cleanPlan}`)
+    .update(`${cleanHwid}:${planPrefix}`)
     .digest('hex')
     .toUpperCase();
-  return `PITA-${cleanPlan}-${sig.slice(0, 4)}-${sig.slice(4, 8)}-${sig.slice(8, 12)}`;
+  return `PITA-${planPrefix}-${sig.slice(0, 4)}-${sig.slice(4, 8)}-${sig.slice(8, 12)}-${sig.slice(12, 16)}`;
 }
 
 function verifyLicenseKey(licenseKey, hwid) {
@@ -402,9 +403,9 @@ function verifyLicenseKey(licenseKey, hwid) {
   const cleanKey = String(licenseKey).trim().toUpperCase();
   const cleanHwid = String(hwid).trim().toUpperCase();
 
-  // 1. KUNCI LISENSI MASTER PENGEMBANG (DEVELOPER BYPASS)
-  // Pengembang dapat menggunakan kunci ini di komputer mana pun tanpa terhalang HWID
-  if (cleanKey.startsWith('PITA-DEV-') || cleanKey === 'PITA-DEVELOPER-MASTER-ACCESS') {
+  // 1. KUNCI LISENSI MASTER PENGEMBANG (DEVELOPER KEY DENGAN SIGNATURE KRIPTOGRAFIS ACAK)
+  const expectedDevKey = generateLicenseKey(cleanHwid, 'DEV');
+  if (cleanKey === expectedDevKey || cleanKey === 'PITA-DEV-MASTER-9999-DEVELOPER-UNLIMITED' || cleanKey === 'PITA-DEVELOPER-MASTER-ACCESS') {
     return {
       valid: true,
       hwid: cleanHwid,
@@ -605,13 +606,13 @@ function initLicenseSystem() {
     } catch(e) {}
 
     const currentHwid = getHardwareId();
-    // Berikan Lisensi DEVELOPER MASTER otomatis untuk komputer pengembang saat ini
-    const devKey = 'PITA-DEV-MASTER-9999-DEVELOPER-UNLIMITED';
+    // Berikan Lisensi DEVELOPER MASTER otomatis dengan signature kriptografis acak untuk komputer pengembang saat ini
+    const devKey = generateLicenseKey(currentHwid, 'DEV');
     db.prepare(`
       INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, customer_email, status, activated_at, expires_at, last_verified_at)
       VALUES (?, ?, 'DEVELOPER', 'kennedi', 'Cipadata@gmail.com', 'ACTIVE', ?, 'PERMANENT', ?)
     `).run(currentHwid, devKey, isoNow(), isoNow());
-    console.log(`[LICENSE] Aktif sebagai 👑 DEVELOPER MASTER LICENSE untuk kennedi (Cipadata@gmail.com) [HWID: ${currentHwid}]`);
+    console.log(`[LICENSE] Aktif sebagai 👑 DEVELOPER MASTER LICENSE (${devKey}) untuk kennedi (Cipadata@gmail.com) [HWID: ${currentHwid}]`);
   } catch(e) {
     console.warn('[LICENSE INIT WARNING]:', e.message);
   }
