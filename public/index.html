@@ -1614,7 +1614,7 @@
               <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-bottom: 4px;">🔑 Kunci Lisensi Aktif:</div>
               <div id="displayLicenseKey" style="font-family: monospace; font-size: 0.82rem; font-weight: 700; color: #0f172a; word-break: break-all;">-</div>
               <div style="font-size: 0.72rem; color: #059669; font-weight: 700; margin-top: 4px;">
-                Paket: <span id="displayLicensePlan">LIFETIME PRO</span> • Terdaftar: <span id="displayLicenseOwner">Owner</span>
+                Paket: <span id="displayLicensePlan">LIFETIME PRO</span> • Terdaftar: <span id="displayLicenseOwner">kennedi</span> (<span id="displayLicenseEmail">Cipadata@gmail.com</span>)
               </div>
             </div>
           </div>
@@ -3503,6 +3503,8 @@
       if (displayHwid) displayHwid.textContent = hwid;
       if (displayKey) displayKey.textContent = key;
       if (displayOwner) displayOwner.textContent = owner;
+      const displayEmail = document.getElementById('displayLicenseEmail');
+      if (displayEmail) displayEmail.textContent = lic.customerEmail || '-';
 
       if (displayPlan) {
         if (isDev) displayPlan.textContent = '👑 DEVELOPER MASTER (Akses Penuh Pengembang)';

@@ -492,8 +492,8 @@ function getLicenseStatus() {
           hwid: currentHwid,
           licenseKey: row.license_key,
           plan: isDev ? 'DEVELOPER' : 'LIFETIME',
-          customerName: row.customer_name || (isDev ? 'Pengembang (Developer Master)' : 'Owner'),
-          customerEmail: row.customer_email || '',
+          customerName: row.customer_name || (isDev ? 'kennedi' : 'Owner'),
+          customerEmail: row.customer_email || (isDev ? 'Cipadata@gmail.com' : ''),
           activatedAt: row.activated_at,
           expiresAt: 'PERMANENT',
           daysRemaining: null,
@@ -606,9 +606,9 @@ function initLicenseSystem() {
     const devKey = 'PITA-DEV-MASTER-9999-DEVELOPER-UNLIMITED';
     db.prepare(`
       INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, customer_email, status, activated_at, expires_at, last_verified_at)
-      VALUES (?, ?, 'DEVELOPER', 'Pengembang (Lead Developer)', 'developer@pitamedia.local', 'ACTIVE', ?, 'PERMANENT', ?)
+      VALUES (?, ?, 'DEVELOPER', 'kennedi', 'Cipadata@gmail.com', 'ACTIVE', ?, 'PERMANENT', ?)
     `).run(currentHwid, devKey, isoNow(), isoNow());
-    console.log(`[LICENSE] Aktif sebagai 👑 DEVELOPER MASTER LICENSE untuk HWID: ${currentHwid}`);
+    console.log(`[LICENSE] Aktif sebagai 👑 DEVELOPER MASTER LICENSE untuk kennedi (Cipadata@gmail.com) [HWID: ${currentHwid}]`);
   } catch(e) {
     console.warn('[LICENSE INIT WARNING]:', e.message);
   }
