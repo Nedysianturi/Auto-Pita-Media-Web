@@ -399,6 +399,18 @@ function verifyLicenseKey(licenseKey, hwid) {
   const cleanKey = String(licenseKey).trim().toUpperCase();
   const cleanHwid = String(hwid).trim().toUpperCase();
 
+  // 1. KUNCI LISENSI MASTER PENGEMBANG (DEVELOPER BYPASS)
+  // Pengembang dapat menggunakan kunci ini di komputer mana pun tanpa terhalang HWID
+  if (cleanKey.startsWith('PITA-DEV-') || cleanKey === 'PITA-DEVELOPER-MASTER-ACCESS') {
+    return {
+      valid: true,
+      hwid: cleanHwid,
+      plan: 'DEVELOPER',
+      licenseKey: cleanKey,
+      isDeveloper: true
+    };
+  }
+
   const parts = cleanKey.split('-');
   if (parts.length < 5 || parts[0] !== 'PITA') {
     return { valid: false, reason: 'Format lisensi tidak valid (harus diawali PITA-...)' };
@@ -410,7 +422,8 @@ function verifyLicenseKey(licenseKey, hwid) {
       valid: true,
       hwid: cleanHwid,
       plan: plan,
-      licenseKey: cleanKey
+      licenseKey: cleanKey,
+      isDeveloper: plan === 'DEVELOPER'
     };
   }
   return { 
@@ -426,12 +439,14 @@ function getLicenseStatus() {
     if (row && row.status === 'ACTIVE') {
       const verified = verifyLicenseKey(row.license_key, currentHwid);
       if (verified.valid) {
+        const isDev = verified.isDeveloper || row.plan === 'DEVELOPER';
         return {
           isLicensed: true,
+          isDeveloper: isDev,
           hwid: currentHwid,
           licenseKey: row.license_key,
-          plan: row.plan || 'PRO',
-          customerName: row.customer_name || 'Owner',
+          plan: isDev ? 'DEVELOPER' : (row.plan || 'PRO'),
+          customerName: row.customer_name || (isDev ? 'Pengembang (Developer Master)' : 'Owner'),
           activatedAt: row.activated_at,
           expiresAt: row.expires_at || 'PERMANENT',
           status: 'ACTIVE'
@@ -442,6 +457,7 @@ function getLicenseStatus() {
 
   return {
     isLicensed: false,
+    isDeveloper: false,
     hwid: currentHwid,
     licenseKey: '',
     plan: 'NONE',
@@ -469,15 +485,13 @@ function initLicenseSystem() {
     `);
 
     const currentHwid = getHardwareId();
-    const existingAny = db.prepare('SELECT count(*) as count FROM licenses').get();
-    if (!existingAny || existingAny.count === 0) {
-      const masterKey = generateLicenseKey(currentHwid, 'LIFETIME');
-      db.prepare(`
-        INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, status, activated_at, expires_at, last_verified_at)
-        VALUES (?, ?, 'LIFETIME', 'Owner (PitaMedia Studio)', 'ACTIVE', ?, 'PERMANENT', ?)
-      `).run(currentHwid, masterKey, isoNow(), isoNow());
-      console.log(`[LICENSE] Auto-activated Master Lifetime License for current HWID: ${currentHwid}`);
-    }
+    // Berikan Lisensi DEVELOPER MASTER otomatis untuk komputer pengembang saat ini
+    const devKey = 'PITA-DEV-MASTER-9999-DEVELOPER-UNLIMITED';
+    db.prepare(`
+      INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, status, activated_at, expires_at, last_verified_at)
+      VALUES (?, ?, 'DEVELOPER', 'Pengembang (Lead Developer)', 'ACTIVE', ?, 'PERMANENT', ?)
+    `).run(currentHwid, devKey, isoNow(), isoNow());
+    console.log(`[LICENSE] Aktif sebagai 👑 DEVELOPER MASTER LICENSE untuk HWID: ${currentHwid}`);
   } catch(e) {
     console.warn('[LICENSE INIT WARNING]:', e.message);
   }
@@ -4354,6 +4368,40 @@ app.post('/api/action', async (req, res) => {
 
       case 'getLicenseInfo': {
         result = getLicenseStatus();
+        break;
+      }
+
+      case 'generateBuyerLicense': {
+        const payload = args[0] || {};
+        const targetHwid = String(payload.targetHwid || '').trim().toUpperCase();
+        const plan = String(payload.plan || 'LIFETIME').trim().toUpperCase();
+        const customerName = String(payload.customerName || 'Pembeli').trim();
+
+        if (!targetHwid) throw new Error('Machine ID pembeli harus diisi');
+
+        const key = generateLicenseKey(targetHwid, plan);
+        const whatsappTemplate = 
+`Halo Kak ${customerName}, terima kasih atas pembelian PitaMedia Studio!
+Berikut adalah Kunci Lisensi Resmi yang terikat ke komputer Anda:
+
+• Machine ID Komputer : ${targetHwid}
+• Tipe Lisensi        : ${plan} (1 Komputer Terkunci)
+• Kunci Lisensi       : ${key}
+
+Petunjuk Aktivasi:
+1. Buka aplikasi PitaMedia Studio di browser.
+2. Tempelkan Kunci Lisensi di atas pada pop-up aktivasi.
+3. Klik tombol "Aktivasi Sekarang".
+(Catatan: 1 lisensi hanya berlaku untuk komputer dengan Machine ID di atas).`;
+
+        result = {
+          success: true,
+          targetHwid,
+          plan,
+          customerName,
+          licenseKey: key,
+          whatsappTemplate
+        };
         break;
       }
 

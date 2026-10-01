@@ -1626,6 +1626,59 @@
           </div>
         </div>
 
+        <!-- Card Generator Lisensi Khusus Developer (Hanya Muncul untuk Pengembang) -->
+        <div id="developerLicenseStudioCard" class="card" style="display: none; margin-bottom: 0; border: 1.5px solid #8b5cf6; background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);">
+          <div class="card-header" style="border-bottom: 1px solid #e9d5ff; padding-bottom: 14px; margin-bottom: 16px;">
+            <div class="card-title" style="display: flex; align-items: center; gap: 10px; font-size: 1.05rem;">
+              <span style="font-size: 1.3rem;">👑</span>
+              <span style="color: #6d28d9; font-weight: 800;">Panel Generator Lisensi Pembeli (Developer Tool)</span>
+            </div>
+            <span class="badge" style="background: #7c3aed; color: #ffffff; font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;">
+              Master Authority
+            </span>
+          </div>
+
+          <div style="font-size: 0.82rem; color: #581c87; margin-bottom: 14px; line-height: 1.5;">
+            Sebagai Pengembang, Anda dapat membuat Kunci Lisensi baru yang terikat khusus ke komputer pembeli langsung dari sini tanpa perlu membuka command prompt / terminal.
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <label class="form-label" style="font-size: 0.75rem; font-weight: 700; color: #4c1d95;">Machine ID Pembeli *</label>
+              <input type="text" id="genTargetHwid" class="form-control" placeholder="Contoh: PM-DAAB-3B00-4B71-11E4" style="font-family: monospace; font-size: 0.82rem; font-weight: 700;" />
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 0.75rem; font-weight: 700; color: #4c1d95;">Nama Pembeli</label>
+              <input type="text" id="genCustomerName" class="form-control" placeholder="Contoh: Budi Santoso / Studio Kreatif" style="font-size: 0.82rem;" />
+            </div>
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <label class="form-label" style="font-size: 0.75rem; font-weight: 700; color: #4c1d95;">Tipe Paket Lisensi</label>
+            <select id="genPlanType" class="form-control" style="font-size: 0.82rem; font-weight: 700;">
+              <option value="LIFETIME">LIFETIME (1 Komputer Permanen - Rekomendasi)</option>
+              <option value="PRO">PRO (Langganan 1 Komputer)</option>
+              <option value="TRIAL">TRIAL (Uji Coba 1 Komputer)</option>
+            </select>
+          </div>
+
+          <button type="button" class="btn btn-primary" onclick="generateBuyerLicenseAction()" style="width: 100%; font-weight: 800; background: linear-gradient(135deg, #7c3aed, #6d28d9); border-color: #6d28d9; margin-bottom: 12px;">
+            ✨ Generate Kunci Lisensi Pembeli
+          </button>
+
+          <!-- Hasil Lisensi Dibuat -->
+          <div id="genResultWrap" style="display: none; background: #f3e8ff; border: 1.5px dashed #a855f7; border-radius: 10px; padding: 12px 14px;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: #6b21a8; margin-bottom: 4px;">KUNCI LISENSI RESMI PEMBELI:</div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <code id="genResultKey" style="font-size: 0.95rem; font-weight: 800; color: #581c87; background: #ffffff; padding: 4px 10px; border-radius: 6px; border: 1px solid #d8b4fe; flex: 1; word-break: break-all;">-</code>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="copyGenKeyOnly()" style="font-weight: 700; white-space: nowrap;">📋 Salin Kunci</button>
+            </div>
+            <button type="button" class="btn btn-sm btn-success" onclick="copyGenWhatsappMsg()" style="width: 100%; font-weight: 800; background: #059669; border-color: #047857; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+              <span>💬 Salin Format Pesan WhatsApp Pembeli</span>
+            </button>
+          </div>
+        </div>
+
         <!-- 0. Konfigurasi AI & Kunci API (Google Gemini) -->
         <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between; border: 1.5px solid rgba(99, 102, 241, 0.35); background: linear-gradient(180deg, #fafbff 0%, #ffffff 100%);">
           <div>
@@ -3321,6 +3374,7 @@
     function renderLicenseState() {
       const lic = appData.license || {};
       const isLicensed = Boolean(lic.isLicensed);
+      const isDev = Boolean(lic.isDeveloper || lic.plan === 'DEVELOPER');
       const hwid = lic.hwid || '-';
       const key = lic.licenseKey || 'Belum diaktivasi';
       const plan = lic.plan || 'NONE';
@@ -3331,16 +3385,25 @@
       const headerDot = document.getElementById('headerLicenseDot');
       const headerText = document.getElementById('headerLicenseText');
       if (headerBadge && headerDot && headerText) {
-        if (isLicensed) {
+        if (isDev) {
+          headerBadge.style.background = 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)';
+          headerBadge.style.color = '#ffffff';
+          headerBadge.style.border = '1px solid #c4b5fd';
+          headerBadge.style.boxShadow = '0 2px 8px rgba(124, 58, 237, 0.4)';
+          headerDot.style.background = '#fbbf24';
+          headerText.textContent = `👑 Developer Master Edition`;
+        } else if (isLicensed) {
           headerBadge.style.background = '#ecfdf5';
           headerBadge.style.color = '#047857';
           headerBadge.style.border = '1px solid #a7f3d0';
+          headerBadge.style.boxShadow = 'none';
           headerDot.style.background = '#10b981';
           headerText.textContent = `🛡️ Lisensi Pro Aktif (${hwid.slice(0, 10)}...)`;
         } else {
           headerBadge.style.background = '#fef2f2';
           headerBadge.style.color = '#b91c1c';
           headerBadge.style.border = '1px solid #fecaca';
+          headerBadge.style.boxShadow = 'none';
           headerDot.style.background = '#ef4444';
           headerText.textContent = '🔒 Belum Diaktivasi (Terkunci)';
         }
@@ -3355,11 +3418,16 @@
 
       if (displayHwid) displayHwid.textContent = hwid;
       if (displayKey) displayKey.textContent = key;
-      if (displayPlan) displayPlan.textContent = `${plan} (1-PC Terkunci)`;
+      if (displayPlan) displayPlan.textContent = isDev ? '👑 DEVELOPER MASTER (Unlimited Authority)' : `${plan} (1-PC Terkunci)`;
       if (displayOwner) displayOwner.textContent = owner;
 
       if (settingsBadge) {
-        if (isLicensed) {
+        if (isDev) {
+          settingsBadge.style.background = '#f5f3ff';
+          settingsBadge.style.color = '#6d28d9';
+          settingsBadge.style.border = '1px solid #ddd6fe';
+          settingsBadge.textContent = '👑 Developer Master License';
+        } else if (isLicensed) {
           settingsBadge.style.background = '#ecfdf5';
           settingsBadge.style.color = '#047857';
           settingsBadge.style.border = '1px solid #a7f3d0';
@@ -3370,6 +3438,12 @@
           settingsBadge.style.border = '1px solid #fecaca';
           settingsBadge.textContent = '🔴 Belum Diaktivasi';
         }
+      }
+
+      // Toggle Developer Studio Card in Settings
+      const devCard = document.getElementById('developerLicenseStudioCard');
+      if (devCard) {
+        devCard.style.display = isDev ? 'block' : 'none';
       }
 
       // Populate Modal Fields
@@ -3384,6 +3458,39 @@
       if (!isLicensed) {
         openModal('modalLicenseActivation');
       }
+    }
+
+    let lastGeneratedWhatsappMsg = '';
+
+    function generateBuyerLicenseAction() {
+      const targetHwid = (document.getElementById('genTargetHwid') ? document.getElementById('genTargetHwid').value : '').trim();
+      const customerName = (document.getElementById('genCustomerName') ? document.getElementById('genCustomerName').value : '').trim() || 'Pembeli';
+      const plan = document.getElementById('genPlanType') ? document.getElementById('genPlanType').value : 'LIFETIME';
+
+      if (!targetHwid) return showToast('Harap masukkan Machine ID pembeli!', 'error');
+
+      showToast('Membuat Kunci Lisensi resmi pembeli...', 'info');
+      callBackend('generateBuyerLicense', { targetHwid, customerName, plan })
+        .then(res => {
+          document.getElementById('genResultWrap').style.display = 'block';
+          document.getElementById('genResultKey').textContent = res.licenseKey;
+          lastGeneratedWhatsappMsg = res.whatsappTemplate;
+          showToast('🎉 Kunci Lisensi Pembeli berhasil dibuat!', 'success');
+        })
+        .catch(err => {
+          showToast('Gagal membuat lisensi: ' + err.message, 'error');
+        });
+    }
+
+    function copyGenKeyOnly() {
+      const key = document.getElementById('genResultKey') ? document.getElementById('genResultKey').textContent : '';
+      if (!key || key === '-') return;
+      navigator.clipboard.writeText(key).then(() => showToast('📋 Kunci lisensi berhasil disalin!', 'success'));
+    }
+
+    function copyGenWhatsappMsg() {
+      if (!lastGeneratedWhatsappMsg) return;
+      navigator.clipboard.writeText(lastGeneratedWhatsappMsg).then(() => showToast('💬 Draf pesan WhatsApp lengkap berhasil disalin!', 'success'));
     }
 
     function openLicenseModal() {
