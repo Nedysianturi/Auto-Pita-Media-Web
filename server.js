@@ -521,12 +521,16 @@ function getLicenseStatus() {
 }
 
 // Background Telemetry: Kirim Data Aktivasi Pembeli ke Google Sheets Pribadi Pengembang
-async function sendActivationTelemetry(payload) {
+async function sendActivationTelemetry(payload, customUrl = null) {
   try {
-    const webhookUrl = getSetting('MASTER_LICENSE_WEBHOOK_URL', process.env.MASTER_LICENSE_WEBHOOK_URL || '');
+    const webhookUrl = (customUrl || getSetting('MASTER_LICENSE_WEBHOOK_URL', process.env.MASTER_LICENSE_WEBHOOK_URL || '')).trim();
     if (!webhookUrl || !webhookUrl.startsWith('http')) {
       console.log('[TELEMETRY] Webhook URL Master belum dikonfigurasi. Data aktivasi tersimpan lokal.');
-      return;
+      return {
+        success: false,
+        status: 'NOT_CONFIGURED',
+        message: 'URL Webhook Google Sheets Master belum diisi atau disimpan.'
+      };
     }
 
     const postData = {
@@ -544,16 +548,35 @@ async function sendActivationTelemetry(payload) {
     };
 
     console.log(`[TELEMETRY] Mengirim data pembeli "${payload.customerName}" ke Master Google Sheets...`);
+    const startTime = Date.now();
     const resp = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(postData),
-      redirect: 'follow'
+      redirect: 'follow',
+      signal: AbortSignal.timeout(15000)
     });
+    const responseTimeMs = Date.now() - startTime;
     const txt = await resp.text();
     console.log('[TELEMETRY SUCCESS] Respons Master Google Sheet:', txt.slice(0, 100));
+
+    let parsed = null;
+    try { parsed = JSON.parse(txt); } catch(e) {}
+
+    return {
+      success: true,
+      httpStatus: resp.status,
+      responseTimeMs,
+      message: (parsed && parsed.message) || 'Data pembeli berhasil dicatat di Master Google Sheet!',
+      raw: txt
+    };
   } catch (err) {
     console.warn('[TELEMETRY NOTICE]:', err.message);
+    return {
+      success: false,
+      error: err.message,
+      message: 'Gagal terhubung ke Google Sheets: ' + err.message
+    };
   }
 }
 
@@ -4498,8 +4521,11 @@ app.post('/api/action', async (req, res) => {
       }
 
       case 'testMasterTelemetryWebhook': {
+        const payload = args[0] || {};
+        const customUrl = payload.url ? String(payload.url).trim() : null;
         const currentHwid = getHardwareId();
-        await sendActivationTelemetry({
+        
+        const testResult = await sendActivationTelemetry({
           hwid: currentHwid,
           customerName: 'Tester Developer (Uji Koneksi)',
           customerEmail: 'developer-test@pitamedia.local',
@@ -4507,8 +4533,18 @@ app.post('/api/action', async (req, res) => {
           licenseKey: 'PITA-DEV-TEST-PING',
           activatedAt: isoNow(),
           expiresAt: 'PERMANENT'
-        });
-        result = { success: true, message: 'Pengujian Webhook terkirim! Silakan periksa baris baru di Google Sheet Anda.' };
+        }, customUrl);
+
+        if (!testResult.success) {
+          throw new Error(testResult.message || 'Koneksi ke Google Sheets gagal');
+        }
+
+        result = {
+          success: true,
+          message: `Koneksi Berhasil! Google Sheet merespons dalam ${testResult.responseTimeMs}ms. (${testResult.message})`,
+          details: testResult,
+          testedAt: new Date().toLocaleTimeString('id-ID', { hour12: false })
+        };
         break;
       }
 

@@ -1691,9 +1691,10 @@
             <div style="display: flex; gap: 8px; margin-bottom: 6px;">
               <input type="text" id="devMasterWebhookUrl" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" style="font-family: monospace; font-size: 0.78rem;" />
               <button type="button" class="btn btn-sm btn-primary" onclick="saveMasterWebhookUrlAction()" style="font-weight: 700; white-space: nowrap;">💾 Simpan</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="testMasterWebhookAction()" style="font-weight: 700; white-space: nowrap;">🧪 Test Ping</button>
+              <button type="button" id="btnTestMasterWebhook" class="btn btn-sm btn-secondary" onclick="testMasterWebhookAction()" style="font-weight: 700; white-space: nowrap;">🧪 Test Ping</button>
             </div>
             <div id="masterWebhookStatusHint" style="font-size: 0.7rem; color: #047857; font-weight: 700;"></div>
+            <div id="masterWebhookStatusBox" style="display: none; margin-top: 8px; padding: 10px 12px; border-radius: 8px; font-size: 0.75rem; line-height: 1.4;"></div>
           </div>
         </div>
 
@@ -3664,12 +3665,67 @@
     }
 
     function testMasterWebhookAction() {
+      const url = (document.getElementById('devMasterWebhookUrl') ? document.getElementById('devMasterWebhookUrl').value : '').trim();
+      if (!url) return showToast('Harap masukkan URL Webhook Google Apps Script terlebih dahulu!', 'error');
+
+      const btn = document.getElementById('btnTestMasterWebhook');
+      const box = document.getElementById('masterWebhookStatusBox');
+      
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Menguji...';
+      }
+
+      if (box) {
+        box.style.display = 'block';
+        box.style.background = '#fef3c7';
+        box.style.border = '1px solid #fde68a';
+        box.style.color = '#92400e';
+        box.innerHTML = '<b>⏳ Sedang menghubungi Google Spreadsheet...</b><br>Mengirimkan data uji coba aktivasi.';
+      }
+
       showToast('Mengirim sinyal uji coba ke Google Sheets Master...', 'info');
-      callBackend('testMasterTelemetryWebhook')
+      callBackend('testMasterTelemetryWebhook', { url })
         .then(res => {
-          showToast('🎉 Uji coba terkirim! Silakan periksa Google Sheet Anda.', 'success');
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = '🧪 Test Ping';
+          }
+          if (box) {
+            box.style.display = 'block';
+            box.style.background = '#ecfdf5';
+            box.style.border = '1.5px solid #a7f3d0';
+            box.style.color = '#065f46';
+            box.innerHTML = `
+              <div style="font-weight: 800; display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                <span>✅ TERHUBUNG SUKSES KE GOOGLE SHEET!</span>
+                <span style="font-size: 0.68rem; opacity: 0.85;">(${res.testedAt || 'Barusan'})</span>
+              </div>
+              <div style="font-size: 0.73rem;">
+                ${res.message || 'Data uji coba berhasil masuk ke tab "Aktivasi Pembeli".'}
+              </div>
+            `;
+          }
+          showToast('🎉 Berhasil! Google Sheet Anda terhubung & menerima data.', 'success');
         })
-        .catch(err => showToast('Uji coba gagal: ' + err.message, 'error'));
+        .catch(err => {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = '🧪 Test Ping';
+          }
+          if (box) {
+            box.style.display = 'block';
+            box.style.background = '#fef2f2';
+            box.style.border = '1.5px solid #fecaca';
+            box.style.color = '#991b1b';
+            box.innerHTML = `
+              <div style="font-weight: 800; margin-bottom: 4px;">❌ GAGAL TERHUBUNG KE GOOGLE SHEET</div>
+              <div style="font-size: 0.73rem;">${err.message}</div>
+              <div style="font-size: 0.68rem; margin-top: 4px; color: #b91c1c;">Pastikan Web App di-deploy dengan izin "Siapa saja (Anyone)".</div>
+            `;
+          }
+          showToast('Uji coba gagal: ' + err.message, 'error');
+        });
     }
 
     const APPS_SCRIPT_SNIPPET = `function doPost(e) {
