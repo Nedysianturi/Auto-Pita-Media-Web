@@ -349,7 +349,9 @@ function setSetting(key, value, keterangan = '') {
 // ========================================================
 const LICENSE_SECRET = process.env.PITAMEDIA_LICENSE_SECRET || 'PitaMediaStudioMasterSecret2026SaltKeyLock';
 
+let _cachedHwid = null;
 function getHardwareId() {
+  if (_cachedHwid) return _cachedHwid;
   let uuid = '';
   let cpu = '';
   let machineGuid = '';
@@ -381,7 +383,8 @@ function getHardwareId() {
 
   const rawSeed = `${uuid}|${cpu}|${machineGuid}|${os.hostname()}`.toUpperCase();
   const hash = crypto.createHash('sha256').update(rawSeed).digest('hex').toUpperCase();
-  return `PM-${hash.slice(0, 4)}-${hash.slice(4, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}`;
+  _cachedHwid = `PM-${hash.slice(0, 4)}-${hash.slice(4, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}`;
+  return _cachedHwid;
 }
 
 function generateLicenseKey(hwid, plan = 'LIFETIME') {
@@ -635,8 +638,14 @@ function resolveNicheFolderPath(niche) {
   return portableDir;
 }
 
-// Auto-Sync Local Folders (Runs automatically on every data request and in background)
-function autoSyncLocalFolders() {
+let _lastAutoSyncLocalFoldersTime = 0;
+// Auto-Sync Local Folders (Runs automatically on every data request and in background, throttled to 30s)
+function autoSyncLocalFolders(force = false) {
+  const now = Date.now();
+  if (!force && (now - _lastAutoSyncLocalFoldersTime < 30000)) {
+    return { added: 0, removed: 0, cached: true };
+  }
+  _lastAutoSyncLocalFoldersTime = now;
   let totalAdded = 0;
   let totalRemoved = 0;
   let nichesCount = 0;
@@ -1648,7 +1657,13 @@ function getSmartHeatmapData(nicheId) {
   };
 }
 
-function autoScheduleUnscheduledMedia() {
+let _lastAutoScheduleTime = 0;
+function autoScheduleUnscheduledMedia(force = false) {
+  const now = Date.now();
+  if (!force && (now - _lastAutoScheduleTime < 20000)) {
+    return;
+  }
+  _lastAutoScheduleTime = now;
   try {
     const isStopped = getSetting('STOP_GLOBAL', 'FALSE') === 'TRUE';
     if (isStopped) return;
@@ -4951,7 +4966,7 @@ app.get('/api/media/:mediaId/frame', (req, res) => {
       }
     }
 
-    // 3. Jika VIDEO REELS: ekstrak frame dengan ffmpeg
+    // 3. Jika VIDEO REELS: ekstrak frame dengan ffmpeg atau gunakan disk cache
     if (!media.file_path || !fs.existsSync(media.file_path)) {
       return res.status(404).send('File video master tidak ditemukan di komputer');
     }
@@ -4960,7 +4975,18 @@ app.get('/api/media/:mediaId/frame', (req, res) => {
     const offsetSec = (offsetMs / 1000).toFixed(2);
 
     res.setHeader('Content-Type', 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=120');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+
+    const thumbsDir = path.join(__dirname, 'temp_mixed', 'thumbs');
+    if (!fs.existsSync(thumbsDir)) {
+      try { fs.mkdirSync(thumbsDir, { recursive: true }); } catch(e){}
+    }
+    const safeMediaId = String(mediaId).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const thumbCachePath = path.join(thumbsDir, `thumb_media_${safeMediaId}_${offsetMs}.jpg`);
+
+    if (fs.existsSync(thumbCachePath)) {
+      return fs.createReadStream(thumbCachePath).pipe(res);
+    }
 
     const proc = spawn('ffmpeg', [
       '-ss', offsetSec,
@@ -4968,11 +4994,17 @@ app.get('/api/media/:mediaId/frame', (req, res) => {
       '-vframes', '1',
       '-q:v', '3',
       '-f', 'image2',
-      'pipe:1'
+      '-y',
+      thumbCachePath
     ]);
 
-    proc.stdout.pipe(res);
-    proc.stderr.on('data', () => {});
+    proc.on('close', (code) => {
+      if (code === 0 && fs.existsSync(thumbCachePath)) {
+        if (!res.headersSent) fs.createReadStream(thumbCachePath).pipe(res);
+      } else {
+        if (!res.headersSent) res.status(500).send('Gagal mengekstrak frame sampul');
+      }
+    });
     proc.on('error', () => {
       if (!res.headersSent) res.status(500).send('Gagal mengekstrak frame sampul');
     });
@@ -5030,7 +5062,18 @@ app.get('/api/jobs/:jobId/frame', (req, res) => {
     const offsetSec = (offsetMs / 1000).toFixed(2);
 
     res.setHeader('Content-Type', 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=120');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+
+    const thumbsDir = path.join(__dirname, 'temp_mixed', 'thumbs');
+    if (!fs.existsSync(thumbsDir)) {
+      try { fs.mkdirSync(thumbsDir, { recursive: true }); } catch(e){}
+    }
+    const safeJobId = String(jobId).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const thumbCachePath = path.join(thumbsDir, `thumb_job_${safeJobId}_${offsetMs}.jpg`);
+
+    if (fs.existsSync(thumbCachePath)) {
+      return fs.createReadStream(thumbCachePath).pipe(res);
+    }
 
     const proc = spawn('ffmpeg', [
       '-ss', offsetSec,
@@ -5038,11 +5081,17 @@ app.get('/api/jobs/:jobId/frame', (req, res) => {
       '-vframes', '1',
       '-q:v', '3',
       '-f', 'image2',
-      'pipe:1'
+      '-y',
+      thumbCachePath
     ]);
 
-    proc.stdout.pipe(res);
-    proc.stderr.on('data', () => {});
+    proc.on('close', (code) => {
+      if (code === 0 && fs.existsSync(thumbCachePath)) {
+        if (!res.headersSent) fs.createReadStream(thumbCachePath).pipe(res);
+      } else {
+        if (!res.headersSent) res.status(500).send('Gagal mengekstrak frame');
+      }
+    });
     proc.on('error', () => {
       if (!res.headersSent) res.status(500).send('Gagal mengekstrak frame sampul');
     });
