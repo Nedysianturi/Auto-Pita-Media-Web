@@ -390,10 +390,13 @@ function autoSyncLocalFolders() {
         totalAdded++;
       }
 
-      // Hapus media di DB yang sudah tidak ada di disk
-      const dbMedia = db.prepare('SELECT media_id, nama_file, file_path FROM media WHERE niche_id = ?').all(niche.niche_id);
+      // Hapus media di DB yang sudah tidak ada di disk (kecuali yang sudah berstatus PUBLISHED)
+      const dbMedia = db.prepare('SELECT media_id, nama_file, file_path, status FROM media WHERE niche_id = ?').all(niche.niche_id);
       for (const m of dbMedia) {
         if (!diskFilenames.has(m.nama_file) && (!m.file_path || !fs.existsSync(m.file_path))) {
+          if (m.status === 'PUBLISHED') {
+            continue; // Pertahankan riwayat video yang sudah sukses dipublikasi
+          }
           db.prepare('DELETE FROM media WHERE media_id = ?').run(m.media_id);
           db.prepare("DELETE FROM posts WHERE media_id = ? AND manual_locked != 'TRUE'").run(m.media_id);
           db.prepare("DELETE FROM jobs WHERE media_id = ? AND status NOT IN ('PUBLISHED', 'UPLOADING')").run(m.media_id);
@@ -1547,6 +1550,100 @@ function backupDatabase(isManual = false) {
   }
 }
 
+// === AUTO-CLEANUP PUBLISHED MEDIA (DISK SPACE SAVER) ===
+function cleanupPublishedMediaFile(mediaId, customMode = null) {
+  const media = db.prepare('SELECT * FROM media WHERE media_id = ?').get(mediaId);
+  if (!media) return { success: false, reason: 'Media tidak ditemukan' };
+
+  // Pastikan seluruh jadwal upload untuk video ini sudah sukses PUBLISHED
+  const remaining = db.prepare("SELECT count(*) as cnt FROM jobs WHERE media_id = ? AND status NOT IN ('PUBLISHED', 'CANCELLED')").get(mediaId);
+  if (remaining && remaining.cnt > 0) {
+    return { success: false, reason: 'Masih ada antrean yang belum selesai tayang' };
+  }
+
+  const mode = customMode || getSetting('CLEANUP_PUBLISHED_MODE', 'KEEP');
+  if (mode === 'KEEP') {
+    return { success: true, action: 'KEEP', message: 'File disimpan (Mode Keep)' };
+  }
+
+  const filePath = media.file_path;
+  if (!filePath || !fs.existsSync(filePath)) {
+    return { success: true, action: 'ALREADY_GONE', message: 'File sudah tidak ada di disk' };
+  }
+
+  try {
+    const fileSize = fs.statSync(filePath).size;
+    const freedMb = Number((fileSize / (1024 * 1024)).toFixed(1));
+
+    if (mode === 'DELETE') {
+      fs.unlinkSync(filePath);
+      console.log(`[DISK SAVER] Video "${media.nama_file}" (${freedMb} MB) dihapus permanen dari harddisk setelah sukses terbit.`);
+      return { success: true, action: 'DELETED', freedMb, filename: media.nama_file };
+    } 
+    
+    if (mode === 'ARCHIVE') {
+      const dir = path.dirname(filePath);
+      const archiveDir = path.join(dir, 'Arsip_Selesai');
+      if (!fs.existsSync(archiveDir)) {
+        fs.mkdirSync(archiveDir, { recursive: true });
+      }
+      const targetPath = path.join(archiveDir, path.basename(filePath));
+      const finalTargetPath = fs.existsSync(targetPath) 
+        ? path.join(archiveDir, `${Date.now()}_${path.basename(filePath)}`) 
+        : targetPath;
+      
+      fs.renameSync(filePath, finalTargetPath);
+      db.prepare('UPDATE media SET file_path = ? WHERE media_id = ?').run(finalTargetPath, mediaId);
+      console.log(`[DISK SAVER] Video "${media.nama_file}" dipindahkan ke folder arsip: ${finalTargetPath}`);
+      return { success: true, action: 'ARCHIVED', targetPath: finalTargetPath, freedMb: 0, filename: media.nama_file };
+    }
+  } catch (err) {
+    console.error(`[DISK SAVER ERROR] Gagal memproses file "${media.nama_file}":`, err.message);
+    return { success: false, error: err.message };
+  }
+
+  return { success: false, reason: 'Mode tidak valid' };
+}
+
+function cleanupAllPublishedMedia(customMode = null) {
+  const mode = customMode || getSetting('CLEANUP_PUBLISHED_MODE', 'DELETE');
+  const allMedia = db.prepare(`
+    SELECT m.media_id, m.nama_file, m.file_path, m.niche_id 
+    FROM media m 
+    WHERE (
+      SELECT count(*) FROM jobs j WHERE j.media_id = m.media_id AND j.status NOT IN ('PUBLISHED', 'CANCELLED')
+    ) = 0
+    AND (
+      SELECT count(*) FROM jobs j WHERE j.media_id = m.media_id AND j.status = 'PUBLISHED'
+    ) > 0
+  `).all();
+
+  let processedCount = 0;
+  let totalFreedMb = 0;
+  const details = [];
+
+  for (const m of allMedia) {
+    if (!m.file_path || !fs.existsSync(m.file_path)) continue;
+    if (mode === 'ARCHIVE' && m.file_path.includes('Arsip_Selesai')) continue;
+
+    const res = cleanupPublishedMediaFile(m.media_id, mode);
+    if (res.success && (res.action === 'DELETED' || res.action === 'ARCHIVED')) {
+      processedCount++;
+      totalFreedMb += (res.freedMb || 0);
+      details.push({ filename: m.nama_file, action: res.action });
+    }
+  }
+
+  return {
+    success: true,
+    mode,
+    processedCount,
+    freedMb: Number(totalFreedMb.toFixed(1)),
+    details,
+    dashboard: getDashboardData()
+  };
+}
+
 // === TOKEN EXPIRY INSPECTOR (EARLY WARNING) ===
 async function inspectAccountTokens() {
   if (!isInternetOnline) return;
@@ -1781,10 +1878,13 @@ function scanDrive(nicheId) {
       addedCount++;
     }
 
-    // Hapus file yang sudah dihapus secara fisik di komputer dari database
-    const allMediaInNiche = db.prepare('SELECT media_id, nama_file, file_path FROM media WHERE niche_id = ?').all(nicheId);
+    // Hapus file yang sudah dihapus secara fisik di komputer dari database (kecuali yang sudah sukses PUBLISHED)
+    const allMediaInNiche = db.prepare('SELECT media_id, nama_file, file_path, status FROM media WHERE niche_id = ?').all(nicheId);
     for (const m of allMediaInNiche) {
       if (!currentVideoFiles.has(m.nama_file) && (!m.file_path || !fs.existsSync(m.file_path))) {
+        if (m.status === 'PUBLISHED') {
+          continue; // Pertahankan riwayat video yang sudah sukses dipublikasi
+        }
         db.prepare('DELETE FROM media WHERE media_id = ?').run(m.media_id);
         db.prepare("DELETE FROM posts WHERE media_id = ? AND manual_locked != 'TRUE'").run(m.media_id);
         db.prepare("DELETE FROM jobs WHERE media_id = ? AND status NOT IN ('PUBLISHED', 'UPLOADING')").run(m.media_id);
@@ -2550,6 +2650,13 @@ async function publishJob(jobId) {
           db.prepare("UPDATE media SET status = 'PUBLISHED' WHERE media_id = ?").run(media.media_id);
           db.prepare("UPDATE posts SET status = 'PUBLISHED' WHERE konten_id = ?").run(job.konten_id);
           console.log(`[PUBLISH COMPLETE] Media "${media.nama_file}" kini berstatus PUBLISHED di seluruh antrean.`);
+          
+          // Auto-cleanup file video lokal dari disk jika opsi diaktifkan
+          try {
+            cleanupPublishedMediaFile(media.media_id);
+          } catch(ce) {
+            console.warn('[AUTO-CLEANUP DISK NOTICE]', ce.message);
+          }
         }
       } catch(e) {}
     }
@@ -3615,8 +3722,30 @@ app.post('/api/action', async (req, res) => {
           geminiApiKey: getSetting('GEMINI_API_KEY', '') || process.env.GEMINI_API_KEY || '',
           geminiModel: getSetting('GEMINI_MODEL', 'gemini-1.5-flash'),
           geminiStatus: getSetting('GEMINI_STATUS', (getSetting('GEMINI_API_KEY', '') ? 'UNVERIFIED' : 'NOT_SET')),
-          geminiStatusMsg: getSetting('GEMINI_STATUS_MSG', '')
+          geminiStatusMsg: getSetting('GEMINI_STATUS_MSG', ''),
+          cleanupPublishedMode: getSetting('CLEANUP_PUBLISHED_MODE', 'KEEP'),
+          publishedMediaCount: db.prepare("SELECT count(DISTINCT m.media_id) as cnt FROM media m WHERE m.status = 'PUBLISHED'").get().cnt
         };
+        break;
+      }
+
+      // Cleanup Published Media Actions
+      case 'saveCleanupPublishedSetting': {
+        const payload = args[0] || {};
+        const mode = String(payload.mode || 'KEEP').toUpperCase();
+        if (!['KEEP', 'ARCHIVE', 'DELETE'].includes(mode)) {
+          throw new Error('Pilihan mode tidak valid. Pilih KEEP, ARCHIVE, atau DELETE.');
+        }
+        setSetting('CLEANUP_PUBLISHED_MODE', mode, 'Opsi pembersihan file video setelah sukses terbit');
+        console.log(`[SETTINGS] Opsi Pembersihan Video Selesai diubah -> ${mode}`);
+        result = { success: true, mode, message: 'Pengaturan pembersihan video berhasil disimpan!' };
+        break;
+      }
+
+      case 'cleanupAllPublishedMedia': {
+        const payload = args[0] || {};
+        const mode = payload.mode ? String(payload.mode).toUpperCase() : null;
+        result = cleanupAllPublishedMedia(mode);
         break;
       }
 

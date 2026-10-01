@@ -1367,6 +1367,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
               <span>Sinkronkan Folder Video</span>
             </button>
+            <button id="btnCleanupPublishedMedia" class="btn btn-sm btn-secondary" onclick="cleanupAllPublishedAction(this)" style="display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: #cbd5e1; background: #ffffff; color: #475569;" title="Bersihkan atau arsipkan file video yang sudah sukses berstatus SELESAI TERBIT dari harddisk komputer">
+              <span style="font-size: 0.85rem;">🗂️</span>
+              <span>Bersihkan Video Selesai</span>
+            </button>
           </div>
         </div>
 
@@ -1748,7 +1752,59 @@
           </div>
         </div>
 
-        <!-- 4. Kontrol Darurat & Otomasi Sistem -->
+        <!-- 4. Pembersihan Video Selesai Terbit (Auto-Cleanup Disk) -->
+        <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between; border: 1.5px solid rgba(14, 165, 233, 0.35); background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);">
+          <div>
+            <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 16px;">
+              <div class="card-title" style="display: flex; align-items: center; gap: 10px; font-size: 1.05rem;">
+                <span style="font-size: 1.3rem;">🗂️</span>
+                <span>Pembersihan Video Selesai (Hemat Ruang Disk)</span>
+              </div>
+              <span id="settingsCleanupBadge" class="badge badge-info" style="font-size: 0.72rem; font-weight: 700;">Simpan File Asli</span>
+            </div>
+
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+              Tentukan tindakan otomatis terhadap file video fisik di komputer Anda setelah video tersebut berhasil 100% dipublikasikan ke seluruh akun sosial media (Facebook Reels & Instagram Reels).
+            </div>
+
+            <!-- Mode Selector Form -->
+            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+              <label class="form-label" style="font-size: 0.78rem; font-weight: 700; margin-bottom: 6px; display: block;">
+                Tindakan Otomatis Setelah Video Sukses Tayang:
+              </label>
+              <select id="settingsCleanupModeSelect" class="form-control" style="font-size: 0.82rem; margin-bottom: 8px;" onchange="onCleanupModeSelectChange()">
+                <option value="KEEP">📁 Simpan File Asli (Bawaan - Jangan Dihapus)</option>
+                <option value="ARCHIVE">📦 Pindahkan ke Folder "Arsip_Selesai" (Rekomendasi Aman)</option>
+                <option value="DELETE">🗑️ Hapus Otomatis File dari Harddisk Komputer (Maksimal Hemat Disk)</option>
+              </select>
+              <div id="settingsCleanupModeHint" style="font-size: 0.75rem; line-height: 1.45;"></div>
+            </div>
+
+            <!-- Stats Box -->
+            <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 0.78rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                <span style="color: var(--text-muted); font-weight: 600;">Total Video Berhasil Tayang:</span>
+                <span style="font-weight: 700; color: #059669;" id="settingsPublishedCount">0</span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted); font-weight: 600;">Riwayat & Laporan Dashboard:</span>
+                <span style="font-weight: 700; color: #4338ca;">Tetap Aman Tersimpan di Database</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--border-color); align-items: center;">
+            <button type="button" class="btn btn-sm btn-primary" onclick="saveCleanupModeAction(this)" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700;">
+              💾 Simpan Pengaturan
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="cleanupAllPublishedAction(this)" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 600; margin-left: auto;">
+              🧹 Bersihkan Video Selesai Sekarang
+            </button>
+          </div>
+        </div>
+
+        <!-- 5. Kontrol Darurat & Otomasi Sistem -->
         <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
           <div>
             <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 16px;">
@@ -3089,9 +3145,131 @@
             aiModelSelect.value = sys.geminiModel;
           }
           updateGeminiBadge(sys.geminiStatus || (sys.geminiApiKey ? 'UNVERIFIED' : 'NOT_SET'), sys.geminiStatusMsg);
+
+          // Populate Cleanup Published Media Settings
+          const cleanupSelect = document.getElementById('settingsCleanupModeSelect');
+          const publishedCountEl = document.getElementById('settingsPublishedCount');
+          if (cleanupSelect && sys.cleanupPublishedMode) {
+            cleanupSelect.value = sys.cleanupPublishedMode;
+            onCleanupModeSelectChange();
+          }
+          if (publishedCountEl) {
+            publishedCountEl.textContent = sys.publishedMediaCount || 0;
+          }
         }
       } catch (e) {
         console.warn('[SETTINGS LOAD NOTICE]:', e.message);
+      }
+    }
+
+    function onCleanupModeSelectChange() {
+      const select = document.getElementById('settingsCleanupModeSelect');
+      const badge = document.getElementById('settingsCleanupBadge');
+      const hint = document.getElementById('settingsCleanupModeHint');
+      if (!select) return;
+      const val = select.value;
+      if (val === 'DELETE') {
+        if (badge) {
+          badge.className = 'badge badge-danger';
+          badge.style.background = '#fef2f2';
+          badge.style.color = '#b91c1c';
+          badge.style.border = '1px solid #fca5a5';
+          badge.textContent = '🗑️ Hapus Otomatis (Maksimal Hemat)';
+        }
+        if (hint) {
+          hint.innerHTML = '<span style="color: #b91c1c; font-weight: 600;">⚠️ File video asli (.mp4) akan langsung dihapus otomatis dari komputer setelah sukses terbit ke semua akun. Data riwayat, caption, dan analitik di dashboard tetap aman.</span>';
+        }
+      } else if (val === 'ARCHIVE') {
+        if (badge) {
+          badge.className = 'badge badge-warning';
+          badge.style.background = '#fef9c3';
+          badge.style.color = '#854d0e';
+          badge.style.border = '1px solid #fde047';
+          badge.textContent = '📦 Pindah ke Folder Arsip';
+        }
+        if (hint) {
+          hint.innerHTML = '<span style="color: #0369a1; font-weight: 600;">📦 File video asli akan otomatis dipindahkan ke subfolder <code>Arsip_Selesai/</code> di dalam niche. Folder utama tetap bersih untuk video baru, dan file asli tetap aman tersimpan.</span>';
+        }
+      } else {
+        if (badge) {
+          badge.className = 'badge badge-info';
+          badge.style.background = '#f0f9ff';
+          badge.style.color = '#0284c7';
+          badge.style.border = '1px solid #bae6fd';
+          badge.textContent = '📁 Simpan File Asli';
+        }
+        if (hint) {
+          hint.innerHTML = '<span style="color: #475569; font-weight: 500;">📁 File video asli tidak akan disentuh dan tetap berada di folder master komputer Anda.</span>';
+        }
+      }
+    }
+
+    async function saveCleanupModeAction(btn) {
+      const select = document.getElementById('settingsCleanupModeSelect');
+      if (!select) return;
+      const mode = select.value;
+
+      const origText = btn ? btn.innerHTML : 'Simpan';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="margin-right: 4px;"></span> Menyimpan...';
+      }
+
+      try {
+        const res = await callBackend('saveCleanupPublishedSetting', { mode });
+        if (res && res.error) throw new Error(res.error);
+        showToast('🎉 Pengaturan pembersihan video selesai berhasil disimpan!', 'success');
+        renderSettingsView();
+      } catch (err) {
+        showToast('Gagal menyimpan pengaturan: ' + err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = origText;
+        }
+      }
+    }
+
+    async function cleanupAllPublishedAction(btn) {
+      const select = document.getElementById('settingsCleanupModeSelect');
+      const currentMode = select ? select.value : 'DELETE';
+      const modeText = currentMode === 'ARCHIVE' ? 'memindahkan ke folder "Arsip_Selesai"' : (currentMode === 'DELETE' ? 'MENGHAPUS PERMANEN dari harddisk komputer' : 'memproses');
+      
+      if (!confirm(`Apakah Anda yakin ingin ${modeText} seluruh file video yang sudah sukses berstatus SELESAI TERBIT?`)) {
+        return;
+      }
+
+      const origText = btn ? btn.innerHTML : 'Bersihkan';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="margin-right: 4px;"></span> Memproses...';
+      }
+      showToast('🧹 Sedang memproses pembersihan video yang sudah terbit...', 'info', 3000);
+
+      try {
+        const res = await callBackend('cleanupAllPublishedMedia', { mode: currentMode });
+        if (res && res.error) throw new Error(res.error);
+
+        if (res.dashboard) {
+          appData = res.dashboard;
+        }
+        renderAll();
+        renderSettingsView();
+
+        const count = res.processedCount || 0;
+        const mb = res.freedMb || 0;
+        if (count > 0) {
+          showToast(`🧹 Berhasil memproses ${count} video selesai (${mb} MB ruang disk dilegakan)!`, 'success', 6000);
+        } else {
+          showToast('Tidak ada video selesai baru yang perlu dibersihkan (Semua sudah bersih).', 'info', 4000);
+        }
+      } catch (err) {
+        showToast('Gagal membersihkan video selesai: ' + err.message, 'error', 5000);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = origText;
+        }
       }
     }
 
