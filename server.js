@@ -4564,13 +4564,17 @@ app.post('/api/action', async (req, res) => {
         const payload = args[0] || {};
         const customUrl = payload.url ? String(payload.url).trim() : null;
         const currentHwid = getHardwareId();
+        const activeLic = db.prepare("SELECT * FROM licenses WHERE hwid = ? AND plan = 'DEVELOPER'").get(currentHwid);
+        const devKey = (activeLic && activeLic.license_key) || generateLicenseKey(currentHwid, 'DEV');
+        const devName = (activeLic && activeLic.customer_name) || 'kennedi';
+        const devEmail = (activeLic && activeLic.customer_email) || 'Cipadata@gmail.com';
         
         const testResult = await sendActivationTelemetry({
           hwid: currentHwid,
-          customerName: 'Tester Developer (Uji Koneksi)',
-          customerEmail: 'developer-test@pitamedia.local',
+          customerName: devName,
+          customerEmail: devEmail,
           plan: 'DEVELOPER',
-          licenseKey: 'PITA-DEV-TEST-PING',
+          licenseKey: devKey,
           activatedAt: isoNow(),
           expiresAt: 'PERMANENT'
         }, customUrl);
@@ -4581,9 +4585,8 @@ app.post('/api/action', async (req, res) => {
 
         result = {
           success: true,
-          message: `Koneksi Berhasil! Google Sheet merespons dalam ${testResult.responseTimeMs}ms. (${testResult.message})`,
-          details: testResult,
-          testedAt: new Date().toLocaleTimeString('id-ID', { hour12: false })
+          message: `Koneksi Google Sheets SUKSES! Data resmi Developer Master (${devName} - ${devEmail}) berhasil dicatat di tab "Developer".`,
+          details: testResult
         };
         break;
       }
