@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const dns = require('dns').promises;
 const { DatabaseSync } = require('node:sqlite');
 const { spawn, execSync } = require('child_process');
+const os = require('os');
 
 // === RESILIENT CRASH GUARDS ===
 // Mencegah server mati jika terjadi error sistem atau jaringan tak terduga
@@ -343,6 +344,166 @@ function setSetting(key, value, keterangan = '') {
     .run(key, String(value), keterangan);
 }
 
+// ========================================================
+// HARDWARE ID (HWID) & 1-PC MACHINE LOCK LICENSE SYSTEM
+// ========================================================
+const LICENSE_SECRET = process.env.PITAMEDIA_LICENSE_SECRET || 'PitaMediaStudioMasterSecret2026SaltKeyLock';
+
+function getHardwareId() {
+  let uuid = '';
+  let cpu = '';
+  let machineGuid = '';
+
+  if (process.platform === 'win32') {
+    try {
+      uuid = execSync('powershell.exe -NoProfile -Command "(Get-CimInstance Win32_ComputerSystemProduct).UUID"', { timeout: 3500 }).toString().trim();
+    } catch(e) {}
+    try {
+      cpu = execSync('powershell.exe -NoProfile -Command "(Get-CimInstance Win32_Processor).ProcessorId"', { timeout: 3500 }).toString().trim();
+    } catch(e) {}
+    try {
+      machineGuid = execSync('powershell.exe -NoProfile -Command "(Get-ItemProperty -Path \'HKLM:\\SOFTWARE\\Microsoft\\Cryptography\').MachineGuid"', { timeout: 3500 }).toString().trim();
+    } catch(e) {}
+  }
+
+  if (!uuid && !cpu && !machineGuid) {
+    try {
+      const ifaces = os.networkInterfaces();
+      const macs = [];
+      for (const k in ifaces) {
+        for (const eth of ifaces[k]) {
+          if (eth.mac && eth.mac !== '00:00:00:00:00:00') macs.push(eth.mac);
+        }
+      }
+      uuid = macs.sort().join(';');
+    } catch(e) {}
+  }
+
+  const rawSeed = `${uuid}|${cpu}|${machineGuid}|${os.hostname()}`.toUpperCase();
+  const hash = crypto.createHash('sha256').update(rawSeed).digest('hex').toUpperCase();
+  return `PM-${hash.slice(0, 4)}-${hash.slice(4, 8)}-${hash.slice(8, 12)}-${hash.slice(12, 16)}`;
+}
+
+function generateLicenseKey(hwid, plan = 'LIFETIME') {
+  const cleanHwid = String(hwid || '').trim().toUpperCase();
+  const cleanPlan = String(plan || 'LIFETIME').trim().toUpperCase();
+  const sig = crypto.createHmac('sha256', LICENSE_SECRET)
+    .update(`${cleanHwid}:${cleanPlan}`)
+    .digest('hex')
+    .toUpperCase();
+  return `PITA-${cleanPlan}-${sig.slice(0, 4)}-${sig.slice(4, 8)}-${sig.slice(8, 12)}`;
+}
+
+function verifyLicenseKey(licenseKey, hwid) {
+  if (!licenseKey) return { valid: false, reason: 'Kunci lisensi kosong' };
+  const cleanKey = String(licenseKey).trim().toUpperCase();
+  const cleanHwid = String(hwid).trim().toUpperCase();
+
+  const parts = cleanKey.split('-');
+  if (parts.length < 5 || parts[0] !== 'PITA') {
+    return { valid: false, reason: 'Format lisensi tidak valid (harus diawali PITA-...)' };
+  }
+  const plan = parts[1];
+  const expectedKey = generateLicenseKey(cleanHwid, plan);
+  if (cleanKey === expectedKey) {
+    return {
+      valid: true,
+      hwid: cleanHwid,
+      plan: plan,
+      licenseKey: cleanKey
+    };
+  }
+  return { 
+    valid: false, 
+    reason: 'Kunci lisensi ini tidak cocok dengan Machine ID komputer ini (Lisensi terikat ke 1 PC).' 
+  };
+}
+
+function getLicenseStatus() {
+  const currentHwid = getHardwareId();
+  try {
+    const row = db.prepare('SELECT * FROM licenses WHERE hwid = ?').get(currentHwid);
+    if (row && row.status === 'ACTIVE') {
+      const verified = verifyLicenseKey(row.license_key, currentHwid);
+      if (verified.valid) {
+        return {
+          isLicensed: true,
+          hwid: currentHwid,
+          licenseKey: row.license_key,
+          plan: row.plan || 'PRO',
+          customerName: row.customer_name || 'Owner',
+          activatedAt: row.activated_at,
+          expiresAt: row.expires_at || 'PERMANENT',
+          status: 'ACTIVE'
+        };
+      }
+    }
+  } catch(e) {}
+
+  return {
+    isLicensed: false,
+    hwid: currentHwid,
+    licenseKey: '',
+    plan: 'NONE',
+    customerName: '',
+    activatedAt: '',
+    expiresAt: '',
+    status: 'UNLICENSED'
+  };
+}
+
+function initLicenseSystem() {
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS licenses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hwid TEXT NOT NULL UNIQUE,
+        license_key TEXT NOT NULL,
+        plan TEXT DEFAULT 'LIFETIME',
+        customer_name TEXT DEFAULT 'Owner',
+        status TEXT DEFAULT 'ACTIVE',
+        activated_at TEXT,
+        expires_at TEXT,
+        last_verified_at TEXT
+      );
+    `);
+
+    const currentHwid = getHardwareId();
+    const existingAny = db.prepare('SELECT count(*) as count FROM licenses').get();
+    if (!existingAny || existingAny.count === 0) {
+      const masterKey = generateLicenseKey(currentHwid, 'LIFETIME');
+      db.prepare(`
+        INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, status, activated_at, expires_at, last_verified_at)
+        VALUES (?, ?, 'LIFETIME', 'Owner (PitaMedia Studio)', 'ACTIVE', ?, 'PERMANENT', ?)
+      `).run(currentHwid, masterKey, isoNow(), isoNow());
+      console.log(`[LICENSE] Auto-activated Master Lifetime License for current HWID: ${currentHwid}`);
+    }
+  } catch(e) {
+    console.warn('[LICENSE INIT WARNING]:', e.message);
+  }
+}
+
+// Portable & Dynamic Folder Resolver
+function resolveNicheFolderPath(niche) {
+  let p = (niche.folder_path || '').trim();
+  if (p && fs.existsSync(p)) return p;
+
+  const safeName = (niche.nama || niche.niche_id || 'Media').replace(/[\\/:*?"<>|]/g, '_');
+  const portableDir = path.join(__dirname, 'Master_Media', safeName);
+  if (!fs.existsSync(portableDir)) {
+    try {
+      fs.mkdirSync(portableDir, { recursive: true });
+      fs.writeFileSync(path.join(portableDir, 'PETUNJUK_FOLDER.txt'), 
+        `Pustaka Media untuk Niche: ${niche.nama}\n\n` +
+        `Letakkan video (.mp4, .mov), foto (.jpg, .png), atau subfolder carousel di sini.\n` +
+        `Aplikasi PitaMedia Studio akan otomatis mendeteksinya.\n`,
+        'utf8'
+      );
+    } catch(e) {}
+  }
+  return portableDir;
+}
+
 // Auto-Sync Local Folders (Runs automatically on every data request and in background)
 function autoSyncLocalFolders() {
   let totalAdded = 0;
@@ -355,7 +516,7 @@ function autoSyncLocalFolders() {
     const imageExts = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
     for (const niche of niches) {
-      const folderPath = (niche.folder_path || '').trim();
+      const folderPath = resolveNicheFolderPath(niche);
       if (!folderPath || !fs.existsSync(folderPath)) continue;
 
       const stats = fs.statSync(folderPath);
@@ -1914,12 +2075,17 @@ function getDashboardData() {
     schedules,
     jobs,
     performance,
-    driveSources: niches.map(n => ({
-      niche_id: n.niche_id,
-      folder_id: n.folder_path || '',
-      folder_path: n.folder_path || '',
-      status: n.folder_path && fs.existsSync(n.folder_path) ? 'AKTIF' : (n.folder_path ? 'TERHUBUNG' : 'NONAKTIF')
-    })),
+    driveSources: niches.map(n => {
+      const resolved = resolveNicheFolderPath(n);
+      return {
+        niche_id: n.niche_id,
+        nama: n.nama,
+        folder_id: resolved,
+        folder_path: resolved,
+        status: fs.existsSync(resolved) ? 'AKTIF' : 'NONAKTIF'
+      };
+    }),
+    license: getLicenseStatus(),
     uploadSessions: [],
     metaSchedules,
     settings: settingsRows,
@@ -1955,7 +2121,7 @@ function scanDrive(nicheId) {
   const niche = db.prepare('SELECT * FROM niches WHERE niche_id = ?').get(nicheId);
   if (!niche) throw new Error('Niche tidak ditemukan: ' + nicheId);
 
-  const folderPath = (niche.folder_path || '').trim();
+  const folderPath = resolveNicheFolderPath(niche);
   if (!folderPath) {
     throw new Error('Path folder untuk niche ' + niche.nama + ' belum ditentukan.');
   }
@@ -3763,6 +3929,7 @@ app.post('/api/action', async (req, res) => {
 
     switch (action) {
       case 'dashboard':
+      case 'getDashboardData':
         result = getDashboardData();
         break;
 
@@ -4156,6 +4323,53 @@ app.post('/api/action', async (req, res) => {
 
       case 'inspectTokensWeb': {
         await inspectAccountTokens();
+        result = getDashboardData();
+        break;
+      }
+
+      case 'activateLicense': {
+        const payload = args[0] || {};
+        const key = String(payload.licenseKey || '').trim().toUpperCase();
+        const customerName = String(payload.customerName || 'Pengguna').trim();
+        const currentHwid = getHardwareId();
+        
+        const verification = verifyLicenseKey(key, currentHwid);
+        if (!verification.valid) {
+          throw new Error(verification.reason || 'Kunci lisensi tidak valid untuk komputer ini');
+        }
+
+        db.prepare(`
+          INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, status, activated_at, expires_at, last_verified_at)
+          VALUES (?, ?, ?, ?, 'ACTIVE', ?, 'PERMANENT', ?)
+        `).run(currentHwid, key, verification.plan || 'PRO', customerName, isoNow(), isoNow());
+
+        result = {
+          success: true,
+          message: 'Aktivasi lisensi berhasil! Aplikasi siap digunakan.',
+          license: getLicenseStatus(),
+          dashboard: getDashboardData()
+        };
+        break;
+      }
+
+      case 'getLicenseInfo': {
+        result = getLicenseStatus();
+        break;
+      }
+
+      case 'updateNicheFolderPath': {
+        const payload = args[0] || {};
+        const nicheId = payload.nicheId;
+        const newPath = String(payload.folderPath || '').trim();
+        if (!nicheId) throw new Error('Niche ID diperlukan');
+        if (!newPath) throw new Error('Path folder tidak boleh kosong');
+
+        if (!fs.existsSync(newPath)) {
+          fs.mkdirSync(newPath, { recursive: true });
+        }
+
+        db.prepare('UPDATE niches SET folder_path = ? WHERE niche_id = ?').run(newPath, nicheId);
+        autoSyncLocalFolders();
         result = getDashboardData();
         break;
       }
@@ -4665,21 +4879,22 @@ app.get('/api/media/:mediaId/slide/:slideIndex', (req, res) => {
 // Live Folder Watcher for real-time auto sync
 function setupFolderWatchers() {
   try {
-    const niches = db.prepare('SELECT niche_id, folder_path FROM niches').all();
+    const niches = db.prepare('SELECT niche_id, nama, folder_path FROM niches').all();
     let debounceTimer = null;
     for (const n of niches) {
-      if (n.folder_path && fs.existsSync(n.folder_path)) {
+      const p = resolveNicheFolderPath(n);
+      if (p && fs.existsSync(p)) {
         try {
-          fs.watch(n.folder_path, { persistent: false }, (eventType, filename) => {
+          fs.watch(p, { persistent: false }, (eventType, filename) => {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
-              console.log('[WATCHER] Detected file change in folder:', n.folder_path);
+              console.log('[WATCHER] Detected file change in folder:', p);
               autoSyncLocalFolders();
             }, 300);
           });
-          console.log('[WATCHER] Watching folder for changes:', n.folder_path);
+          console.log('[WATCHER] Watching folder for changes:', p);
         } catch (we) {
-          console.warn('[WATCHER] Could not watch:', n.folder_path, we.message);
+          console.warn('[WATCHER] Could not watch:', p, we.message);
         }
       }
     }
@@ -4695,6 +4910,10 @@ app.listen(PORT, () => {
   console.log(`👉 http://localhost:${PORT}`);
   console.log(`📁 Database: SQLite (data.sqlite)`);
   console.log('========================================================');
+  
+  // Inisialisasi Lisensi 1-PC (Auto-Seed Master License untuk Pemilik Saat Ini)
+  initLicenseSystem();
+
   setupFolderWatchers();
 
   // 1. Auto-Backup Database saat server startup (Safety Net)
