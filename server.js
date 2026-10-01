@@ -538,21 +538,30 @@ async function sendActivationTelemetry(payload, customUrl = null) {
       };
     }
 
+    const isDev = payload.plan === 'DEVELOPER' || payload.plan === 'DEVELOPER MASTER' || payload.isDeveloper;
+    const planFormatted = isDev 
+      ? '👑 DEVELOPER MASTER' 
+      : (payload.plan === 'TRIAL' ? '⏳ PEMBELI (TRIAL 7 HARI)' : '💎 PEMBELI (LIFETIME)');
+    const roleFormatted = isDev ? '👑 PENGEMBANG (OWNER)' : '🛒 PEMBELI RESMI';
+
     const postData = {
       action: 'log_activation',
+      role: roleFormatted,
+      tipe_akun: roleFormatted,
+      customer_role: roleFormatted,
       hwid: payload.hwid,
-      customer_name: payload.customerName,
+      customer_name: isDev ? `${payload.customerName} (👑 Developer)` : payload.customerName,
       customer_email: payload.customerEmail,
-      plan: payload.plan,
+      plan: planFormatted,
       license_key: payload.licenseKey,
-      status: 'ACTIVE',
+      status: isDev ? '👑 DEVELOPER ACTIVE' : 'ACTIVE',
       activated_at: payload.activatedAt || isoNow(),
-      expires_at: payload.expiresAt || 'PERMANENT',
+      expires_at: isDev ? 'PERMANENT (OWNER)' : (payload.expiresAt || 'PERMANENT'),
       os_info: `${os.type()} ${os.release()} (${os.arch()})`,
       app_version: '2.5.0-Desktop'
     };
 
-    console.log(`[TELEMETRY] Mengirim data pembeli "${payload.customerName}" ke Master Google Sheets...`);
+    console.log(`[TELEMETRY] Mengirim data ${roleFormatted}: "${payload.customerName}" ke Master Google Sheets...`);
     const startTime = Date.now();
     const resp = await fetch(webhookUrl, {
       method: 'POST',
@@ -607,13 +616,25 @@ function initLicenseSystem() {
     } catch(e) {}
 
     const currentHwid = getHardwareId();
-    // Berikan Lisensi DEVELOPER MASTER otomatis dengan signature kriptografis acak untuk komputer pengembang saat ini
-    const devKey = generateLicenseKey(currentHwid, 'DEV');
-    db.prepare(`
-      INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, customer_email, status, activated_at, expires_at, last_verified_at)
-      VALUES (?, ?, 'DEVELOPER', 'kennedi', 'Cipadata@gmail.com', 'ACTIVE', ?, 'PERMANENT', ?)
-    `).run(currentHwid, devKey, isoNow(), isoNow());
-    console.log(`[LICENSE] Aktif sebagai 👑 DEVELOPER MASTER LICENSE (${devKey}) untuk kennedi (Cipadata@gmail.com) [HWID: ${currentHwid}]`);
+    const DEVELOPER_MASTER_HWID = 'PM-1B32-76F9-4D2D-A065';
+
+    // HANYA aktifkan Developer Master otomatis jika dijalankan di PC Pengembang Utama (kennedi)
+    if (currentHwid === DEVELOPER_MASTER_HWID) {
+      const devKey = generateLicenseKey(currentHwid, 'DEV');
+      db.prepare(`
+        INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, customer_email, status, activated_at, expires_at, last_verified_at)
+        VALUES (?, ?, 'DEVELOPER', 'kennedi', 'Cipadata@gmail.com', 'ACTIVE', ?, 'PERMANENT', ?)
+      `).run(currentHwid, devKey, isoNow(), isoNow());
+      console.log(`[LICENSE] Aktif sebagai 👑 DEVELOPER MASTER LICENSE (${devKey}) untuk kennedi (Cipadata@gmail.com) [HWID: ${currentHwid}]`);
+    } else {
+      // Komputer Pembeli / User Lain: Cek apakah lisensi sudah diaktivasi
+      const existing = db.prepare('SELECT * FROM licenses WHERE hwid = ?').get(currentHwid);
+      if (existing && existing.status === 'ACTIVE') {
+        console.log(`[LICENSE] Lisensi Pembeli Aktif: ${existing.customer_name} (${existing.plan}) [HWID: ${currentHwid}]`);
+      } else {
+        console.log(`[LICENSE] Perangkat Pembeli Baru Terdeteksi. Menunggu input kunci lisensi di Web UI... [HWID: ${currentHwid}]`);
+      }
+    }
   } catch(e) {
     console.warn('[LICENSE INIT WARNING]:', e.message);
   }
