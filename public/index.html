@@ -1573,11 +1573,12 @@
                   </a>
                 </label>
                 <div style="display: flex; gap: 6px;">
-                  <input type="password" id="settingsGeminiApiKey" class="form-control" placeholder="Tempel Google Gemini API Key di sini (AIzaSy...)" style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;" autocomplete="off" />
+                  <input type="password" id="settingsGeminiApiKey" class="form-control" placeholder="Tempel Google Gemini API Key di sini (AIzaSy...)" style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;" autocomplete="off" oninput="onGeminiApiKeyInput()" />
                   <button type="button" class="btn btn-sm btn-secondary" onclick="toggleShowGeminiApiKey()" id="btnToggleApiKey" style="padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;">
                     👁️ Intip
                   </button>
                 </div>
+                <div id="geminiKeyFormatHint" style="display: none; margin-top: 6px; font-size: 0.75rem;"></div>
               </div>
 
               <div>
@@ -1598,12 +1599,15 @@
           </div>
 
           <!-- Actions -->
-          <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--border-color);">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--border-color); align-items: center;">
             <button type="button" class="btn btn-sm btn-primary" onclick="saveGeminiSettingsAction()" id="btnSaveGeminiKey" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 700;">
               💾 Simpan Pengaturan AI
             </button>
             <button type="button" class="btn btn-sm btn-secondary" onclick="testGeminiApiKeyAction()" id="btnTestGeminiKey" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 600;">
               🧪 Tes Koneksi AI
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteGeminiKeyAction()" id="btnDeleteGeminiKey" style="display: inline-flex; align-items: center; gap: 5px; font-weight: 600; margin-left: auto;">
+              🗑️ Hapus Kunci
             </button>
           </div>
         </div>
@@ -3045,26 +3049,73 @@
           // Populate Gemini AI Settings
           const aiKeyInput = document.getElementById('settingsGeminiApiKey');
           const aiModelSelect = document.getElementById('settingsGeminiModel');
-          const aiBadge = document.getElementById('settingsAiBadge');
 
-          if (aiKeyInput && sys.geminiApiKey) {
-            aiKeyInput.value = sys.geminiApiKey;
+          if (aiKeyInput) {
+            aiKeyInput.value = sys.geminiApiKey || '';
+            onGeminiApiKeyInput();
           }
           if (aiModelSelect && sys.geminiModel) {
             aiModelSelect.value = sys.geminiModel;
           }
-          if (aiBadge) {
-            if (sys.geminiApiKey) {
-              aiBadge.className = 'badge badge-success';
-              aiBadge.textContent = '🟢 Aktif & Terpasang';
-            } else {
-              aiBadge.className = 'badge badge-warning';
-              aiBadge.textContent = '⚠️ Belum Disetel';
-            }
-          }
+          updateGeminiBadge(sys.geminiStatus || (sys.geminiApiKey ? 'UNVERIFIED' : 'NOT_SET'), sys.geminiStatusMsg);
         }
       } catch (e) {
         console.warn('[SETTINGS LOAD NOTICE]:', e.message);
+      }
+    }
+
+    function updateGeminiBadge(status, msg = '') {
+      const badge = document.getElementById('settingsAiBadge');
+      if (!badge) return;
+      if (status === 'VERIFIED') {
+        badge.className = 'badge';
+        badge.style.background = '#ecfdf5';
+        badge.style.color = '#047857';
+        badge.style.border = '1px solid #6ee7b7';
+        badge.textContent = '🟢 Aktif & Terverifikasi';
+        badge.title = msg || 'Koneksi ke Google Gemini AI berhasil dan terverifikasi lancar.';
+      } else if (status === 'ERROR') {
+        badge.className = 'badge';
+        badge.style.background = '#fef2f2';
+        badge.style.color = '#b91c1c';
+        badge.style.border = '1px solid #fca5a5';
+        badge.textContent = '🔴 Kunci Tidak Valid / Error';
+        badge.title = msg || 'Koneksi ke Google Gemini AI gagal. Periksa Kunci API Anda.';
+      } else if (status === 'UNVERIFIED') {
+        badge.className = 'badge';
+        badge.style.background = '#fef9c3';
+        badge.style.color = '#854d0e';
+        badge.style.border = '1px solid #fde047';
+        badge.textContent = '🟡 Tersimpan (Belum Dites)';
+        badge.title = 'Kunci API tersimpan di database, namun belum diuji dengan tombol "Tes Koneksi AI".';
+      } else {
+        badge.className = 'badge';
+        badge.style.background = '#f1f5f9';
+        badge.style.color = '#64748b';
+        badge.style.border = '1px solid #cbd5e1';
+        badge.textContent = '⚪ Belum Dikonfigurasi';
+        badge.title = 'Belum ada Google Gemini API Key yang disetel.';
+      }
+    }
+
+    function onGeminiApiKeyInput() {
+      const input = document.getElementById('settingsGeminiApiKey');
+      const hint = document.getElementById('geminiKeyFormatHint');
+      if (!input || !hint) return;
+      const val = input.value.trim();
+      if (!val) {
+        hint.style.display = 'none';
+        hint.innerHTML = '';
+        return;
+      }
+      hint.style.display = 'block';
+      if (val.startsWith('AIzaSy')) {
+        hint.innerHTML = '<span style="color: #059669; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">✓ Format Kunci Google AI Studio sesuai (AIzaSy...)</span>';
+      } else {
+        const prefix = val.length > 8 ? val.slice(0, 8) + '...' : val;
+        hint.innerHTML = `<div style="color: #b91c1c; font-weight: 600; background: #fff1f2; padding: 6px 10px; border-radius: 6px; border: 1px solid #fecdd3; line-height: 1.4;">
+          ⚠️ <b>Peringatan Format:</b> Kunci API Google Gemini resmi biasanya diawali dengan huruf <code>AIzaSy...</code>. Kunci Anda saat ini diawali <code>${escapeHtml(prefix)}</code>. Pastikan Anda menyalin dari <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline;">Google AI Studio</a>.
+        </div>`;
       }
     }
 
@@ -3089,17 +3140,6 @@
       const apiKey = (input ? input.value : '').trim();
       const model = (modelSelect ? modelSelect.value : 'gemini-1.5-flash').trim();
 
-      if (!apiKey) {
-        if (alertBox) {
-          alertBox.style.display = 'block';
-          alertBox.style.background = '#fef2f2';
-          alertBox.style.border = '1px solid #fecaca';
-          alertBox.style.color = '#991b1b';
-          alertBox.innerHTML = '⚠️ <b>Kunci API Masih Kosong:</b> Silakan tempelkan Google Gemini API Key Anda pada kolom di atas sebelum menyimpan.';
-        }
-        return showToast('Masukkan Google Gemini API Key Anda!', 'error');
-      }
-
       const origText = btn ? btn.innerHTML : 'Simpan';
       if (btn) {
         btn.disabled = true;
@@ -3109,14 +3149,28 @@
       try {
         const res = await callBackend('saveGeminiSettings', { apiKey, model });
         if (res && res.error) throw new Error(res.error);
-        if (alertBox) {
-          alertBox.style.display = 'block';
-          alertBox.style.background = '#ecfdf5';
-          alertBox.style.border = '1px solid #a7f3d0';
-          alertBox.style.color = '#065f46';
-          alertBox.innerHTML = `<div><div style="font-weight: 700; font-size: 0.88rem; margin-bottom: 2px;">✅ PENGATURAN AI BERHASIL DISIMPAN!</div><div style="font-size: 0.78rem; font-weight: 500;">Kunci API dan Model <b>${escapeHtml(model)}</b> telah tersimpan aman di database lokal.</div></div>`;
+
+        if (!apiKey) {
+          updateGeminiBadge('NOT_SET');
+          if (alertBox) {
+            alertBox.style.display = 'block';
+            alertBox.style.background = '#f8fafc';
+            alertBox.style.border = '1px solid #cbd5e1';
+            alertBox.style.color = '#475569';
+            alertBox.innerHTML = `<div><div style="font-weight: 700; font-size: 0.88rem; margin-bottom: 2px;">⚪ KUNCI API DIKOSONGKAN</div><div style="font-size: 0.78rem; font-weight: 500;">Kunci API Gemini telah dihapus dari database. Fitur caption otomatis AI dinonaktifkan.</div></div>`;
+          }
+          showToast('🗑️ Kunci API Gemini berhasil dihapus dan dikosongkan.', 'info', 4500);
+        } else {
+          updateGeminiBadge('UNVERIFIED');
+          if (alertBox) {
+            alertBox.style.display = 'block';
+            alertBox.style.background = '#ecfdf5';
+            alertBox.style.border = '1px solid #a7f3d0';
+            alertBox.style.color = '#065f46';
+            alertBox.innerHTML = `<div><div style="font-weight: 700; font-size: 0.88rem; margin-bottom: 2px;">💾 PENGATURAN AI BERHASIL DISIMPAN!</div><div style="font-size: 0.78rem; font-weight: 500;">Kunci API dan Model <b>${escapeHtml(model)}</b> telah tersimpan di database lokal. Klik tombol <b>"🧪 Tes Koneksi AI"</b> untuk memverifikasi keaktifannya.</div></div>`;
+          }
+          showToast('💾 Kunci API Gemini & Model berhasil disimpan!', 'success');
         }
-        showToast('🎉 Kunci API Gemini & Model berhasil disimpan!', 'success');
         renderSettingsView();
       } catch(err) {
         if (alertBox) {
@@ -3127,6 +3181,42 @@
           alertBox.innerHTML = `<div><div style="font-weight: 700; font-size: 0.88rem; margin-bottom: 2px;">❌ GAGAL MENYIMPAN PENGATURAN</div><div style="font-size: 0.78rem; font-weight: 500;">${escapeHtml(err.message)}</div></div>`;
         }
         showToast('Gagal menyimpan API Key: ' + err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = origText;
+        }
+      }
+    }
+
+    async function deleteGeminiKeyAction() {
+      if (!confirm('Apakah Anda yakin ingin menghapus dan mengosongkan Google Gemini API Key dari sistem?')) return;
+      const input = document.getElementById('settingsGeminiApiKey');
+      const alertBox = document.getElementById('settingsAiStatusAlert');
+      const btn = document.getElementById('btnDeleteGeminiKey');
+      if (input) input.value = '';
+      onGeminiApiKeyInput();
+
+      const origText = btn ? btn.innerHTML : 'Hapus Kunci';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="margin-right: 4px;"></span> Menghapus...';
+      }
+
+      try {
+        const res = await callBackend('deleteGeminiApiKey');
+        updateGeminiBadge('NOT_SET');
+        if (alertBox) {
+          alertBox.style.display = 'block';
+          alertBox.style.background = '#f8fafc';
+          alertBox.style.border = '1px solid #cbd5e1';
+          alertBox.style.color = '#475569';
+          alertBox.innerHTML = '⚪ <b>Kunci API Berhasil Dihapus:</b> Fitur pembuatan caption AI Gemini dinonaktifkan sampai Anda memasukkan API Key baru.';
+        }
+        showToast('🗑️ Kunci API Gemini berhasil dihapus dan dinonaktifkan!', 'info', 4500);
+        renderSettingsView();
+      } catch (err) {
+        showToast('Gagal menghapus API Key: ' + err.message, 'error');
       } finally {
         if (btn) {
           btn.disabled = false;
@@ -3151,6 +3241,7 @@
           alertBox.style.color = '#991b1b';
           alertBox.innerHTML = '⚠️ <b>Kunci API Belum Diisi:</b> Tempelkan Google Gemini API Key Anda terlebih dahulu pada kolom di atas untuk melakukan pengujian koneksi.';
         }
+        updateGeminiBadge('NOT_SET');
         return showToast('Isi API Key terlebih dahulu sebelum tes!', 'error');
       }
 
@@ -3174,6 +3265,7 @@
         const res = await callBackend('testGeminiApiKey', { apiKey, model });
         if (res && res.error) throw new Error(res.error);
         
+        const activeModel = res.model || model;
         if (alertBox) {
           alertBox.style.display = 'block';
           alertBox.style.background = '#ecfdf5';
@@ -3185,17 +3277,13 @@
                 <span>✅ KONEKSI AI BERHASIL & LANCAR!</span>
               </div>
               <div style="font-size: 0.8rem; font-weight: 500; color: #047857; margin-bottom: 2px;">
-                Server Google Gemini merespons dengan cepat. Kunci API valid dan model <b>${escapeHtml(model)}</b> aktif dan siap menghasilkan caption AI.
+                Server Google Gemini merespons dengan cepat. Kunci API valid dan model <b>${escapeHtml(activeModel)}</b> aktif dan siap menghasilkan caption AI.
               </div>
             </div>`;
         }
 
-        showToast(`✅ Koneksi Gemini AI (${model}) Berhasil & Lancar!`, 'success', 5000);
-        const badge = document.getElementById('settingsAiBadge');
-        if (badge) {
-          badge.className = 'badge badge-success';
-          badge.textContent = '🟢 Aktif & Terverifikasi';
-        }
+        showToast(`✅ Koneksi Gemini AI (${activeModel}) Berhasil & Lancar!`, 'success', 5000);
+        updateGeminiBadge('VERIFIED');
       } catch(err) {
         if (alertBox) {
           alertBox.style.display = 'block';
@@ -3205,22 +3293,18 @@
           alertBox.innerHTML = `
             <div>
               <div style="font-weight: 700; font-size: 0.92rem; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
-                <span>❌ KONEKSI AI GAGAL / TIDAK DAPAT DIAKSES</span>
+                <span>❌ KONEKSI AI GAGAL / KUNCI TIDAK PAS</span>
               </div>
-              <div style="font-size: 0.8rem; font-weight: 500; color: #b91c1c; margin-bottom: 4px;">
+              <div style="font-size: 0.8rem; font-weight: 500; color: #b91c1c; margin-bottom: 4px; line-height: 1.45;">
                 ${escapeHtml(err.message)}
               </div>
-              <div style="font-size: 0.72rem; color: #7f1d1d; font-weight: 600;">
-                💡 Solusi: Periksa kembali apakah kunci API telah disalin dengan lengkap dari Google AI Studio dan kuota API Anda aktif.
+              <div style="font-size: 0.74rem; color: #7f1d1d; font-weight: 600; line-height: 1.45;">
+                💡 <b>Petunjuk:</b> Kunci API Google Gemini resmi selalu diawali dengan <code>AIzaSy...</code> (bukan <code>AQ...</code>). Anda bisa mendapatkan Kunci API gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline;">Google AI Studio</a>.
               </div>
             </div>`;
         }
         showToast('❌ Gagal terhubung ke Gemini: ' + err.message, 'error', 6000);
-        const badge = document.getElementById('settingsAiBadge');
-        if (badge) {
-          badge.className = 'badge badge-danger';
-          badge.textContent = '🔴 Gagal Terhubung';
-        }
+        updateGeminiBadge('ERROR', err.message);
       } finally {
         if (btn) {
           btn.disabled = false;
@@ -3417,13 +3501,14 @@
               <button class="btn btn-sm btn-secondary" onclick="openSmartHeatmapModal('${escapeHtml(n.niche_id)}', '${escapeHtml(n.nama)}')" style="display: inline-flex; align-items: center; gap: 4px; border-color: #86efac; color: #15803d; background: #f0fdf4;" title="Lihat Peta Jam Emas Pintar yang dipelajari AI dari performa konten">
                 🧠 Peta Jam AI
               </button>
-              <button class="btn btn-sm btn-secondary" onclick="scanDriveForNiche('${escapeHtml(n.niche_id)}')" style="display: inline-flex; align-items: center; gap: 4px;">
+              <button class="btn btn-sm btn-secondary" onclick="scanDriveForNiche('${escapeHtml(n.niche_id)}', this)" style="display: inline-flex; align-items: center; gap: 4px;">
                 🔄 Scan Video
               </button>
               <button class="btn btn-sm btn-danger" onclick="deleteNicheAction('${escapeHtml(n.niche_id)}', '${escapeHtml(n.nama)}')" style="margin-left: auto;">
                 Hapus
               </button>
             </div>
+            <div id="scan-feedback-${escapeHtml(n.niche_id)}" style="display: none; margin-top: 8px; font-size: 0.78rem; border-radius: 6px; padding: 6px 10px; font-weight: 600;"></div>
           </div>
         `;
       }).join('');
@@ -3900,7 +3985,7 @@
                     📂 Buka Folder
                   </button>
                 ` : ''}
-                <button class="btn btn-sm btn-secondary" onclick="scanDriveForNiche('${escapeHtml(s.niche_id)}')">
+                <button class="btn btn-sm btn-secondary" onclick="scanDriveForNiche('${escapeHtml(s.niche_id)}', this)">
                   🔄 Scan Video
                 </button>
                 <button class="btn btn-sm btn-secondary" onclick="openModalEditDriveFolder('${escapeHtml(s.niche_id)}', '${escapeHtml(nicheName)}', '${escapeHtml(s.folder_path || s.folder_id)}')">
@@ -3979,8 +4064,21 @@
         .catch(err => showToast('Gagal memutuskan folder: ' + err.message, 'error'));
     }
 
-    function scanDriveForNiche(nicheId) {
-      showToast('🔍 Memindai folder video niche di komputer lokal...', 'info', 3000);
+    function scanDriveForNiche(nicheId, btn) {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="width: 12px; height: 12px; margin-right: 4px;"></span> Memindai...';
+      }
+      const feedbackElem = document.getElementById(`scan-feedback-${nicheId}`);
+      if (feedbackElem) {
+        feedbackElem.style.display = 'block';
+        feedbackElem.style.background = '#eff6ff';
+        feedbackElem.style.border = '1px solid #bfdbfe';
+        feedbackElem.style.color = '#1d4ed8';
+        feedbackElem.innerHTML = '<span class="spinner" style="width: 11px; height: 11px; margin-right: 5px;"></span> Sedang memindai folder video komputer...';
+      }
+      showToast('🔍 <b>Sedang Memindai Folder...</b> Memeriksa file video di harddisk komputer...', 'info', 3000);
+
       callBackend('scanDrive', nicheId)
         .then(res => {
           appData = res;
@@ -3991,16 +4089,41 @@
           const totalInNiche = r.totalActiveInNiche !== undefined ? r.totalActiveInNiche : (appData.media || []).filter(m => m.niche_id === nicheId).length;
           const nicheName = r.nicheName || 'Niche';
           
-          let detail = `📁 <b>Pindai Folder Selesai & Lancar!</b><br>`;
+          let detail = `📁 <b>Scan Video AKTIF & BERJALAN LANCAR!</b><br>`;
+          detail += `• Status Folder: <b>🟢 Terhubung & Normal</b><br>`;
           detail += `• Niche: <b>${escapeHtml(nicheName)}</b><br>`;
-          if (added > 0) detail += `• Video Baru Masuk: <b>+${added} file</b><br>`;
+          detail += `• Video Baru Masuk: <b>${added > 0 ? '+' + added + ' file' : 'Tidak ada (Semua sudah sinkron)'}</b><br>`;
           if (removed > 0) detail += `• Video Dibersihkan: <b>-${removed} file</b><br>`;
           detail += `• Total Video Siap di Niche: <b>${totalInNiche} video</b>`;
 
-          showToast(detail, 'success', 5500);
+          showToast(detail, 'success', 6500);
+
+          const newFeedback = document.getElementById(`scan-feedback-${nicheId}`);
+          if (newFeedback) {
+            newFeedback.style.display = 'block';
+            newFeedback.style.background = '#ecfdf5';
+            newFeedback.style.border = '1px solid #a7f3d0';
+            newFeedback.style.color = '#065f46';
+            newFeedback.innerHTML = `🟢 <b>Scan Video AKTIF & LANCAR:</b> Folder normal (+${added} baru, -${removed} dibersihkan, total ${totalInNiche} video siap).`;
+            setTimeout(() => { if (newFeedback) newFeedback.style.display = 'none'; }, 8000);
+          }
         })
         .catch(err => {
-          showToast(`❌ <b>Gagal Memindai Folder:</b><br>${escapeHtml(err.message)}`, 'error', 6000);
+          showToast(`❌ <b>Scan Video GAGAL / TIDAK AKTIF:</b><br>${escapeHtml(err.message)}`, 'error', 7000);
+          const newFeedback = document.getElementById(`scan-feedback-${nicheId}`);
+          if (newFeedback) {
+            newFeedback.style.display = 'block';
+            newFeedback.style.background = '#fef2f2';
+            newFeedback.style.border = '1px solid #fecaca';
+            newFeedback.style.color = '#991b1b';
+            newFeedback.innerHTML = `❌ <b>Scan Gagal:</b> ${escapeHtml(err.message)}`;
+          }
+        })
+        .finally(() => {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '🔄 Scan Video';
+          }
         });
     }
 

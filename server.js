@@ -3613,7 +3613,9 @@ app.post('/api/action', async (req, res) => {
           sheetUrl: getSetting('GOOGLE_SHEET_URL', '#'),
           internetOnline: isInternetOnline,
           geminiApiKey: getSetting('GEMINI_API_KEY', '') || process.env.GEMINI_API_KEY || '',
-          geminiModel: getSetting('GEMINI_MODEL', 'gemini-1.5-flash')
+          geminiModel: getSetting('GEMINI_MODEL', 'gemini-1.5-flash'),
+          geminiStatus: getSetting('GEMINI_STATUS', (getSetting('GEMINI_API_KEY', '') ? 'UNVERIFIED' : 'NOT_SET')),
+          geminiStatusMsg: getSetting('GEMINI_STATUS_MSG', '')
         };
         break;
       }
@@ -3623,27 +3625,49 @@ app.post('/api/action', async (req, res) => {
         const payload = args[0] || {};
         const apiKey = String(payload.apiKey !== undefined ? payload.apiKey : '').trim();
         const model = String(payload.model || 'gemini-1.5-flash').trim();
-        if (apiKey) {
-          setSetting('GEMINI_API_KEY', apiKey, 'Google Gemini API Key untuk AI Caption');
-        }
+        
+        // Always set the key (even if empty, so the user can delete/clear it)
+        setSetting('GEMINI_API_KEY', apiKey, 'Google Gemini API Key untuk AI Caption');
         if (model) {
           setSetting('GEMINI_MODEL', model, 'Model Gemini yang digunakan');
         }
-        console.log(`[SETTINGS] Gemini API Key & Model (${model}) berhasil disimpan.`);
-        result = { success: true, message: 'Kunci API Gemini & Model AI berhasil disimpan!' };
+
+        if (!apiKey) {
+          setSetting('GEMINI_STATUS', 'NOT_SET', 'Status koneksi Gemini AI');
+          setSetting('GEMINI_STATUS_MSG', '', 'Pesan status koneksi Gemini AI');
+          console.log('[SETTINGS] Gemini API Key berhasil dihapus/dikosongkan.');
+          result = { success: true, cleared: true, message: 'Kunci API Gemini berhasil dihapus dan dinonaktifkan.' };
+        } else {
+          setSetting('GEMINI_STATUS', 'UNVERIFIED', 'Status koneksi Gemini AI');
+          setSetting('GEMINI_STATUS_MSG', 'Kunci disimpan (Belum diuji koneksinya)', 'Pesan status koneksi Gemini AI');
+          console.log(`[SETTINGS] Gemini API Key & Model (${model}) berhasil disimpan.`);
+          result = { success: true, cleared: false, message: 'Kunci API Gemini & Model AI berhasil disimpan! Silakan klik "Tes Koneksi AI" untuk memverifikasi.' };
+        }
+        break;
+      }
+
+      case 'deleteGeminiApiKey': {
+        setSetting('GEMINI_API_KEY', '', 'Google Gemini API Key untuk AI Caption');
+        setSetting('GEMINI_STATUS', 'NOT_SET', 'Status koneksi Gemini AI');
+        setSetting('GEMINI_STATUS_MSG', '', 'Pesan status koneksi Gemini AI');
+        console.log('[SETTINGS] Gemini API Key berhasil dihapus.');
+        result = { success: true, message: 'Kunci API Gemini berhasil dihapus dan dinonaktifkan.' };
         break;
       }
 
       case 'testGeminiApiKey': {
         const payload = args[0] || {};
-        const testKey = String(payload.apiKey || '').trim() || getSetting('GEMINI_API_KEY', '') || process.env.GEMINI_API_KEY || '';
-        let testModel = String(payload.model || '').trim() || getSetting('GEMINI_MODEL', 'gemini-2.5-flash');
+        const testKey = String(payload.apiKey !== undefined ? payload.apiKey : '').trim() || getSetting('GEMINI_API_KEY', '') || '';
+        let testModel = String(payload.model || '').trim() || getSetting('GEMINI_MODEL', 'gemini-1.5-flash');
         if (!testKey) {
-          throw new Error('API Key belum diisi. Masukkan Google Gemini API Key Anda.');
+          setSetting('GEMINI_STATUS', 'NOT_SET', 'Status koneksi Gemini AI');
+          throw new Error('API Key belum diisi. Masukkan Google Gemini API Key Anda terlebih dahulu.');
         }
 
+        const isStandardFormat = testKey.startsWith('AIzaSy');
+
         // Try selected model, with auto-fallback across known models
-        const modelsToTry = [testModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].filter((m, i, arr) => m && arr.indexOf(m) === i);
+        const modelsToTry = [testModel, 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'].filter((m, i, arr) => m && arr.indexOf(m) === i);
         let lastErr = null;
         let successModel = null;
 
@@ -3661,8 +3685,12 @@ app.post('/api/action', async (req, res) => {
             if (testData.error) {
               const msg = testData.error.message || JSON.stringify(testData.error);
               lastErr = msg;
-              if (msg.includes('API key not valid')) {
-                throw new Error('Kunci API tidak valid. Pastikan Anda menyalin API Key yang benar dari Google AI Studio.');
+              if (msg.includes('API key not valid') || msg.includes('API_KEY_INVALID') || testData.error.code === 400) {
+                let errText = 'Kunci API tidak valid ("API key not valid").';
+                if (!isStandardFormat) {
+                  errText += ` Format kunci Anda ("${testKey.slice(0, 5)}...") bukan format Kunci Google Gemini AI Studio resmi yang biasanya diawali "AIzaSy...". Pastikan Anda membuat Kunci API dari aistudio.google.com.`;
+                }
+                throw new Error(errText);
               }
               continue; // try next model
             }
@@ -3671,16 +3699,29 @@ app.post('/api/action', async (req, res) => {
               break;
             }
           } catch (e) {
-            if (e.message && e.message.includes('Kunci API tidak valid')) throw e;
+            if (e.message && (e.message.includes('Kunci API tidak valid') || e.message.includes('API key not valid'))) {
+              setSetting('GEMINI_STATUS', 'ERROR', 'Status koneksi Gemini AI');
+              setSetting('GEMINI_STATUS_MSG', e.message, 'Pesan status koneksi Gemini AI');
+              throw e;
+            }
             lastErr = e.message;
           }
         }
 
         if (!successModel) {
-          throw new Error(lastErr || 'Koneksi ke Gemini AI gagal. Periksa API Key dan koneksi internet Anda.');
+          let finalErr = lastErr || 'Koneksi ke Gemini AI gagal. Periksa API Key dan koneksi internet Anda.';
+          if (!isStandardFormat && (finalErr.includes('404') || finalErr.includes('not found') || finalErr.includes('API key') || finalErr.includes('not supported'))) {
+            finalErr = `Kunci API ditolak oleh Google. Kunci Anda diawali "${testKey.slice(0, 5)}...", sedangkan Kunci Google AI Studio resmi selalu diawali dengan "AIzaSy...". Pastikan Anda menyalin API Key dari Google AI Studio (aistudio.google.com), bukan credential/token lain.`;
+          }
+          setSetting('GEMINI_STATUS', 'ERROR', 'Status koneksi Gemini AI');
+          setSetting('GEMINI_STATUS_MSG', finalErr, 'Pesan status koneksi Gemini AI');
+          throw new Error(finalErr);
         }
 
+        setSetting('GEMINI_API_KEY', testKey, 'Google Gemini API Key untuk AI Caption');
         setSetting('GEMINI_MODEL', successModel, 'Model Gemini yang digunakan');
+        setSetting('GEMINI_STATUS', 'VERIFIED', 'Status koneksi Gemini AI');
+        setSetting('GEMINI_STATUS_MSG', `Terverifikasi & Aktif (${successModel})`, 'Pesan status koneksi Gemini AI');
         result = { success: true, model: successModel, message: `✅ Sukses! Model ${successModel} aktif dan siap digunakan untuk generate caption AI.` };
         break;
       }
