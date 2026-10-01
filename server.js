@@ -129,6 +129,12 @@ try {
     UPDATE jobs SET nama_file = (
       SELECT nama_video FROM performance WHERE performance.perf_id = jobs.job_id
     ) WHERE (nama_file IS NULL OR nama_file = '') AND job_id IN (SELECT perf_id FROM performance);
+
+    UPDATE jobs SET nama_file = 'Denny Sumargo_KBC_01_Nyaris_Mati_Di_Becak.mp4' WHERE media_id = 'VID-7159D98D' AND (nama_file IS NULL OR nama_file = '');
+    UPDATE jobs SET nama_file = 'Denny Sumargo_KBC_02_Kerja_Keras_Dipetik_Orang.mp4' WHERE media_id = 'VID-C22F1214' AND (nama_file IS NULL OR nama_file = '');
+    UPDATE jobs SET nama_file = 'Denny Sumargo_KBC_03_Youtube_Diambil_Orang.mp4' WHERE media_id = 'VID-43C968AA' AND (nama_file IS NULL OR nama_file = '');
+    UPDATE jobs SET nama_file = 'Denny Sumargo_KBC_04_Manggung_Tujuh_Juta_Dapat_Dua_Ratus_Ribu.mp4' WHERE media_id = 'VID-96476E03' AND (nama_file IS NULL OR nama_file = '');
+    UPDATE jobs SET nama_file = 'Denny Sumargo_KBC_05_Kangen_Band_Jadi_Warisan.mp4' WHERE media_id = 'VID-6451A63D' AND (nama_file IS NULL OR nama_file = '');
   `);
 } catch(e) {}
 
