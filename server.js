@@ -118,8 +118,12 @@ try { db.exec("ALTER TABLE accounts ADD COLUMN token_expires_at TEXT DEFAULT 'PE
 try { db.exec("ALTER TABLE accounts ADD COLUMN token_checked_at TEXT"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE accounts ADD COLUMN token_info TEXT DEFAULT '🟢 Token Aktif Permanen (Never Expires)'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE jobs ADD COLUMN smart_reason TEXT"); } catch(e) { /* sudah ada */ }
-try { db.exec("ALTER TABLE jobs ADD COLUMN schedule_mode TEXT DEFAULT 'GOLDEN_SLOTS'"); } catch(e) { /* sudah ada */ }
 try { db.exec("ALTER TABLE jobs ADD COLUMN nama_file TEXT"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE media ADD COLUMN media_type TEXT DEFAULT 'VIDEO'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE media ADD COLUMN carousel_items TEXT DEFAULT ''"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE posts ADD COLUMN media_type TEXT DEFAULT 'VIDEO'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE jobs ADD COLUMN media_type TEXT DEFAULT 'VIDEO'"); } catch(e) { /* sudah ada */ }
+try { db.exec("ALTER TABLE jobs ADD COLUMN carousel_items TEXT DEFAULT ''"); } catch(e) { /* sudah ada */ }
 try {
   db.exec(`
     UPDATE jobs SET nama_file = (
@@ -348,6 +352,7 @@ function autoSyncLocalFolders() {
     const niches = db.prepare('SELECT niche_id, nama, folder_path, mode_caption FROM niches').all();
     nichesCount = niches.length;
     const videoExts = new Set(['.mp4', '.mov', '.mkv', '.avi', '.webm', '.m4v']);
+    const imageExts = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
     for (const niche of niches) {
       const folderPath = (niche.folder_path || '').trim();
@@ -356,63 +361,154 @@ function autoSyncLocalFolders() {
       const stats = fs.statSync(folderPath);
       if (!stats.isDirectory()) continue;
 
-      const files = fs.readdirSync(folderPath);
+      let entries = [];
+      try {
+        entries = fs.readdirSync(folderPath, { withFileTypes: true });
+      } catch (re) {
+        continue;
+      }
       const diskFilenames = new Set();
 
-      for (const filename of files) {
-        const ext = path.extname(filename).toLowerCase();
-        if (!videoExts.has(ext)) continue;
-        diskFilenames.add(filename);
+      for (const entry of entries) {
+        const entryName = entry.name;
+        const fullPath = path.join(folderPath, entryName);
 
-        const fullPath = path.join(folderPath, filename);
+        // 1. CEK SUBFOLDER UNTUK CAROUSEL MULTI-FOTO
+        if (entry.isDirectory()) {
+          let subImages = [];
+          try {
+            subImages = fs.readdirSync(fullPath)
+              .filter(f => imageExts.has(path.extname(f).toLowerCase()))
+              .sort()
+              .map(f => path.join(fullPath, f));
+          } catch(se) {}
+
+          if (subImages.length >= 2) {
+            diskFilenames.add(entryName);
+            const existing = db.prepare('SELECT media_id, file_path, carousel_items FROM media WHERE niche_id = ? AND (nama_file = ? OR file_path = ?)').get(niche.niche_id, entryName, fullPath);
+            if (existing) {
+              const newItemsJson = JSON.stringify(subImages);
+              if (existing.carousel_items !== newItemsJson || existing.file_path !== fullPath) {
+                db.prepare("UPDATE media SET file_path = ?, carousel_items = ?, media_type = 'CAROUSEL' WHERE media_id = ?").run(fullPath, newItemsJson, existing.media_id);
+              }
+              continue;
+            }
+
+            // Baca caption manual dari file .txt jika ada: subfolder/caption.txt atau folder/nama_subfolder.txt
+            let txtCaption = '';
+            const capFile1 = path.join(fullPath, 'caption.txt');
+            const capFile2 = path.join(folderPath, `${entryName}.txt`);
+            if (fs.existsSync(capFile1)) {
+              try { txtCaption = fs.readFileSync(capFile1, 'utf8').trim(); } catch(e){}
+            } else if (fs.existsSync(capFile2)) {
+              try { txtCaption = fs.readFileSync(capFile2, 'utf8').trim(); } catch(e){}
+            }
+
+            const captionToUse = txtCaption || entryName.replace(/[_-]+/g, ' ');
+            const lockedToUse = txtCaption ? 'TRUE' : 'FALSE';
+            const mediaId = 'CAR-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+            const kontenId = 'CNT-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+
+            db.prepare(`
+              INSERT INTO media (media_id, niche_id, file_path, nama_file, mime_type, file_size, deskripsi, caption_mode, caption_manual, status, media_type, carousel_items, created_at)
+              VALUES (?, ?, ?, ?, 'image/carousel', 0, '', 'MANUAL', ?, 'SIAP', 'CAROUSEL', ?, ?)
+            `).run(
+              mediaId, niche.niche_id, fullPath, entryName, captionToUse, JSON.stringify(subImages), isoNow()
+            );
+
+            db.prepare(`
+              INSERT INTO posts (konten_id, media_id, niche_id, mode_caption, caption_utama, caption_facebook, caption_instagram, caption_tiktok, hashtags, emoji, manual_locked, status, updated_at)
+              VALUES (?, ?, ?, 'MANUAL', ?, '', '', '', '', '', ?, 'READY', ?)
+            `).run(
+              kontenId, mediaId, niche.niche_id, captionToUse, lockedToUse, isoNow()
+            );
+            totalAdded++;
+          }
+          continue;
+        }
+
+        // 2. CEK FILE TUNGGAL (VIDEO REELS ATAU FOTO TUNGGAL)
+        if (!entry.isFile()) continue;
+
+        const ext = path.extname(entryName).toLowerCase();
+        const isVideo = videoExts.has(ext);
+        const isImage = imageExts.has(ext);
+        if (!isVideo && !isImage) continue;
+
+        diskFilenames.add(entryName);
 
         // Check if exists
-        const existing = db.prepare('SELECT media_id, file_path FROM media WHERE niche_id = ? AND (nama_file = ? OR file_path = ?)').get(niche.niche_id, filename, fullPath);
+        const existing = db.prepare('SELECT media_id, file_path, media_type FROM media WHERE niche_id = ? AND (nama_file = ? OR file_path = ?)').get(niche.niche_id, entryName, fullPath);
         if (existing) {
-          if (existing.file_path !== fullPath) {
-            db.prepare('UPDATE media SET file_path = ? WHERE media_id = ?').run(fullPath, existing.media_id);
+          const expectedType = isVideo ? 'VIDEO' : 'IMAGE';
+          if (existing.file_path !== fullPath || existing.media_type !== expectedType) {
+            db.prepare('UPDATE media SET file_path = ?, media_type = ? WHERE media_id = ?').run(fullPath, expectedType, existing.media_id);
           }
           continue; // NEVER overwrite existing captions!
         }
 
         const fileStat = fs.statSync(fullPath);
-        const mediaId = 'VID-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+        const mediaId = (isVideo ? 'VID-' : 'IMG-') + crypto.randomUUID().slice(0, 8).toUpperCase();
         const kontenId = 'CNT-' + crypto.randomUUID().slice(0, 8).toUpperCase();
 
-        // Check if there is an existing caption for this filename to restore
+        // Check if companion .txt exists for manual caption (e.g. foto.jpg -> foto.txt)
+        const baseName = entryName.replace(/\.[^/.]+$/, '');
+        const txtPath = path.join(folderPath, `${baseName}.txt`);
+        let txtCaption = '';
+        if (fs.existsSync(txtPath)) {
+          try { txtCaption = fs.readFileSync(txtPath, 'utf8').trim(); } catch(e){}
+        }
+
+        // Check if there is an existing caption for this filename in posts
         const existingPost = db.prepare(`
           SELECT p.* FROM posts p 
           JOIN media m ON p.media_id = m.media_id 
           WHERE m.nama_file = ? AND p.caption_utama IS NOT NULL AND p.caption_utama != ''
-        `).get(filename);
+        `).get(entryName);
 
-        const captionToUse = existingPost ? existingPost.caption_utama : filename.replace(/\.[^/.]+$/, '');
+        const captionToUse = txtCaption || (existingPost ? existingPost.caption_utama : baseName.replace(/[_-]+/g, ' '));
         const hashtagsToUse = existingPost ? (existingPost.hashtags || '') : '';
-        const lockedToUse = existingPost ? (existingPost.manual_locked || 'TRUE') : 'FALSE';
+        const lockedToUse = txtCaption ? 'TRUE' : (existingPost ? (existingPost.manual_locked || 'TRUE') : 'FALSE');
+        const mediaType = isVideo ? 'VIDEO' : 'IMAGE';
+        const mimeType = isVideo ? 'video/mp4' : (ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg'));
 
         db.prepare(`
-          INSERT INTO media (media_id, niche_id, file_path, nama_file, mime_type, file_size, deskripsi, caption_mode, caption_manual, status, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO media (media_id, niche_id, file_path, nama_file, mime_type, file_size, deskripsi, caption_mode, caption_manual, status, media_type, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
-          mediaId, niche.niche_id, fullPath, filename, 'video/mp4', fileStat.size,
-          '', niche.mode_caption || 'MANUAL', captionToUse, 'SIAP', isoNow()
+          mediaId, niche.niche_id, fullPath, entryName, mimeType, fileStat.size,
+          '', niche.mode_caption || 'MANUAL', captionToUse, 'SIAP', mediaType, isoNow()
         );
 
         db.prepare(`
-          INSERT INTO posts (konten_id, media_id, niche_id, mode_caption, caption_utama, caption_facebook, caption_instagram, caption_tiktok, hashtags, emoji, manual_locked, status, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO posts (konten_id, media_id, niche_id, mode_caption, caption_utama, caption_facebook, caption_instagram, caption_tiktok, hashtags, emoji, manual_locked, media_type, status, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 'READY', ?)
         `).run(
           kontenId, mediaId, niche.niche_id, niche.mode_caption || 'MANUAL',
-          captionToUse, '', '', '', hashtagsToUse, '', lockedToUse, 'READY', isoNow()
+          captionToUse, '', '', '', hashtagsToUse, lockedToUse, mediaType, isoNow()
         );
         totalAdded++;
       }
 
       // Hapus media di DB yang sudah tidak ada secara fisik di disk komputer
-      const dbMedia = db.prepare('SELECT media_id, nama_file, file_path, status FROM media WHERE niche_id = ?').all(niche.niche_id);
+      const dbMedia = db.prepare('SELECT media_id, nama_file, file_path, status, media_type, carousel_items FROM media WHERE niche_id = ?').all(niche.niche_id);
       for (const m of dbMedia) {
-        if (!diskFilenames.has(m.nama_file) && (!m.file_path || !fs.existsSync(m.file_path))) {
-          // File fisik tidak ada di komputer -> hapus dari Pustaka Video aktif (media & posts)
+        let fileStillExists = false;
+        if (m.media_type === 'CAROUSEL') {
+          if (m.file_path && fs.existsSync(m.file_path)) fileStillExists = true;
+          try {
+            const items = JSON.parse(m.carousel_items || '[]');
+            if (items.length > 0 && items.some(p => fs.existsSync(p))) fileStillExists = true;
+          } catch(e) {}
+        } else {
+          fileStillExists = m.file_path && fs.existsSync(m.file_path);
+        }
+
+        if (!diskFilenames.has(m.nama_file) && !fileStillExists) {
+          // File fisik tidak ada di komputer -> hapus dari Pustaka Media aktif (media & posts)
+          try {
+            db.prepare("UPDATE jobs SET nama_file = COALESCE(nama_file, ?) WHERE media_id = ?").run(m.nama_file, m.media_id);
+          } catch(e) {}
           db.prepare('DELETE FROM media WHERE media_id = ?').run(m.media_id);
           db.prepare("DELETE FROM posts WHERE media_id = ?").run(m.media_id);
           // Hapus antrean yang belum terbit, TAPI pertahankan riwayat PUBLISHED di tabel jobs & performance!
@@ -1329,9 +1425,9 @@ function autoScheduleUnscheduledMedia() {
           for (const acc of neededAccounts) {
             const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
             db.prepare(`
-              INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text, schedule_mode, smart_reason, nama_file)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id), modeJadwal, slot.reason || 'Slot Jam Emas', media.nama_file);
+              INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text, schedule_mode, smart_reason, nama_file, media_type, carousel_items)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id), modeJadwal, slot.reason || 'Slot Jam Emas', media.nama_file, media.media_type || 'VIDEO', media.carousel_items || '');
           }
 
           db.prepare("UPDATE media SET status = 'TERJADWAL' WHERE media_id = ?").run(media.media_id);
@@ -1429,10 +1525,10 @@ function autoScheduleUnscheduledMedia() {
         for (const acc of neededAccounts) {
           const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
           db.prepare(`
-            INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text, nama_file)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text, nama_file, media_type, carousel_items)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
-            jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id), media.nama_file
+            jobId, jadwalId, media.konten_id, media.media_id, niche.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), media.cover_offset_ms || 1800, niche.default_bgm_enabled || 'TRUE', niche.default_bgm_category || 'AUTO', 0.15, niche.default_sfx_enabled || 'TRUE', niche.default_sfx_category || 'AUTO', 0.60, niche.default_outro_enabled || 'TRUE', niche.default_outro_text || getDefaultOutroText(niche.nama || niche.niche_id), media.nama_file, media.media_type || 'VIDEO', media.carousel_items || ''
           );
         }
 
@@ -1747,9 +1843,20 @@ function getDashboardData() {
       token_checked_at: a.token_checked_at || ''
     };
   });
-  // Pustaka Video HANYA memuat file video yang secara fisik nyata ada di harddisk komputer
+  // Pustaka Media HANYA memuat file/folder yang secara fisik nyata ada di harddisk komputer
   const rawMedia = db.prepare('SELECT * FROM media ORDER BY rowid DESC LIMIT 500').all()
-    .filter(m => m.file_path && fs.existsSync(m.file_path));
+    .filter(m => {
+      if (m.media_type === 'CAROUSEL') {
+        if (m.file_path && fs.existsSync(m.file_path)) return true;
+        try {
+          const items = JSON.parse(m.carousel_items || '[]');
+          return items.length > 0 && items.some(p => fs.existsSync(p));
+        } catch(e) {
+          return false;
+        }
+      }
+      return m.file_path && fs.existsSync(m.file_path);
+    });
   const media = rawMedia.map(m => {
     const pubInfo = getPublishedMediaInfo(m.media_id, m.nama_file);
     const nicheAccs = accounts.filter(a => {
@@ -1860,66 +1967,154 @@ function scanDrive(nicheId) {
       throw new Error('Path yang ditentukan bukan sebuah folder: ' + folderPath);
     }
 
-    const files = fs.readdirSync(folderPath);
-    const videoExts = ['.mp4', '.mov', '.mkv', '.avi', '.webm', '.m4v'];
-    const currentVideoFiles = new Set();
+    let entries = [];
+    try {
+      entries = fs.readdirSync(folderPath, { withFileTypes: true });
+    } catch(re) {
+      entries = [];
+    }
+    const videoExts = new Set(['.mp4', '.mov', '.mkv', '.avi', '.webm', '.m4v']);
+    const imageExts = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+    const currentActiveFiles = new Set();
     let addedCount = 0;
     let removedCount = 0;
 
-    for (const filename of files) {
-      const ext = path.extname(filename).toLowerCase();
-      if (!videoExts.includes(ext)) continue;
-      currentVideoFiles.add(filename);
+    for (const entry of entries) {
+      const entryName = entry.name;
+      const fullPath = path.join(folderPath, entryName);
 
-      const fullPath = path.join(folderPath, filename);
-      const fileStat = fs.statSync(fullPath);
+      // 1. CEK SUBFOLDER CAROUSEL MULTI-FOTO
+      if (entry.isDirectory()) {
+        let subImages = [];
+        try {
+          subImages = fs.readdirSync(fullPath)
+            .filter(f => imageExts.has(path.extname(f).toLowerCase()))
+            .sort()
+            .map(f => path.join(fullPath, f));
+        } catch(se) {}
 
-      // Check if file already exists in media
-      const existing = db.prepare('SELECT media_id, file_path FROM media WHERE niche_id = ? AND (nama_file = ? OR file_path = ?)').get(nicheId, filename, fullPath);
-      if (existing) {
-        if (existing.file_path !== fullPath) {
-          db.prepare('UPDATE media SET file_path = ? WHERE media_id = ?').run(fullPath, existing.media_id);
+        if (subImages.length >= 2) {
+          currentActiveFiles.add(entryName);
+          const existing = db.prepare('SELECT media_id, file_path, carousel_items FROM media WHERE niche_id = ? AND (nama_file = ? OR file_path = ?)').get(nicheId, entryName, fullPath);
+          if (existing) {
+            const newItemsJson = JSON.stringify(subImages);
+            if (existing.carousel_items !== newItemsJson || existing.file_path !== fullPath) {
+              db.prepare("UPDATE media SET file_path = ?, carousel_items = ?, media_type = 'CAROUSEL' WHERE media_id = ?").run(fullPath, newItemsJson, existing.media_id);
+            }
+            continue;
+          }
+
+          let txtCaption = '';
+          const capFile1 = path.join(fullPath, 'caption.txt');
+          const capFile2 = path.join(folderPath, `${entryName}.txt`);
+          if (fs.existsSync(capFile1)) {
+            try { txtCaption = fs.readFileSync(capFile1, 'utf8').trim(); } catch(e){}
+          } else if (fs.existsSync(capFile2)) {
+            try { txtCaption = fs.readFileSync(capFile2, 'utf8').trim(); } catch(e){}
+          }
+
+          const captionToUse = txtCaption || entryName.replace(/[_-]+/g, ' ');
+          const lockedToUse = txtCaption ? 'TRUE' : 'FALSE';
+          const mediaId = 'CAR-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+          const kontenId = 'CNT-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+
+          db.prepare(`
+            INSERT INTO media (media_id, niche_id, file_path, nama_file, mime_type, file_size, deskripsi, caption_mode, caption_manual, status, media_type, carousel_items, created_at)
+            VALUES (?, ?, ?, ?, 'image/carousel', 0, '', 'MANUAL', ?, 'SIAP', 'CAROUSEL', ?, ?)
+          `).run(
+            mediaId, nicheId, fullPath, entryName, captionToUse, JSON.stringify(subImages), isoNow()
+          );
+
+          db.prepare(`
+            INSERT INTO posts (konten_id, media_id, niche_id, mode_caption, caption_utama, caption_facebook, caption_instagram, caption_tiktok, hashtags, emoji, manual_locked, media_type, status, updated_at)
+            VALUES (?, ?, ?, 'MANUAL', ?, '', '', '', '', '', ?, 'CAROUSEL', 'READY', ?)
+          `).run(
+            kontenId, mediaId, nicheId, captionToUse, lockedToUse, isoNow()
+          );
+          addedCount++;
         }
         continue;
       }
 
-      const mediaId = 'VID-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+      // 2. CEK FILE TUNGGAL (VIDEO ATAU FOTO)
+      if (!entry.isFile()) continue;
+
+      const ext = path.extname(entryName).toLowerCase();
+      const isVideo = videoExts.has(ext);
+      const isImage = imageExts.has(ext);
+      if (!isVideo && !isImage) continue;
+
+      currentActiveFiles.add(entryName);
+
+      // Check if file already exists in media
+      const existing = db.prepare('SELECT media_id, file_path, media_type FROM media WHERE niche_id = ? AND (nama_file = ? OR file_path = ?)').get(nicheId, entryName, fullPath);
+      if (existing) {
+        const expectedType = isVideo ? 'VIDEO' : 'IMAGE';
+        if (existing.file_path !== fullPath || existing.media_type !== expectedType) {
+          db.prepare('UPDATE media SET file_path = ?, media_type = ? WHERE media_id = ?').run(fullPath, expectedType, existing.media_id);
+        }
+        continue;
+      }
+
+      const fileStat = fs.statSync(fullPath);
+      const mediaId = (isVideo ? 'VID-' : 'IMG-') + crypto.randomUUID().slice(0, 8).toUpperCase();
       const kontenId = 'CNT-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+
+      // Check if companion .txt exists for manual caption (e.g. foto.jpg -> foto.txt)
+      const baseName = entryName.replace(/\.[^/.]+$/, '');
+      const txtPath = path.join(folderPath, `${baseName}.txt`);
+      let txtCaption = '';
+      if (fs.existsSync(txtPath)) {
+        try { txtCaption = fs.readFileSync(txtPath, 'utf8').trim(); } catch(e){}
+      }
 
       // Check if there is an existing caption for this filename to restore
       const existingPost = db.prepare(`
         SELECT p.* FROM posts p 
         JOIN media m ON p.media_id = m.media_id 
         WHERE m.nama_file = ? AND p.caption_utama IS NOT NULL AND p.caption_utama != ''
-      `).get(filename);
+      `).get(entryName);
 
-      const captionToUse = existingPost ? existingPost.caption_utama : filename.replace(/\.[^/.]+$/, '');
+      const captionToUse = txtCaption || (existingPost ? existingPost.caption_utama : baseName.replace(/[_-]+/g, ' '));
       const hashtagsToUse = existingPost ? (existingPost.hashtags || '') : '';
-      const lockedToUse = existingPost ? (existingPost.manual_locked || 'TRUE') : 'FALSE';
+      const lockedToUse = txtCaption ? 'TRUE' : (existingPost ? (existingPost.manual_locked || 'TRUE') : 'FALSE');
+      const mediaType = isVideo ? 'VIDEO' : 'IMAGE';
+      const mimeType = isVideo ? 'video/mp4' : (ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg'));
 
       db.prepare(`
-        INSERT INTO media (media_id, niche_id, file_path, nama_file, mime_type, file_size, deskripsi, caption_mode, caption_manual, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO media (media_id, niche_id, file_path, nama_file, mime_type, file_size, deskripsi, caption_mode, caption_manual, status, media_type, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-        mediaId, nicheId, fullPath, filename, 'video/mp4', fileStat.size,
-        '', niche.mode_caption || 'MANUAL', captionToUse, 'SIAP', isoNow()
+        mediaId, nicheId, fullPath, entryName, mimeType, fileStat.size,
+        '', niche.mode_caption || 'MANUAL', captionToUse, 'SIAP', mediaType, isoNow()
       );
 
       db.prepare(`
-        INSERT INTO posts (konten_id, media_id, niche_id, mode_caption, caption_utama, caption_facebook, caption_instagram, caption_tiktok, hashtags, emoji, manual_locked, status, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO posts (konten_id, media_id, niche_id, mode_caption, caption_utama, caption_facebook, caption_instagram, caption_tiktok, hashtags, emoji, manual_locked, media_type, status, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, 'READY', ?)
       `).run(
         kontenId, mediaId, nicheId, niche.mode_caption || 'MANUAL',
-        captionToUse, '', '', '', hashtagsToUse, '', lockedToUse, 'READY', isoNow()
+        captionToUse, '', '', '', hashtagsToUse, lockedToUse, mediaType, isoNow()
       );
 
       addedCount++;
     }
 
     // Hapus file yang sudah dihapus secara fisik di komputer dari database
-    const allMediaInNiche = db.prepare('SELECT media_id, nama_file, file_path, status FROM media WHERE niche_id = ?').all(nicheId);
+    const allMediaInNiche = db.prepare('SELECT media_id, nama_file, file_path, status, media_type, carousel_items FROM media WHERE niche_id = ?').all(nicheId);
     for (const m of allMediaInNiche) {
-      if (!currentVideoFiles.has(m.nama_file) && (!m.file_path || !fs.existsSync(m.file_path))) {
+      let fileStillExists = false;
+      if (m.media_type === 'CAROUSEL') {
+        if (m.file_path && fs.existsSync(m.file_path)) fileStillExists = true;
+        try {
+          const items = JSON.parse(m.carousel_items || '[]');
+          if (items.length > 0 && items.some(p => fs.existsSync(p))) fileStillExists = true;
+        } catch(e) {}
+      } else {
+        fileStillExists = m.file_path && fs.existsSync(m.file_path);
+      }
+
+      if (!currentActiveFiles.has(m.nama_file) && !fileStillExists) {
         // Amankan nama_file di jobs sebelum media dibersihkan
         try {
           db.prepare("UPDATE jobs SET nama_file = COALESCE(nama_file, ?) WHERE media_id = ?").run(m.nama_file, m.media_id);
@@ -1931,13 +2126,13 @@ function scanDrive(nicheId) {
       }
     }
 
-    console.log(`[SCAN] Niche "${niche.nama}": Added ${addedCount}, Removed ${removedCount} missing videos.`);
+    console.log(`[SCAN] Niche "${niche.nama}": Added ${addedCount}, Removed ${removedCount} missing media.`);
     const dash = getDashboardData();
     dash.scanReport = {
       nicheName: niche.nama,
       addedCount,
       removedCount,
-      totalActiveInNiche: currentVideoFiles.size,
+      totalActiveInNiche: currentActiveFiles.size,
       totalActive: db.prepare('SELECT count(*) as count FROM media').get().count
     };
     return dash;
@@ -2179,10 +2374,10 @@ function saveScheduleWeb(input) {
   for (const acc of validAccounts) {
     const jobId = 'JOB-' + crypto.randomUUID().slice(0, 8).toUpperCase();
     db.prepare(`
-      INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text, nama_file)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO jobs (job_id, jadwal_id, konten_id, media_id, niche_id, akun_id, platform, scheduled_at, status, attempts, updated_at, cover_offset_ms, bgm_enabled, bgm_category, bgm_volume, sfx_enabled, sfx_category, sfx_volume, outro_enabled, outro_text, nama_file, media_type, carousel_items)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'READY', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      jobId, jadwalId, post.konten_id, mediaId, media.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume, sfxEnabled, sfxCategory, sfxVolume, outroEnabled, outroText, media.nama_file
+      jobId, jadwalId, post.konten_id, mediaId, media.niche_id, acc.akun_id, acc.platform, scheduledIso, isoNow(), coverOffsetMs, bgmEnabled, bgmCategory, bgmVolume, sfxEnabled, sfxCategory, sfxVolume, outroEnabled, outroText, media.nama_file, media.media_type || 'VIDEO', media.carousel_items || ''
     );
   }
 
@@ -2198,6 +2393,45 @@ function saveScheduleWeb(input) {
   return getDashboardData();
 }
 
+// Helper Meta CDN Photo Stager untuk Instagram & Facebook
+async function uploadPhotoToMetaCdn(filePath, fbPageId, fbToken) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    throw new Error('File foto tidak ditemukan di komputer: ' + filePath);
+  }
+  const fileBuffer = fs.readFileSync(filePath);
+  const ext = path.extname(filePath).toLowerCase();
+  const mimeType = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg');
+
+  const form = new FormData();
+  form.append('source', new Blob([fileBuffer], { type: mimeType }), path.basename(filePath));
+  form.append('published', 'false');
+  form.append('access_token', fbToken);
+
+  const res = await fetch(`https://graph.facebook.com/v21.0/${fbPageId}/photos`, {
+    method: 'POST',
+    body: form
+  });
+  const data = await res.json();
+  if (data.error) {
+    throw new Error('Meta Photo Staging: ' + (data.error.message || JSON.stringify(data.error)));
+  }
+
+  const photoId = data.id;
+  const getResp = await fetch(`https://graph.facebook.com/v21.0/${photoId}?fields=images&access_token=${fbToken}`);
+  const getData = await getResp.json();
+  if (getData.error) {
+    throw new Error('Meta Photo Info: ' + (getData.error.message || JSON.stringify(getData.error)));
+  }
+  if (!getData.images || !getData.images.length) {
+    throw new Error('Tidak dapat memperoleh CDN URL foto dari server Meta');
+  }
+
+  return {
+    photoId,
+    cdnUrl: getData.images[0].source
+  };
+}
+
 // 6. Meta Graph API Publishing
 async function publishJob(jobId) {
   const job = db.prepare('SELECT * FROM jobs WHERE job_id = ?').get(jobId);
@@ -2209,7 +2443,7 @@ async function publishJob(jobId) {
   const post = db.prepare('SELECT * FROM posts WHERE konten_id = ?').get(job.konten_id);
   const media = db.prepare('SELECT * FROM media WHERE media_id = ?').get(job.media_id);
 
-  // Pre-flight Check Anti-Duplikasi: Batalkan otomatis jika video ternyata sudah pernah terbit di platform/akun ini
+  // Pre-flight Check Anti-Duplikasi: Batalkan otomatis jika media ternyata sudah pernah terbit di platform/akun ini
   const rawFile = media ? String(media.nama_file || '').trim() : '';
   const baseName = rawFile.replace(/\.[^/.]+$/, '').trim();
 
@@ -2232,8 +2466,8 @@ async function publishJob(jobId) {
   `).get(rawFile, job.media_id, `%${baseName}%`, job.akun_id, job.platform);
 
   if (alreadyPubJob || alreadyPubPerf) {
-    console.warn(`[PUBLISH MENOLAK DUPLIKASI] Job ${jobId} dibatalkan otomatis karena video "${rawFile}" sudah pernah terbit di ${job.platform} (${acc.nama_akun}).`);
-    db.prepare("UPDATE jobs SET status = 'CANCELLED', last_error = 'Dibatalkan otomatis: Video sudah pernah terbit di platform ini.', updated_at = ? WHERE job_id = ?").run(isoNow(), jobId);
+    console.warn(`[PUBLISH MENOLAK DUPLIKASI] Job ${jobId} dibatalkan otomatis karena media "${rawFile}" sudah pernah terbit di ${job.platform} (${acc.nama_akun}).`);
+    db.prepare("UPDATE jobs SET status = 'CANCELLED', last_error = 'Dibatalkan otomatis: Media sudah pernah terbit di platform ini.', updated_at = ? WHERE job_id = ?").run(isoNow(), jobId);
     return getDashboardData();
   }
 
@@ -2241,61 +2475,270 @@ async function publishJob(jobId) {
 
   db.prepare("UPDATE jobs SET status = 'UPLOADING', updated_at = ? WHERE job_id = ?").run(isoNow(), jobId);
 
-  let activeFilePath = media.file_path;
+  let activeFilePath = media ? media.file_path : '';
   let tempMixedFile = null;
 
   try {
-    // === AUTO BGM, SFX HOOK & OUTRO FOLLOWER CTA ENHANCER ===
-    const isBgm = job.bgm_enabled === 'TRUE' || job.bgm_enabled === true || job.bgm_enabled === 'true';
-    const isSfx = job.sfx_enabled === 'TRUE' || job.sfx_enabled === true || job.sfx_enabled === 'true';
-    const isOutro = job.outro_enabled === 'TRUE' || job.outro_enabled === true || job.outro_enabled === 'true' || job.outro_enabled === undefined;
-    const outroTextToUse = isOutro ? (job.outro_text || getDefaultOutroText(niche ? (niche.nama || niche.niche_id) : media.niche_id)) : null;
-
-    if (isBgm || isSfx || isOutro) {
-      try {
-        let selectedBgm = null;
-        let selectedSfx = null;
-
-        if (isBgm) {
-          selectedBgm = pickAudioTrackForMedia(media, job.bgm_category);
-        }
-        if (isSfx) {
-          selectedSfx = pickSfxTrackForMedia(media, job.sfx_category);
-        }
-
-        const bgmPath = selectedBgm ? selectedBgm.path : null;
-        const sfxPath = selectedSfx ? selectedSfx.path : null;
-
-        if (bgmPath || sfxPath || isOutro) {
-          console.log(`[MEDIA ENHANCER] Memproses video ${media.nama_file}...`);
-          if (bgmPath) console.log(`  🎵 BGM: "${selectedBgm.name}" (${selectedBgm.category}, vol: ${job.bgm_volume || 0.15})`);
-          if (sfxPath) console.log(`  ⚡ SFX Hook: "${selectedSfx.name}" (${selectedSfx.category}, vol: ${job.sfx_volume || 0.60})`);
-          if (isOutro) console.log(`  🔔 Outro Follower CTA: "${outroTextToUse}"`);
-
-          const mixed = await mixVideoWithAudio(media.file_path, bgmPath, job.bgm_volume || 0.15, sfxPath, job.sfx_volume || 0.60, outroTextToUse);
-          if (mixed && fs.existsSync(mixed)) {
-            activeFilePath = mixed;
-            tempMixedFile = mixed;
-            console.log(`[MEDIA ENHANCER] Video sukses disempurnakan: ${tempMixedFile}`);
-          }
-        }
-      } catch (mixErr) {
-        console.warn('[MEDIA ENHANCER WARNING] Gagal memadukan audio/outro, melanjutkan dengan video asli:', mixErr.message);
-      }
-    }
-
     const rawCaption = (job.platform === 'FACEBOOK' ? (post.caption_facebook || post.caption_utama) : (post.caption_instagram || post.caption_utama)) +
       (post.hashtags ? '\n\n' + post.hashtags : '');
     const captionText = sanitizeCaptionAntiShadowban(rawCaption);
 
     let publishResult = null;
+    const mediaType = (job.media_type || (media && media.media_type) || 'VIDEO').toUpperCase();
 
-    // === PILAR 1 & 2: UNIVERSAL PRE-FLIGHT VIDEO SANITIZER ===
-    const sanitizedPath = await sanitizeVideoForPlatform(activeFilePath);
-    if (sanitizedPath && sanitizedPath !== activeFilePath) {
-      if (!tempMixedFile) tempMixedFile = sanitizedPath;
-      activeFilePath = sanitizedPath;
-    }
+    if (mediaType === 'IMAGE') {
+      // === PILAR PUBLIKASI FOTO TUNGGAL ===
+      const filePath = activeFilePath;
+      if (!filePath || !fs.existsSync(filePath)) {
+        throw new Error(`File foto tidak ditemukan di komputer: ${filePath || (media && media.nama_file)}`);
+      }
+      const fileBuffer = fs.readFileSync(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeType = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg');
+
+      if (job.platform === 'FACEBOOK') {
+        const pageId = acc.platform_user_id;
+        console.log(`[FB PHOTO] Mengunggah foto tunggal ke Halaman Facebook ${acc.nama_akun}...`);
+        const form = new FormData();
+        form.append('source', new Blob([fileBuffer], { type: mimeType }), path.basename(filePath));
+        form.append('message', captionText);
+        form.append('access_token', acc.token);
+
+        const fbResp = await fetch(`https://graph.facebook.com/v21.0/${pageId}/photos`, {
+          method: 'POST',
+          body: form
+        });
+        const fbData = await fbResp.json();
+        if (fbData.error) throw new Error('FB Photo: ' + (fbData.error.message || JSON.stringify(fbData.error)));
+
+        const photoId = fbData.id;
+        const permalink = fbData.post_id ? `https://www.facebook.com/${fbData.post_id}` : `https://www.facebook.com/${photoId}`;
+        publishResult = { id: photoId, url: permalink };
+      } else if (job.platform === 'INSTAGRAM') {
+        const igUserId = acc.platform_user_id;
+        const fbAcc = db.prepare("SELECT * FROM accounts WHERE niche_id = ? AND platform = 'FACEBOOK' AND aktif = 'TRUE' LIMIT 1").get(job.niche_id)
+          || db.prepare("SELECT * FROM accounts WHERE platform = 'FACEBOOK' AND aktif = 'TRUE' LIMIT 1").get();
+        if (!fbAcc || !fbAcc.token) {
+          throw new Error('Tidak ditemukan akun Facebook yang terhubung untuk meng-host foto ke Meta CDN');
+        }
+
+        console.log(`[IG PHOTO] Menyiapkan foto ke Meta CDN via Halaman Facebook (${fbAcc.nama_akun})...`);
+        const staged = await uploadPhotoToMetaCdn(filePath, fbAcc.platform_user_id, fbAcc.token);
+
+        console.log(`[IG PHOTO] Membuat media container di Instagram untuk ${media ? media.nama_file : 'foto'}...`);
+        const initResp = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image_url: staged.cdnUrl,
+            caption: captionText,
+            access_token: acc.token
+          })
+        });
+        const initData = await initResp.json();
+        if (initData.error) throw new Error('IG Photo Container: ' + (initData.error.message || JSON.stringify(initData.error)));
+
+        const containerId = initData.id;
+        await new Promise(r => setTimeout(r, 2500));
+
+        console.log(`[IG PHOTO] Mempublikasikan container foto Instagram...`);
+        const pubResp = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            creation_id: containerId,
+            access_token: acc.token
+          })
+        });
+        const pubData = await pubResp.json();
+        if (pubData.error) throw new Error('IG Photo Publish: ' + (pubData.error.message || JSON.stringify(pubData.error)));
+
+        let permalink = 'https://www.instagram.com/';
+        try {
+          const pResp = await fetch(`https://graph.facebook.com/v21.0/${pubData.id}?fields=permalink&access_token=${acc.token}`);
+          const pData = await pResp.json();
+          if (pData.permalink) permalink = pData.permalink;
+        } catch(e) {}
+
+        publishResult = { id: pubData.id, url: permalink };
+      } else {
+        throw new Error(`Platform ${job.platform} belum mendukung postingan foto tunggal.`);
+      }
+
+    } else if (mediaType === 'CAROUSEL') {
+      // === PILAR PUBLIKASI CAROUSEL (MULTI-FOTO SLIDES) ===
+      let slidePaths = [];
+      try {
+        slidePaths = JSON.parse(job.carousel_items || (media ? media.carousel_items : '') || '[]');
+      } catch(e) {}
+      if (!slidePaths.length && media && media.file_path && fs.existsSync(media.file_path) && fs.statSync(media.file_path).isDirectory()) {
+        const imageExts = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+        slidePaths = fs.readdirSync(media.file_path)
+          .filter(f => imageExts.has(path.extname(f).toLowerCase()))
+          .sort()
+          .map(f => path.join(media.file_path, f));
+      }
+      slidePaths = slidePaths.filter(p => fs.existsSync(p)).slice(0, 10);
+      if (slidePaths.length < 2) {
+        throw new Error('Carousel memerlukan minimal 2 foto valid di disk.');
+      }
+
+      if (job.platform === 'FACEBOOK') {
+        const pageId = acc.platform_user_id;
+        console.log(`[FB CAROUSEL] Mengunggah ${slidePaths.length} foto ke Facebook Page ${acc.nama_akun}...`);
+        const attachedMedia = [];
+
+        for (let i = 0; i < slidePaths.length; i++) {
+          const sPath = slidePaths[i];
+          const fileBuffer = fs.readFileSync(sPath);
+          const ext = path.extname(sPath).toLowerCase();
+          const mimeType = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg');
+
+          const form = new FormData();
+          form.append('source', new Blob([fileBuffer], { type: mimeType }), path.basename(sPath));
+          form.append('published', 'false');
+          form.append('access_token', acc.token);
+
+          const photoResp = await fetch(`https://graph.facebook.com/v21.0/${pageId}/photos`, {
+            method: 'POST',
+            body: form
+          });
+          const photoData = await photoResp.json();
+          if (photoData.error) throw new Error(`FB Carousel Slide ${i + 1}: ` + (photoData.error.message || JSON.stringify(photoData.error)));
+          attachedMedia.push({ media_fbid: photoData.id });
+        }
+
+        console.log(`[FB CAROUSEL] Menerbitkan postingan multi-foto ke feed Facebook Page...`);
+        const feedResp = await fetch(`https://graph.facebook.com/v21.0/${pageId}/feed`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: captionText,
+            attached_media: attachedMedia,
+            access_token: acc.token
+          })
+        });
+        const feedData = await feedResp.json();
+        if (feedData.error) throw new Error('FB Feed Carousel: ' + (feedData.error.message || JSON.stringify(feedData.error)));
+
+        const permalink = `https://www.facebook.com/${feedData.id}`;
+        publishResult = { id: feedData.id, url: permalink };
+      } else if (job.platform === 'INSTAGRAM') {
+        const igUserId = acc.platform_user_id;
+        const fbAcc = db.prepare("SELECT * FROM accounts WHERE niche_id = ? AND platform = 'FACEBOOK' AND aktif = 'TRUE' LIMIT 1").get(job.niche_id)
+          || db.prepare("SELECT * FROM accounts WHERE platform = 'FACEBOOK' AND aktif = 'TRUE' LIMIT 1").get();
+        if (!fbAcc || !fbAcc.token) {
+          throw new Error('Tidak ditemukan akun Facebook yang terhubung untuk meng-host slide carousel ke Meta CDN');
+        }
+
+        console.log(`[IG CAROUSEL] Menyiapkan ${slidePaths.length} slide foto ke Meta CDN dan membuat sub-container...`);
+        const childrenIds = [];
+
+        for (let idx = 0; idx < slidePaths.length; idx++) {
+          const sPath = slidePaths[idx];
+          const staged = await uploadPhotoToMetaCdn(sPath, fbAcc.platform_user_id, fbAcc.token);
+
+          const itemResp = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image_url: staged.cdnUrl,
+              is_carousel_item: true,
+              access_token: acc.token
+            })
+          });
+          const itemData = await itemResp.json();
+          if (itemData.error) throw new Error(`IG Carousel Slide ${idx + 1}: ` + (itemData.error.message || JSON.stringify(itemData.error)));
+          childrenIds.push(itemData.id);
+        }
+
+        console.log(`[IG CAROUSEL] Membuat container Carousel utama (${childrenIds.length} slides)...`);
+        const parentResp = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            media_type: 'CAROUSEL',
+            caption: captionText,
+            children: childrenIds,
+            access_token: acc.token
+          })
+        });
+        const parentData = await parentResp.json();
+        if (parentData.error) throw new Error('IG Carousel Parent: ' + (parentData.error.message || JSON.stringify(parentData.error)));
+
+        const carouselContainerId = parentData.id;
+        await new Promise(r => setTimeout(r, 3500));
+
+        console.log(`[IG CAROUSEL] Mempublikasikan Instagram Carousel...`);
+        const pubResp = await fetch(`https://graph.facebook.com/v21.0/${igUserId}/media_publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            creation_id: carouselContainerId,
+            access_token: acc.token
+          })
+        });
+        const pubData = await pubResp.json();
+        if (pubData.error) throw new Error('IG Carousel Publish: ' + (pubData.error.message || JSON.stringify(pubData.error)));
+
+        let permalink = 'https://www.instagram.com/';
+        try {
+          const pResp = await fetch(`https://graph.facebook.com/v21.0/${pubData.id}?fields=permalink&access_token=${acc.token}`);
+          const pData = await pResp.json();
+          if (pData.permalink) permalink = pData.permalink;
+        } catch(e) {}
+
+        publishResult = { id: pubData.id, url: permalink };
+      } else {
+        throw new Error(`Platform ${job.platform} belum mendukung postingan carousel.`);
+      }
+
+    } else {
+      // === PILAR PUBLIKASI VIDEO REELS (KODE RESMI YG SUDAH STABIL & LANCAR) ===
+      const isBgm = job.bgm_enabled === 'TRUE' || job.bgm_enabled === true || job.bgm_enabled === 'true';
+      const isSfx = job.sfx_enabled === 'TRUE' || job.sfx_enabled === true || job.sfx_enabled === 'true';
+      const isOutro = job.outro_enabled === 'TRUE' || job.outro_enabled === true || job.outro_enabled === 'true' || job.outro_enabled === undefined;
+      const outroTextToUse = isOutro ? (job.outro_text || getDefaultOutroText(niche ? (niche.nama || niche.niche_id) : media.niche_id)) : null;
+
+      if (isBgm || isSfx || isOutro) {
+        try {
+          let selectedBgm = null;
+          let selectedSfx = null;
+
+          if (isBgm) {
+            selectedBgm = pickAudioTrackForMedia(media, job.bgm_category);
+          }
+          if (isSfx) {
+            selectedSfx = pickSfxTrackForMedia(media, job.sfx_category);
+          }
+
+          const bgmPath = selectedBgm ? selectedBgm.path : null;
+          const sfxPath = selectedSfx ? selectedSfx.path : null;
+
+          if (bgmPath || sfxPath || isOutro) {
+            console.log(`[MEDIA ENHANCER] Memproses video ${media.nama_file}...`);
+            if (bgmPath) console.log(`  🎵 BGM: "${selectedBgm.name}" (${selectedBgm.category}, vol: ${job.bgm_volume || 0.15})`);
+            if (sfxPath) console.log(`  ⚡ SFX Hook: "${selectedSfx.name}" (${selectedSfx.category}, vol: ${job.sfx_volume || 0.60})`);
+            if (isOutro) console.log(`  🔔 Outro Follower CTA: "${outroTextToUse}"`);
+
+            const mixed = await mixVideoWithAudio(media.file_path, bgmPath, job.bgm_volume || 0.15, sfxPath, job.sfx_volume || 0.60, outroTextToUse);
+            if (mixed && fs.existsSync(mixed)) {
+              activeFilePath = mixed;
+              tempMixedFile = mixed;
+              console.log(`[MEDIA ENHANCER] Video sukses disempurnakan: ${tempMixedFile}`);
+            }
+          }
+        } catch (mixErr) {
+          console.warn('[MEDIA ENHANCER WARNING] Gagal memadukan audio/outro, melanjutkan dengan video asli:', mixErr.message);
+        }
+      }
+
+      // === PILAR 1 & 2: UNIVERSAL PRE-FLIGHT VIDEO SANITIZER ===
+      const sanitizedPath = await sanitizeVideoForPlatform(activeFilePath);
+      if (sanitizedPath && sanitizedPath !== activeFilePath) {
+        if (!tempMixedFile) tempMixedFile = sanitizedPath;
+        activeFilePath = sanitizedPath;
+      }
 
     if (job.platform === 'FACEBOOK') {
       const pageId = acc.platform_user_id;
@@ -2661,6 +3104,7 @@ async function publishJob(jobId) {
         url: tiktokUsername ? `https://www.tiktok.com/@${tiktokUsername}` : 'https://www.tiktok.com/'
       };
     }
+  }
 
     // Success
     db.prepare(`
@@ -3612,6 +4056,82 @@ app.post('/api/action', async (req, res) => {
         result = savePost(args[0]);
         break;
 
+      case 'createCarousel': {
+        const payload = args[0] || {};
+        const nicheId = payload.nicheId || payload.niche_id;
+        const slideMediaIds = Array.isArray(payload.slideMediaIds) ? payload.slideMediaIds : [];
+        let slideFilePaths = Array.isArray(payload.slides) 
+          ? payload.slides.map(s => typeof s === 'string' ? s : (s.file_path || '')).filter(Boolean)
+          : [];
+
+        if (!slideFilePaths.length && slideMediaIds.length > 0) {
+          slideFilePaths = slideMediaIds.map(mid => {
+            const m = db.prepare('SELECT file_path FROM media WHERE media_id = ?').get(mid);
+            return m ? m.file_path : null;
+          }).filter(Boolean);
+        }
+
+        if (slideFilePaths.length < 2) {
+          throw new Error('Carousel minimal harus memilih 2 foto (maksimal 10 foto)');
+        }
+        if (!nicheId) throw new Error('Pilih niche tujuan terlebih dahulu');
+
+        const mediaId = 'CAR-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+        const kontenId = 'CNT-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+        const title = (payload.title || `Carousel ${slideFilePaths.length} Slide - ${new Date().toLocaleDateString('id-ID')}`).trim();
+        const caption = (payload.caption || '').trim();
+        const hashtags = (payload.hashtags || '').trim();
+
+        db.prepare(`
+          INSERT INTO media (media_id, niche_id, file_path, nama_file, mime_type, file_size, deskripsi, caption_mode, caption_manual, status, media_type, carousel_items, created_at)
+          VALUES (?, ?, ?, ?, 'image/carousel', 0, '', 'MANUAL', ?, 'SIAP', 'CAROUSEL', ?, ?)
+        `).run(
+          mediaId, nicheId, slideFilePaths[0], title, caption, JSON.stringify(slideFilePaths), isoNow()
+        );
+
+        db.prepare(`
+          INSERT INTO posts (konten_id, media_id, niche_id, mode_caption, caption_utama, caption_facebook, caption_instagram, caption_tiktok, hashtags, emoji, manual_locked, media_type, status, updated_at)
+          VALUES (?, ?, ?, 'MANUAL', ?, '', '', '', ?, '', 'TRUE', 'CAROUSEL', 'READY', ?)
+        `).run(
+          kontenId, mediaId, nicheId, caption, hashtags, isoNow()
+        );
+
+        result = getDashboardData();
+        result.newCarouselMediaId = mediaId;
+        break;
+      }
+
+      case 'updateCarousel': {
+        const payload = args[0] || {};
+        const mediaId = payload.mediaId || payload.media_id;
+        const slideFilePaths = Array.isArray(payload.slides) 
+          ? payload.slides.map(s => typeof s === 'string' ? s : (s.file_path || '')).filter(Boolean)
+          : [];
+        const title = payload.title ? String(payload.title).trim() : null;
+        const caption = payload.caption !== undefined ? String(payload.caption).trim() : null;
+        const hashtags = payload.hashtags !== undefined ? String(payload.hashtags).trim() : null;
+
+        const media = db.prepare('SELECT * FROM media WHERE media_id = ?').get(mediaId);
+        if (!media) throw new Error('Carousel tidak ditemukan');
+
+        if (slideFilePaths.length >= 2) {
+          db.prepare("UPDATE media SET file_path = ?, carousel_items = ? WHERE media_id = ?").run(slideFilePaths[0], JSON.stringify(slideFilePaths), mediaId);
+        }
+        if (title) {
+          db.prepare("UPDATE media SET nama_file = ? WHERE media_id = ?").run(title, mediaId);
+        }
+        if (caption !== null) {
+          db.prepare("UPDATE media SET caption_manual = ? WHERE media_id = ?").run(caption, mediaId);
+          db.prepare("UPDATE posts SET caption_utama = ?, manual_locked = 'TRUE', updated_at = ? WHERE media_id = ?").run(caption, isoNow(), mediaId);
+        }
+        if (hashtags !== null) {
+          db.prepare("UPDATE posts SET hashtags = ?, updated_at = ? WHERE media_id = ?").run(hashtags, isoNow(), mediaId);
+        }
+
+        result = getDashboardData();
+        break;
+      }
+
       case 'saveScheduleWeb':
         result = saveScheduleWeb(args[0]);
         break;
@@ -3941,17 +4461,57 @@ app.post('/api/action', async (req, res) => {
   }
 });
 
-// === PEMILIH SAMPUL VISUAL (STREAM FRAME DARI VIDEO MASTER) ===
+// === PEMILIH SAMPUL VISUAL (STREAM FRAME DARI MASTER MEDIA / FOTO / CAROUSEL) ===
 app.get('/api/media/:mediaId/frame', (req, res) => {
   try {
     const { mediaId } = req.params;
+    const media = db.prepare('SELECT file_path, media_type, mime_type, carousel_items FROM media WHERE media_id = ?').get(mediaId);
+    if (!media) {
+      return res.status(404).send('Media tidak ditemukan');
+    }
+
+    // 1. Jika FOTO TUNGGAL: stream file foto langsung tanpa ffmpeg
+    if (media.media_type === 'IMAGE' || (media.file_path && /\.(jpg|jpeg|png|webp)$/i.test(media.file_path))) {
+      if (media.file_path && fs.existsSync(media.file_path)) {
+        const ext = path.extname(media.file_path).toLowerCase();
+        const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg');
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        return fs.createReadStream(media.file_path).pipe(res);
+      }
+    }
+
+    // 2. Jika CAROUSEL: stream slide foto pertama
+    if (media.media_type === 'CAROUSEL') {
+      let firstSlide = null;
+      try {
+        const items = JSON.parse(media.carousel_items || '[]');
+        if (items.length > 0 && fs.existsSync(items[0])) firstSlide = items[0];
+      } catch(e) {}
+      if (!firstSlide && media.file_path && fs.existsSync(media.file_path)) {
+        if (fs.statSync(media.file_path).isDirectory()) {
+          const files = fs.readdirSync(media.file_path).filter(f => /\.(jpg|jpeg|png|webp)$/i.test(f)).sort();
+          if (files.length > 0) firstSlide = path.join(media.file_path, files[0]);
+        } else {
+          firstSlide = media.file_path;
+        }
+      }
+      if (firstSlide && fs.existsSync(firstSlide)) {
+        const ext = path.extname(firstSlide).toLowerCase();
+        const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg');
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        return fs.createReadStream(firstSlide).pipe(res);
+      }
+    }
+
+    // 3. Jika VIDEO REELS: ekstrak frame dengan ffmpeg
+    if (!media.file_path || !fs.existsSync(media.file_path)) {
+      return res.status(404).send('File video master tidak ditemukan di komputer');
+    }
+
     const offsetMs = Math.max(0, parseInt(req.query.offset_ms || 1800, 10));
     const offsetSec = (offsetMs / 1000).toFixed(2);
-
-    const media = db.prepare('SELECT file_path FROM media WHERE media_id = ?').get(mediaId);
-    if (!media || !media.file_path || !fs.existsSync(media.file_path)) {
-      return res.status(404).send('Media video tidak ditemukan');
-    }
 
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=120');
@@ -3978,16 +4538,50 @@ app.get('/api/media/:mediaId/frame', (req, res) => {
 app.get('/api/jobs/:jobId/frame', (req, res) => {
   try {
     const { jobId } = req.params;
-    const job = db.prepare('SELECT media_id, cover_offset_ms FROM jobs WHERE job_id = ?').get(jobId);
+    const job = db.prepare('SELECT media_id, cover_offset_ms, media_type, carousel_items FROM jobs WHERE job_id = ?').get(jobId);
     if (!job) return res.status(404).send('Job tidak ditemukan');
+
+    const media = db.prepare('SELECT file_path, media_type, carousel_items FROM media WHERE media_id = ?').get(job.media_id);
+    const mType = job.media_type || (media && media.media_type) || 'VIDEO';
+
+    if (mType === 'IMAGE') {
+      const fPath = media ? media.file_path : null;
+      if (fPath && fs.existsSync(fPath)) {
+        const ext = path.extname(fPath).toLowerCase();
+        const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg');
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        return fs.createReadStream(fPath).pipe(res);
+      }
+    }
+
+    if (mType === 'CAROUSEL') {
+      let firstSlide = null;
+      try {
+        const items = JSON.parse(job.carousel_items || (media ? media.carousel_items : '') || '[]');
+        if (items.length > 0 && fs.existsSync(items[0])) firstSlide = items[0];
+      } catch(e) {}
+      if (!firstSlide && media && media.file_path && fs.existsSync(media.file_path)) {
+        if (fs.statSync(media.file_path).isDirectory()) {
+          const files = fs.readdirSync(media.file_path).filter(f => /\.(jpg|jpeg|png|webp)$/i.test(f)).sort();
+          if (files.length > 0) firstSlide = path.join(media.file_path, files[0]);
+        }
+      }
+      if (firstSlide && fs.existsSync(firstSlide)) {
+        const ext = path.extname(firstSlide).toLowerCase();
+        const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg');
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        return fs.createReadStream(firstSlide).pipe(res);
+      }
+    }
+
+    if (!media || !media.file_path || !fs.existsSync(media.file_path)) {
+      return res.status(404).send('File video tidak ditemukan');
+    }
 
     const offsetMs = req.query.offset_ms !== undefined ? Math.max(0, parseInt(req.query.offset_ms, 10)) : (job.cover_offset_ms || 1800);
     const offsetSec = (offsetMs / 1000).toFixed(2);
-
-    const media = db.prepare('SELECT file_path FROM media WHERE media_id = ?').get(job.media_id);
-    if (!media || !media.file_path || !fs.existsSync(media.file_path)) {
-      return res.status(404).send('Media video tidak ditemukan');
-    }
 
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=120');
@@ -4008,6 +4602,63 @@ app.get('/api/jobs/:jobId/frame', (req, res) => {
     });
   } catch (err) {
     if (!res.headersSent) res.status(500).send(err.message);
+  }
+});
+
+// Carousel Slides Detail Endpoint (untuk pratinjau slide di web)
+app.get('/api/media/:mediaId/slides', (req, res) => {
+  try {
+    const { mediaId } = req.params;
+    const media = db.prepare('SELECT file_path, media_type, carousel_items FROM media WHERE media_id = ?').get(mediaId);
+    if (!media) return res.status(404).json({ error: 'Media not found' });
+    let slidePaths = [];
+    try {
+      slidePaths = JSON.parse(media.carousel_items || '[]');
+    } catch(e) {}
+    if (!slidePaths.length && media.file_path && fs.existsSync(media.file_path) && fs.statSync(media.file_path).isDirectory()) {
+      slidePaths = fs.readdirSync(media.file_path)
+        .filter(f => /\.(jpg|jpeg|png|webp)$/i.test(f))
+        .sort()
+        .map(f => path.join(media.file_path, f));
+    }
+    const slides = slidePaths.map((p, idx) => ({
+      index: idx,
+      name: path.basename(p),
+      url: `/api/media/${encodeURIComponent(mediaId)}/slide/${idx}`
+    }));
+    res.json({ success: true, slides });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/media/:mediaId/slide/:slideIndex', (req, res) => {
+  try {
+    const { mediaId, slideIndex } = req.params;
+    const idx = parseInt(slideIndex, 10) || 0;
+    const media = db.prepare('SELECT file_path, carousel_items FROM media WHERE media_id = ?').get(mediaId);
+    if (!media) return res.status(404).send('Media not found');
+    let slidePaths = [];
+    try {
+      slidePaths = JSON.parse(media.carousel_items || '[]');
+    } catch(e) {}
+    if (!slidePaths.length && media.file_path && fs.existsSync(media.file_path) && fs.statSync(media.file_path).isDirectory()) {
+      slidePaths = fs.readdirSync(media.file_path)
+        .filter(f => /\.(jpg|jpeg|png|webp)$/i.test(f))
+        .sort()
+        .map(f => path.join(media.file_path, f));
+    }
+    if (!slidePaths[idx] || !fs.existsSync(slidePaths[idx])) {
+      return res.status(404).send('Slide not found');
+    }
+    const targetFile = slidePaths[idx];
+    const ext = path.extname(targetFile).toLowerCase();
+    const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg');
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    fs.createReadStream(targetFile).pipe(res);
+  } catch(e) {
+    res.status(500).send(e.message);
   }
 });
 

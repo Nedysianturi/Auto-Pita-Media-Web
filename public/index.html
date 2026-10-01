@@ -1339,9 +1339,9 @@
       <div class="card">
         <!-- Sub-tab & Controls Header -->
         <div style="display: flex; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--border-color); background: #f8fafc; border-top-left-radius: 16px; border-top-right-radius: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-          <div style="display: flex; gap: 8px; align-items: center;">
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <button class="btn btn-sm btn-primary" style="border-radius: 8px; font-weight: 700; cursor: default;">
-              🎬 Koleksi Video Drive (<span id="countVideoTotal">0</span>)
+              📁 Pustaka Media (<span id="countVideoTotal">0</span>)
             </button>
             <div style="display: inline-flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: #ffffff;">
               <button id="btnMediaViewCards" class="btn btn-sm" onclick="setMediaViewMode('cards')" style="border-radius: 0; font-weight: 700; background: var(--primary); color: #fff; padding: 5px 10px;" title="Tampilan Kartu Studio">
@@ -1351,8 +1351,17 @@
                 📑 Tabel
               </button>
             </div>
+            <button class="btn btn-sm" onclick="openCarouselBuilderModal()" style="font-weight: 700; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; border-radius: 8px; border: none; padding: 5px 12px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);" title="Gabungkan beberapa foto menjadi satu postingan Carousel swipeable">
+              <span>📑 Buat Carousel Baru</span>
+            </button>
           </div>
           <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <select id="filterMediaFormat" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; border-color: #6366f1; color: #4338ca;" onchange="renderMedia()">
+              <option value="ALL">Semua Format (Video & Foto)</option>
+              <option value="VIDEO">🎬 Video Reels</option>
+              <option value="IMAGE">📸 Foto Tunggal</option>
+              <option value="CAROUSEL">📑 Carousel Slide</option>
+            </select>
             <select id="filterMediaNiche" class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" onchange="renderMedia()">
               <option value="ALL">Semua Niche</option>
             </select>
@@ -1362,19 +1371,38 @@
               <option value="SELESAI">✓ Selesai Terbit</option>
               <option value="SIAP">Belum Dijadwalkan (Siap)</option>
             </select>
-            <input type="text" id="searchVideoInput" class="form-control" style="width: 180px; padding: 6px 12px; font-size: 0.8rem;" placeholder="Cari judul video..." oninput="onSearchVideoDebounce()" />
-            <button id="btnSyncFolderVideos" class="btn btn-sm btn-primary" onclick="syncFolderVideosAction()" style="display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);" title="Pindai langsung folder komputer untuk menghapus video yang telah Anda buang dan memuat video baru">
+            <input type="text" id="searchVideoInput" class="form-control" style="width: 170px; padding: 6px 12px; font-size: 0.8rem;" placeholder="Cari judul media..." oninput="onSearchVideoDebounce()" />
+            <button id="btnSyncFolderVideos" class="btn btn-sm btn-primary" onclick="syncFolderVideosAction()" style="display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);" title="Pindai langsung folder komputer untuk memuat video, foto, dan folder carousel baru">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
-              <span>Sinkronkan Folder Video</span>
+              <span>Sinkronkan Folder</span>
             </button>
-            <button id="btnCleanupPublishedMedia" class="btn btn-sm btn-secondary" onclick="cleanupAllPublishedAction(this)" style="display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: #cbd5e1; background: #ffffff; color: #475569;" title="Bersihkan atau arsipkan file video yang sudah sukses berstatus SELESAI TERBIT dari harddisk komputer">
+            <button id="btnCleanupPublishedMedia" class="btn btn-sm btn-secondary" onclick="cleanupAllPublishedAction(this)" style="display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: #cbd5e1; background: #ffffff; color: #475569;" title="Bersihkan file media yang sudah sukses berstatus SELESAI TERBIT dari harddisk komputer">
               <span style="font-size: 0.85rem;">🗂️</span>
-              <span>Bersihkan Video Selesai</span>
+              <span>Bersihkan Selesai</span>
             </button>
           </div>
         </div>
 
         <div style="padding: 20px;">
+          <!-- Active Selection Bar for Carousel Creation -->
+          <div id="carouselSelectionBar" style="display: none; align-items: center; justify-content: space-between; gap: 12px; background: linear-gradient(135deg, #1e1b4b, #312e81); color: #fff; padding: 12px 18px; border-radius: 10px; margin-bottom: 18px; box-shadow: 0 4px 14px rgba(49, 46, 129, 0.35); flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.3rem;">📑</span>
+              <div>
+                <span style="font-weight: 700; font-size: 0.95rem;"><span id="carouselSelectedCount">0</span> Foto Terpilih</span>
+                <span style="font-size: 0.8rem; color: #cbd5e1; margin-left: 8px;">(Pilih 2 hingga 10 foto untuk digabung menjadi 1 konten Carousel)</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button class="btn btn-sm" onclick="openCarouselBuilderFromSelection()" style="font-weight: 700; background: #6366f1; color: #fff; border: 1px solid #818cf8; padding: 7px 16px; border-radius: 8px; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);">
+                ✨ Jadikan 1 Konten Carousel ➔
+              </button>
+              <button class="btn btn-sm" onclick="clearCarouselSelection()" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 7px 12px; border-radius: 8px;">
+                ✕ Batal
+              </button>
+            </div>
+          </div>
+
           <!-- MODE 1: STUDIO CARDS CONTAINER (DEFAULT) -->
           <div id="videoStudioCardsWrap">
             <div id="videoStudioCardsContainer">
@@ -2147,6 +2175,131 @@
     </div>
   </div>
 
+  <!-- Modal Carousel Builder -->
+  <div class="modal-overlay" id="modalCarouselBuilder">
+    <div class="modal-dialog" style="max-width: 680px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.25rem;">📑</span>
+          <span>Carousel Builder (Gabungkan & Susun Slide Foto)</span>
+        </div>
+        <button class="modal-close" onclick="closeModal('modalCarouselBuilder')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="carouselEditMediaId" />
+        
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.8rem; color: #1e40af; display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.2rem;">💡</span>
+          <span>Susun 2 hingga 10 foto untuk diposting sebagai 1 album/slide swipeable di Instagram dan Facebook. Anda dapat menggeser urutan slide ke kiri/kanan.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700;">Niche Akun Tujuan *</label>
+          <select id="carouselTargetNiche" class="form-control">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700;">Judul Konten Carousel *</label>
+          <input type="text" id="carouselTitleInput" class="form-control" placeholder="Contoh: Tips Menarik Hari Ini (5 Slide)" />
+        </div>
+
+        <!-- Slide Deck List (Thumbnail, Move Left, Move Right, Remove) -->
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label class="form-label" style="margin-bottom: 0; font-weight: 700;">
+              Urutan Slide Foto (<span id="carouselSlideCountText">0</span> / 10 Foto)
+            </label>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Gunakan tombol ⬅️ ➡️ untuk mengubah urutan slide</span>
+          </div>
+          <div id="carouselSlideDeckContainer" style="display: flex; gap: 12px; overflow-x: auto; padding: 12px 8px; min-height: 140px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Manual Caption Editor -->
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <label class="form-label" style="margin-bottom: 0; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+              <span>📝 Caption Manual Postingan</span>
+              <span class="badge badge-success" style="font-size: 0.68rem; padding: 2px 7px;">🔒 Terkunci Aman</span>
+            </label>
+            <span id="carouselCharCount" style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">0 karakter</span>
+          </div>
+          <textarea id="carouselCaptionInput" class="form-control" style="min-height: 120px;" placeholder="Tulis caption manual Anda di sini..." oninput="updateCarouselCharCount()"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700;">Hashtags</label>
+          <input type="text" id="carouselHashtagsInput" class="form-control" placeholder="#Fotografi #Tips #Inspirasi" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalCarouselBuilder')">Batal</button>
+        <button class="btn btn-secondary" onclick="saveCarouselAction(false)" style="font-weight: 600; border-color: #cbd5e1;">
+          💾 Simpan Sebagai Siap
+        </button>
+        <button class="btn btn-primary" onclick="saveCarouselAction(true)" style="font-weight: 700; background: linear-gradient(135deg, #4f46e5, #6366f1);">
+          ⏰ Jadwalkan Carousel Ini ➔
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Carousel Preview -->
+  <div class="modal-overlay" id="modalCarouselPreview">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="modal-header">
+        <div class="modal-title" id="carouselPreviewTitle">Pratinjau Carousel Slide</div>
+        <button class="modal-close" onclick="closeModal('modalCarouselPreview')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 16px; text-align: center;">
+        <div style="position: relative; width: 100%; height: 380px; background: #0f172a; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.2);">
+          <img id="carouselPreviewImg" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+          <button onclick="prevCarouselPreviewSlide()" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">‹</button>
+          <button onclick="nextCarouselPreviewSlide()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.6); color: #fff; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">›</button>
+          <div id="carouselPreviewIndicator" style="position: absolute; bottom: 10px; background: rgba(0,0,0,0.65); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;">
+            1 / 1
+          </div>
+        </div>
+        <div id="carouselPreviewCaption" style="font-size: 0.85rem; color: var(--text-main); text-align: left; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); max-height: 120px; overflow-y: auto;">
+          <!-- Caption text -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalCarouselPreview')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Single Photo Preview -->
+  <div class="modal-overlay" id="modalPhotoPreview">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="modal-header">
+        <div class="modal-title" id="photoPreviewTitle">Pratinjau Foto Tunggal</div>
+        <button class="modal-close" onclick="closeModal('modalPhotoPreview')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 16px; text-align: center;">
+        <div style="width: 100%; height: 400px; background: #0f172a; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+          <img id="photoPreviewImg" src="" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+        </div>
+        <div id="photoPreviewCaption" style="font-size: 0.85rem; color: var(--text-main); text-align: left; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); max-height: 120px; overflow-y: auto;">
+          <!-- Caption -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modalPhotoPreview')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Edit Caption -->
   <div class="modal-overlay" id="modalCaption">
     <div class="modal-dialog">
@@ -2210,7 +2363,7 @@
         </div>
 
         <!-- Thumbnail / Cover Frame Video (Otomatis & Manual) -->
-        <div class="form-group" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;">
+        <div id="scheduleThumbFormGroup" class="form-group" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
             <label class="form-label" style="margin-bottom: 0; font-weight: 700; display: flex; align-items: center; gap: 6px;">
               <span>🖼️ Sampul / Thumbnail (Reels & TikTok)</span>
@@ -2294,96 +2447,99 @@
           <input type="text" id="scheduleHashtags" class="form-control" placeholder="#Bisnis #Musik #Viral" />
         </div>
 
-        <!-- Musik Latar Trending (BGM Auto Ducking) -->
-        <div class="form-group" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label style="margin-bottom: 0; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.88rem;">
-              <input type="checkbox" id="scheduleBgmEnabled" checked onchange="toggleBgmOptions()" style="width: 16px; height: 16px; accent-color: var(--primary);" />
-              <span>🎵 Tambahkan Musik Latar Trending (Otomatis)</span>
-            </label>
-            <span class="badge badge-info" style="font-size: 0.7rem;">Suara Bicara 100% Jelas</span>
-          </div>
+        <!-- Video Enhancer Wrap (BGM, SFX, Outro CTA - for Video only) -->
+        <div id="scheduleVideoEnhancerWrap">
+          <!-- Musik Latar Trending (BGM Auto Ducking) -->
+          <div class="form-group" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label style="margin-bottom: 0; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.88rem;">
+                <input type="checkbox" id="scheduleBgmEnabled" checked onchange="toggleBgmOptions()" style="width: 16px; height: 16px; accent-color: var(--primary);" />
+                <span>🎵 Tambahkan Musik Latar Trending (Otomatis)</span>
+              </label>
+              <span class="badge badge-info" style="font-size: 0.7rem;">Suara Bicara 100% Jelas</span>
+            </div>
 
-          <div id="scheduleBgmSettingsArea" style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-              <div>
-                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;">Tema Suasana / Mood</label>
-                <select id="scheduleBgmCategory" class="form-control" style="font-size: 0.8rem; padding: 6px 10px;">
-                  <option value="AUTO">✨ Auto Sesuai Video (AI/Niche)</option>
-                  <option value="misteri">👻 Misteri / Horor / Tegang</option>
-                  <option value="podcast">🎙️ Podcast Chill / Warm LoFi</option>
-                  <option value="inspiratif">🥺 Inspiratif / Haru / Emosional</option>
-                  <option value="ceria">🎉 Ceria / Komedi / Upbeat Fun</option>
-                </select>
-              </div>
-              <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0;">Volume Musik</label>
-                  <span id="scheduleBgmVolumeLabel" style="font-size: 0.75rem; font-weight: 700; color: var(--primary);">15% (Halus)</span>
+            <div id="scheduleBgmSettingsArea" style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;">Tema Suasana / Mood</label>
+                  <select id="scheduleBgmCategory" class="form-control" style="font-size: 0.8rem; padding: 6px 10px;">
+                    <option value="AUTO">✨ Auto Sesuai Video (AI/Niche)</option>
+                    <option value="misteri">👻 Misteri / Horor / Tegang</option>
+                    <option value="podcast">🎙️ Podcast Chill / Warm LoFi</option>
+                    <option value="inspiratif">🥺 Inspiratif / Haru / Emosional</option>
+                    <option value="ceria">🎉 Ceria / Komedi / Upbeat Fun</option>
+                  </select>
                 </div>
-                <input type="range" id="scheduleBgmVolume" min="0.05" max="0.30" step="0.01" value="0.15" oninput="updateBgmVolumeLabel(this.value)" style="width: 100%; accent-color: var(--primary); margin-top: 4px;" />
-              </div>
-            </div>
-            <div style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.35;">
-              💡 <b>Auto-Ducking:</b> Musik diputar halus (~15%), suara vokal asli di video tetap 100% jernih, dan aman dari klaim hak cipta.
-            </div>
-          </div>
-        </div>
-
-        <!-- Sound Effect (SFX) Hook 3 Detik Pertama -->
-        <div class="form-group" style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label style="margin-bottom: 0; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.88rem;">
-              <input type="checkbox" id="scheduleSfxEnabled" checked onchange="toggleSfxOptions()" style="width: 16px; height: 16px; accent-color: #f59e0b;" />
-              <span>⚡ Sound Effect Hook 3 Detik Pertama (Pencegah Scroll)</span>
-            </label>
-            <span class="badge badge-warning" style="font-size: 0.7rem; background: #fef3c7; color: #92400e; font-weight: 700;">Menaikkan Retensi FYP</span>
-          </div>
-
-          <div id="scheduleSfxSettingsArea" style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-              <div>
-                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;">Karakter Efek Suara Pembuka</label>
-                <select id="scheduleSfxCategory" class="form-control" style="font-size: 0.8rem; padding: 6px 10px;">
-                  <option value="AUTO">✨ Auto Sesuai Video (AI/Niche)</option>
-                  <option value="podcast">💥 Cinematic Deep Impact / Whoosh</option>
-                  <option value="misteri">💓 Heartbeat / Horror Tension Riser</option>
-                  <option value="inspiratif">🔔 Crystal Clean Ding / Shimmer</option>
-                  <option value="ceria">🎉 Cartoon Boing / Bubble Pop</option>
-                </select>
-              </div>
-              <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0;">Volume Hook SFX</label>
-                  <span id="scheduleSfxVolumeLabel" style="font-size: 0.75rem; font-weight: 700; color: #d97706;">60% (Pas & Mantap)</span>
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0;">Volume Musik</label>
+                    <span id="scheduleBgmVolumeLabel" style="font-size: 0.75rem; font-weight: 700; color: var(--primary);">15% (Halus)</span>
+                  </div>
+                  <input type="range" id="scheduleBgmVolume" min="0.05" max="0.30" step="0.01" value="0.15" oninput="updateBgmVolumeLabel(this.value)" style="width: 100%; accent-color: var(--primary); margin-top: 4px;" />
                 </div>
-                <input type="range" id="scheduleSfxVolume" min="0.20" max="1.00" step="0.05" value="0.60" oninput="updateSfxVolumeLabel(this.value)" style="width: 100%; accent-color: #f59e0b; margin-top: 4px;" />
+              </div>
+              <div style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.35;">
+                💡 <b>Auto-Ducking:</b> Musik diputar halus (~15%), suara vokal asli di video tetap 100% jernih, dan aman dari klaim hak cipta.
               </div>
             </div>
-            <div style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.35;">
-              💡 <b>Hook 0.0 - 1.5 Detik:</b> Suara efek kejutan menghentak lembut di detik awal agar penonton berhenti scrolling, lalu berganti ke vokal asli & alunan musik.
-            </div>
-          </div>
-        </div>
-
-        <!-- Outro Follower Call-To-Action (Ajakan Follow) -->
-        <div class="form-group" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label style="margin-bottom: 0; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.88rem;">
-              <input type="checkbox" id="scheduleOutroEnabled" checked onchange="toggleOutroOptions()" style="width: 16px; height: 16px; accent-color: #10b981;" />
-              <span>🔔 Outro Ajakan Follow (3 Detik Terakhir)</span>
-            </label>
-            <span class="badge badge-success" style="font-size: 0.7rem; background: #d1fae5; color: #065f46; font-weight: 700;">+Follower Otomatis</span>
           </div>
 
-          <div id="scheduleOutroSettingsArea" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-            <div>
-              <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;">Teks Ajakan Follow (Call-To-Action)</label>
-              <input type="text" id="scheduleOutroTextInput" class="form-control" style="font-size: 0.82rem; padding: 7px 10px;" placeholder="🔔 Suka cerita ini? Follow @PitaMisteri.tv untuk kisah berikutnya!" />
+          <!-- Sound Effect (SFX) Hook 3 Detik Pertama -->
+          <div class="form-group" style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label style="margin-bottom: 0; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.88rem;">
+                <input type="checkbox" id="scheduleSfxEnabled" checked onchange="toggleSfxOptions()" style="width: 16px; height: 16px; accent-color: #f59e0b;" />
+                <span>⚡ Sound Effect Hook 3 Detik Pertama (Pencegah Scroll)</span>
+              </label>
+              <span class="badge badge-warning" style="font-size: 0.7rem; background: #fef3c7; color: #92400e; font-weight: 700;">Menaikkan Retensi FYP</span>
             </div>
-            <div style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.35; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
-              <span>💡 Muncul di 3 detik terakhir video, mengajak penonton follow channel sebelum video habis.</span>
-              <span class="badge" style="font-size: 0.68rem; background: rgba(59, 130, 246, 0.1); color: #2563eb; font-weight: 700;" title="Kamus internal 60+ kata sensitif menyensor caption otomatis">🛡️ Anti-Shadowban Aktif</span>
+
+            <div id="scheduleSfxSettingsArea" style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;">Karakter Efek Suara Pembuka</label>
+                  <select id="scheduleSfxCategory" class="form-control" style="font-size: 0.8rem; padding: 6px 10px;">
+                    <option value="AUTO">✨ Auto Sesuai Video (AI/Niche)</option>
+                    <option value="podcast">💥 Cinematic Deep Impact / Whoosh</option>
+                    <option value="misteri">💓 Heartbeat / Horror Tension Riser</option>
+                    <option value="inspiratif">🔔 Crystal Clean Ding / Shimmer</option>
+                    <option value="ceria">🎉 Cartoon Boing / Bubble Pop</option>
+                  </select>
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0;">Volume Hook SFX</label>
+                    <span id="scheduleSfxVolumeLabel" style="font-size: 0.75rem; font-weight: 700; color: #d97706;">60% (Pas & Mantap)</span>
+                  </div>
+                  <input type="range" id="scheduleSfxVolume" min="0.20" max="1.00" step="0.05" value="0.60" oninput="updateSfxVolumeLabel(this.value)" style="width: 100%; accent-color: #f59e0b; margin-top: 4px;" />
+                </div>
+              </div>
+              <div style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.35;">
+                💡 <b>Hook 0.0 - 1.5 Detik:</b> Suara efek kejutan menghentak lembut di detik awal agar penonton berhenti scrolling, lalu berganti ke vokal asli & alunan musik.
+              </div>
+            </div>
+          </div>
+
+          <!-- Outro Follower Call-To-Action (Ajakan Follow) -->
+          <div class="form-group" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label style="margin-bottom: 0; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.88rem;">
+                <input type="checkbox" id="scheduleOutroEnabled" checked onchange="toggleOutroOptions()" style="width: 16px; height: 16px; accent-color: #10b981;" />
+                <span>🔔 Outro Ajakan Follow (3 Detik Terakhir)</span>
+              </label>
+              <span class="badge badge-success" style="font-size: 0.7rem; background: #d1fae5; color: #065f46; font-weight: 700;">+Follower Otomatis</span>
+            </div>
+
+            <div id="scheduleOutroSettingsArea" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+              <div>
+                <label class="form-label" style="font-size: 0.75rem; margin-bottom: 4px;">Teks Ajakan Follow (Call-To-Action)</label>
+                <input type="text" id="scheduleOutroTextInput" class="form-control" style="font-size: 0.82rem; padding: 7px 10px;" placeholder="🔔 Suka cerita ini? Follow @PitaMisteri.tv untuk kisah berikutnya!" />
+              </div>
+              <div style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.35; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
+                <span>💡 Muncul di 3 detik terakhir video, mengajak penonton follow channel sebelum video habis.</span>
+                <span class="badge" style="font-size: 0.68rem; background: rgba(59, 130, 246, 0.1); color: #2563eb; font-weight: 700;" title="Kamus internal 60+ kata sensitif menyensor caption otomatis">🛡️ Anti-Shadowban Aktif</span>
+              </div>
             </div>
           </div>
         </div>
@@ -4871,12 +5027,28 @@
           }
         }
 
+        const mediaType = j.media_type || (media ? media.media_type : 'VIDEO');
+        let typeIcon = '🎬';
+        let typeBadge = '';
+        if (mediaType === 'IMAGE') {
+          typeIcon = '📸';
+          typeBadge = '<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:0.65rem;padding:1px 5px;margin-left:4px;font-weight:700;">Foto</span>';
+        } else if (mediaType === 'CAROUSEL') {
+          typeIcon = '📑';
+          let slideCount = 0;
+          try {
+            const items = typeof j.carousel_items === 'string' ? JSON.parse(j.carousel_items) : (j.carousel_items || []);
+            slideCount = items.length;
+          } catch(e){}
+          typeBadge = `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-size:0.65rem;padding:1px 5px;margin-left:4px;font-weight:700;">Carousel ${slideCount ? `(${slideCount})` : ''}</span>`;
+        }
+
         return `
           <tr>
             <td class="font-mono" style="font-size: 0.75rem;">${escapeHtml(j.job_id)}</td>
             <td style="max-width: 280px;">
               <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(videoName)}">
-                🎬 ${escapeHtml(videoName)}
+                ${typeIcon} ${escapeHtml(videoName)} ${typeBadge}
               </div>
               <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 3px;">
                 <span class="font-mono" style="background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 0.68rem; color: #475569;" title="Media ID: ${escapeHtml(j.media_id)}">${escapeHtml(j.media_id)}</span>
@@ -4990,11 +5162,27 @@
         const videoName = j.nama_file || (media ? media.nama_file : '') || j.media_id;
         const postLink = formatPostUrl(j);
 
+        const mediaType = j.media_type || (media ? media.media_type : 'VIDEO');
+        let typeIcon = '🎬';
+        let typeBadge = '';
+        if (mediaType === 'IMAGE') {
+          typeIcon = '📸';
+          typeBadge = '<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:0.65rem;padding:1px 5px;margin-left:4px;font-weight:700;">Foto</span>';
+        } else if (mediaType === 'CAROUSEL') {
+          typeIcon = '📑';
+          let slideCount = 0;
+          try {
+            const items = typeof j.carousel_items === 'string' ? JSON.parse(j.carousel_items) : (j.carousel_items || []);
+            slideCount = items.length;
+          } catch(e){}
+          typeBadge = `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-size:0.65rem;padding:1px 5px;margin-left:4px;font-weight:700;">Carousel ${slideCount ? `(${slideCount})` : ''}</span>`;
+        }
+
         return `
           <tr>
             <td style="max-width: 280px;">
               <div style="font-weight: 700; color: #0f172a; font-size: 0.88rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(videoName)}">
-                🎬 ${escapeHtml(videoName)}
+                ${typeIcon} ${escapeHtml(videoName)} ${typeBadge}
               </div>
               <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                 <span class="font-mono" style="background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 0.68rem; color: #475569;" title="Media ID">${escapeHtml(j.media_id)}</span>
@@ -5376,7 +5564,293 @@
       searchDebounceTimer = setTimeout(renderMedia, 150);
     }
 
-            let currentMediaViewMode = 'cards';
+    // ==========================================
+    // CAROUSEL & PHOTO MANAGEMENT LOGIC
+    // ==========================================
+    const selectedCarouselIds = new Set();
+
+    function onToggleCarouselPhotoSelect(mediaId) {
+      if (selectedCarouselIds.has(mediaId)) {
+        selectedCarouselIds.delete(mediaId);
+      } else {
+        if (selectedCarouselIds.size >= 10) {
+          showToast('Maksimal 10 foto untuk satu Carousel!', 'warning');
+          return;
+        }
+        selectedCarouselIds.add(mediaId);
+      }
+      updateCarouselSelectionBar();
+      renderMedia();
+    }
+
+    function updateCarouselSelectionBar() {
+      const bar = document.getElementById('carouselSelectionBar');
+      const countEl = document.getElementById('carouselSelectedCount');
+      if (!bar) return;
+      const count = selectedCarouselIds.size;
+      if (countEl) countEl.textContent = count;
+      bar.style.display = count > 0 ? 'flex' : 'none';
+    }
+
+    function clearCarouselSelection() {
+      selectedCarouselIds.clear();
+      updateCarouselSelectionBar();
+      renderMedia();
+    }
+
+    function openCarouselBuilderFromSelection() {
+      if (selectedCarouselIds.size < 2) {
+        return showToast('Pilih minimal 2 foto untuk membuat Carousel!', 'warning');
+      }
+      openCarouselBuilderModal(null, Array.from(selectedCarouselIds));
+    }
+
+    let currentCarouselSlides = [];
+
+    function openCarouselBuilderModal(editMediaId = null, initialMediaIds = null) {
+      const editInput = document.getElementById('carouselEditMediaId');
+      const nicheSelect = document.getElementById('carouselTargetNiche');
+      const titleInput = document.getElementById('carouselTitleInput');
+      const captionInput = document.getElementById('carouselCaptionInput');
+      const hashtagsInput = document.getElementById('carouselHashtagsInput');
+      
+      const niches = appData.niches || [];
+      if (nicheSelect) {
+        nicheSelect.innerHTML = niches.map(n => `<option value="${escapeHtml(n.niche_id)}">${escapeHtml(n.nama)}</option>`).join('');
+      }
+
+      currentCarouselSlides = [];
+
+      if (editMediaId) {
+        const media = (appData.media || []).find(m => m.media_id === editMediaId);
+        const post = (appData.posts || []).find(p => p.media_id === editMediaId);
+        if (editInput) editInput.value = editMediaId;
+        if (nicheSelect && media) nicheSelect.value = media.niche_id;
+        if (titleInput && media) titleInput.value = media.nama_file || '';
+        if (captionInput) captionInput.value = (post && post.caption_utama) || (media && media.caption_manual) || '';
+        if (hashtagsInput) hashtagsInput.value = (post && post.hashtags) || '';
+
+        try {
+          const items = typeof media.carousel_items === 'string' ? JSON.parse(media.carousel_items) : (media.carousel_items || []);
+          currentCarouselSlides = items.map((it, idx) => {
+            const p = typeof it === 'string' ? it : (it.file_path || '');
+            return {
+              file_path: p,
+              media_id: (it && it.media_id) || null,
+              filename: p ? p.split(/[\\/]/).pop() : `Slide ${idx+1}`
+            };
+          });
+        } catch (e) {
+          currentCarouselSlides = [];
+        }
+      } else {
+        if (editInput) editInput.value = '';
+        if (titleInput) titleInput.value = '';
+        if (captionInput) captionInput.value = '';
+        if (hashtagsInput) hashtagsInput.value = '';
+
+        if (initialMediaIds && initialMediaIds.length > 0) {
+          const allMedia = appData.media || [];
+          let targetNiche = null;
+          initialMediaIds.forEach(id => {
+            const m = allMedia.find(x => x.media_id === id);
+            if (m) {
+              if (!targetNiche) targetNiche = m.niche_id;
+              currentCarouselSlides.push({
+                media_id: m.media_id,
+                file_path: m.file_path,
+                filename: m.nama_file || id
+              });
+            }
+          });
+          if (targetNiche && nicheSelect) nicheSelect.value = targetNiche;
+          if (titleInput && currentCarouselSlides.length > 0) {
+            titleInput.value = `Carousel ${currentCarouselSlides.length} Slide - ` + new Date().toLocaleDateString('id-ID');
+          }
+        }
+      }
+
+      renderCarouselSlideDeck();
+      updateCarouselCharCount();
+      openModal('modalCarouselBuilder');
+    }
+
+    function renderCarouselSlideDeck() {
+      const container = document.getElementById('carouselSlideDeckContainer');
+      const countText = document.getElementById('carouselSlideCountText');
+      if (countText) countText.textContent = currentCarouselSlides.length;
+      if (!container) return;
+
+      if (currentCarouselSlides.length === 0) {
+        container.innerHTML = `<div style="width: 100%; text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 24px;">Belum ada slide foto. Pilih foto dari galeri atau scan folder.</div>`;
+        return;
+      }
+
+      container.innerHTML = currentCarouselSlides.map((slide, idx) => {
+        const imgSrc = slide.media_id ? `/api/media/${encodeURIComponent(slide.media_id)}/frame` : `/api/media/slide-preview?path=${encodeURIComponent(slide.file_path || '')}`;
+        return `
+          <div style="flex-shrink: 0; width: 110px; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+            <div style="position: absolute; top: 4px; left: 4px; background: rgba(15,23,42,0.8); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;">
+              #${idx + 1}
+            </div>
+            <button type="button" onclick="removeCarouselSlide(${idx})" style="position: absolute; top: 4px; right: 4px; background: rgba(239,68,68,0.9); color: #fff; border: none; border-radius: 4px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; cursor: pointer;" title="Hapus slide ini">×</button>
+            <div style="height: 100px; background: #0f172a; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+              <img src="${imgSrc}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/public/favicon.png'" />
+            </div>
+            <div style="padding: 4px 6px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main);" title="${escapeHtml(slide.filename || '')}">
+              ${escapeHtml(slide.filename || `Slide ${idx+1}`)}
+            </div>
+            <div style="display: flex; border-top: 1px solid var(--border-color); background: #f8fafc;">
+              <button type="button" onclick="moveCarouselSlide(${idx}, -1)" ${idx === 0 ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''} style="flex: 1; border: none; background: transparent; padding: 3px 0; cursor: pointer; font-size: 0.75rem;" title="Geser ke kiri">⬅️</button>
+              <div style="width: 1px; background: var(--border-color);"></div>
+              <button type="button" onclick="moveCarouselSlide(${idx}, 1)" ${idx === currentCarouselSlides.length - 1 ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''} style="flex: 1; border: none; background: transparent; padding: 3px 0; cursor: pointer; font-size: 0.75rem;" title="Geser ke kanan">➡️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function moveCarouselSlide(idx, dir) {
+      const targetIdx = idx + dir;
+      if (targetIdx < 0 || targetIdx >= currentCarouselSlides.length) return;
+      const temp = currentCarouselSlides[idx];
+      currentCarouselSlides[idx] = currentCarouselSlides[targetIdx];
+      currentCarouselSlides[targetIdx] = temp;
+      renderCarouselSlideDeck();
+    }
+
+    function removeCarouselSlide(idx) {
+      currentCarouselSlides.splice(idx, 1);
+      renderCarouselSlideDeck();
+    }
+
+    function updateCarouselCharCount() {
+      const val = (document.getElementById('carouselCaptionInput') ? document.getElementById('carouselCaptionInput').value : '') || '';
+      const el = document.getElementById('carouselCharCount');
+      if (el) el.textContent = `${val.length} karakter`;
+    }
+
+    function saveCarouselAction(scheduleImmediately = false) {
+      const editMediaId = (document.getElementById('carouselEditMediaId') ? document.getElementById('carouselEditMediaId').value : '').trim();
+      const nicheId = (document.getElementById('carouselTargetNiche') ? document.getElementById('carouselTargetNiche').value : '').trim();
+      const title = (document.getElementById('carouselTitleInput') ? document.getElementById('carouselTitleInput').value : '').trim();
+      const caption = (document.getElementById('carouselCaptionInput') ? document.getElementById('carouselCaptionInput').value : '').trim();
+      const hashtags = (document.getElementById('carouselHashtagsInput') ? document.getElementById('carouselHashtagsInput').value : '').trim();
+
+      if (!nicheId) return showToast('Pilih Niche Akun terlebih dahulu!', 'error');
+      if (!title) return showToast('Judul Carousel tidak boleh kosong!', 'error');
+      if (currentCarouselSlides.length < 2) return showToast('Carousel harus memiliki minimal 2 slide foto!', 'error');
+      if (currentCarouselSlides.length > 10) return showToast('Maksimal 10 slide foto dalam 1 carousel!', 'error');
+
+      const actionName = editMediaId ? 'updateCarousel' : 'createCarousel';
+      const payload = {
+        mediaId: editMediaId || null,
+        nicheId,
+        title,
+        caption,
+        hashtags,
+        slides: currentCarouselSlides
+      };
+
+      showToast('Menyimpan Carousel...', 'info');
+      callBackend(actionName, payload)
+        .then(res => {
+          appData = res.data || res;
+          clearCarouselSelection();
+          closeModal('modalCarouselBuilder');
+          renderAll();
+          showToast('✅ Carousel berhasil disimpan!', 'success');
+          
+          if (scheduleImmediately) {
+            const newMediaId = res.newCarouselMediaId || editMediaId;
+            if (newMediaId) {
+              setTimeout(() => openModalSchedule(newMediaId), 300);
+            }
+          }
+        })
+        .catch(err => {
+          showToast('Gagal menyimpan Carousel: ' + err.message, 'error');
+        });
+    }
+
+    // Pratinjau Foto Tunggal
+    function openPhotoPreviewModal(mediaId) {
+      const media = (appData.media || []).find(m => m.media_id === mediaId);
+      const post = (appData.posts || []).find(p => p.media_id === mediaId);
+      const titleEl = document.getElementById('photoPreviewTitle');
+      const imgEl = document.getElementById('photoPreviewImg');
+      const captionEl = document.getElementById('photoPreviewCaption');
+
+      if (titleEl) titleEl.textContent = `Pratinjau Foto: ${media ? media.nama_file : mediaId}`;
+      if (imgEl) imgEl.src = `/api/media/${encodeURIComponent(mediaId)}/frame`;
+      const capText = (post && post.caption_utama) || (media && media.caption_manual) || '';
+      if (captionEl) captionEl.innerHTML = capText ? escapeHtml(capText).replace(/\n/g, '<br>') : '<i style="color:var(--text-dim);">Tidak ada caption</i>';
+      
+      openModal('modalPhotoPreview');
+    }
+
+    // Pratinjau Carousel Slide
+    let currentCarouselPreviewData = { slides: [], index: 0 };
+
+    function openCarouselPreviewModal(mediaId) {
+      const media = (appData.media || []).find(m => m.media_id === mediaId);
+      const post = (appData.posts || []).find(p => p.media_id === mediaId);
+      const titleEl = document.getElementById('carouselPreviewTitle');
+      const captionEl = document.getElementById('carouselPreviewCaption');
+
+      let slides = [];
+      try {
+        const raw = typeof media.carousel_items === 'string' ? JSON.parse(media.carousel_items) : (media.carousel_items || []);
+        slides = raw.map((it, i) => {
+          return `/api/media/${encodeURIComponent(mediaId)}/slide/${i}`;
+        });
+      } catch (e) {
+        slides = [`/api/media/${encodeURIComponent(mediaId)}/frame`];
+      }
+
+      if (slides.length === 0) {
+        slides = [`/api/media/${encodeURIComponent(mediaId)}/frame`];
+      }
+
+      currentCarouselPreviewData = {
+        mediaId,
+        slides,
+        index: 0
+      };
+
+      if (titleEl) titleEl.textContent = `Pratinjau Carousel: ${media ? media.nama_file : mediaId}`;
+      const capText = (post && post.caption_utama) || (media && media.caption_manual) || '';
+      if (captionEl) captionEl.innerHTML = capText ? escapeHtml(capText).replace(/\n/g, '<br>') : '<i style="color:var(--text-dim);">Tidak ada caption</i>';
+
+      updateCarouselPreviewDisplay();
+      openModal('modalCarouselPreview');
+    }
+
+    function updateCarouselPreviewDisplay() {
+      const imgEl = document.getElementById('carouselPreviewImg');
+      const indicatorEl = document.getElementById('carouselPreviewIndicator');
+      const { slides, index } = currentCarouselPreviewData;
+      if (imgEl && slides[index]) {
+        imgEl.src = slides[index];
+      }
+      if (indicatorEl) {
+        indicatorEl.textContent = `${index + 1} / ${slides.length}`;
+      }
+    }
+
+    function nextCarouselPreviewSlide() {
+      if (!currentCarouselPreviewData.slides.length) return;
+      currentCarouselPreviewData.index = (currentCarouselPreviewData.index + 1) % currentCarouselPreviewData.slides.length;
+      updateCarouselPreviewDisplay();
+    }
+
+    function prevCarouselPreviewSlide() {
+      if (!currentCarouselPreviewData.slides.length) return;
+      currentCarouselPreviewData.index = (currentCarouselPreviewData.index - 1 + currentCarouselPreviewData.slides.length) % currentCarouselPreviewData.slides.length;
+      updateCarouselPreviewDisplay();
+    }
+
+    let currentMediaViewMode = 'cards';
 
     function setMediaViewMode(mode) {
       currentMediaViewMode = mode;
@@ -5427,6 +5901,11 @@
         if (!jobsByMedia.has(j.media_id)) jobsByMedia.set(j.media_id, []);
         jobsByMedia.get(j.media_id).push(j);
       });
+
+      const filterFormatVal = document.getElementById("filterMediaFormat") ? document.getElementById("filterMediaFormat").value : "ALL";
+      if (filterFormatVal && filterFormatVal !== "ALL") {
+        media = media.filter(m => (m.media_type || 'VIDEO').toUpperCase() === filterFormatVal);
+      }
 
       if (filterNicheVal && filterNicheVal !== "ALL") {
         media = media.filter(m => m.niche_id === filterNicheVal);
@@ -5550,14 +6029,53 @@
             `;
           }
 
+          const mType = (m.media_type || 'VIDEO').toUpperCase();
+          let formatBadgeHtml = '';
+          let previewOnClick = '';
+          let previewBtnLabel = '▶️ Tonton';
+          let cardCheckboxHtml = '';
+          let extraCardActions = '';
+
+          if (mType === 'IMAGE') {
+            formatBadgeHtml = `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-weight:700;padding:4px 9px;border-radius:9999px;">📸 Foto</span>`;
+            previewOnClick = `openPhotoPreviewModal('${escapeHtml(m.media_id)}')`;
+            previewBtnLabel = '🔍 Pratinjau';
+            const isSelected = selectedCarouselIds.has(m.media_id);
+            cardCheckboxHtml = `
+              <label style="position: absolute; top: 10px; right: 10px; z-index: 10; background: rgba(255,255,255,0.95); border: 1.5px solid ${isSelected ? '#6366f1' : '#cbd5e1'}; border-radius: 6px; padding: 3px 8px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.12);">
+                <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="onToggleCarouselPhotoSelect('${escapeHtml(m.media_id)}')" style="accent-color: #6366f1; width: 15px; height: 15px; cursor: pointer;" />
+                <span style="font-size: 0.72rem; font-weight: 700; color: ${isSelected ? '#4f46e5' : '#475569'};">Pilih Carousel</span>
+              </label>
+            `;
+          } else if (mType === 'CAROUSEL') {
+            let slideCount = 0;
+            try {
+              const items = typeof m.carousel_items === 'string' ? JSON.parse(m.carousel_items) : (m.carousel_items || []);
+              slideCount = items.length;
+            } catch(e){}
+            formatBadgeHtml = `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-weight:700;padding:4px 9px;border-radius:9999px;">📑 Carousel (${slideCount} Slide)</span>`;
+            previewOnClick = `openCarouselPreviewModal('${escapeHtml(m.media_id)}')`;
+            previewBtnLabel = '📑 Pratinjau Slide';
+            extraCardActions = `
+              <button class="btn btn-secondary" onclick="openCarouselBuilderModal('${escapeHtml(m.media_id)}')" style="display: inline-flex; align-items: center; gap: 4px; border-color: #d8b4fe; color: #7e22ce;" title="Edit urutan slide carousel">
+                🛠️ Susun Slide
+              </button>
+            `;
+          } else {
+            formatBadgeHtml = `<span class="badge" style="background:#ede9fe;color:#5b21b6;font-weight:700;padding:4px 9px;border-radius:9999px;">🎬 Video</span>`;
+            previewOnClick = `playVideoModal('${escapeHtml(m.media_id)}', '${escapeHtml(m.nama_file)}')`;
+            previewBtnLabel = '▶️ Tonton';
+          }
+
           return `
-            <div class="video-studio-card" style="${schInfo.isFullyPublished ? 'border: 1.5px solid #10b981; background: #f0fdf4;' : (schInfo.isScheduled ? 'border: 1.5px solid #f59e0b; background: #fffdfa;' : '')}">
+            <div class="video-studio-card" style="position: relative; ${schInfo.isFullyPublished ? 'border: 1.5px solid #10b981; background: #f0fdf4;' : (schInfo.isScheduled ? 'border: 1.5px solid #f59e0b; background: #fffdfa;' : '')}">
+              ${cardCheckboxHtml}
               <div class="vsc-header">
                 <div class="vsc-title-wrap">
-                  <div class="vsc-icon" onclick="playVideoModal('${escapeHtml(m.media_id)}', '${escapeHtml(m.nama_file)}')" title="Klik untuk memutar pratinjau video">
+                  <div class="vsc-icon" onclick="${previewOnClick}" title="Klik untuk melihat pratinjau">
                     <img src="/api/media/${encodeURIComponent(m.media_id)}/frame" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
                     <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; font-size: 1.25rem; background: ${schInfo.isFullyPublished ? '#d1fae5' : (schInfo.isScheduled ? '#fef3c7' : 'linear-gradient(135deg, #4f46e5, #6366f1)')};">
-                      ${schInfo.isFullyPublished ? '✅' : (schInfo.isScheduled ? '⏰' : '🎬')}
+                      ${schInfo.isFullyPublished ? '✅' : (schInfo.isScheduled ? '⏰' : (mType === 'IMAGE' ? '📸' : (mType === 'CAROUSEL' ? '📑' : '🎬')))}
                     </div>
                   </div>
                   <div>
@@ -5588,6 +6106,7 @@
                   </div>
                 </div>
                 <div class="vsc-badges">
+                  ${formatBadgeHtml}
                   ${post && (post.manual_locked === 'TRUE' || post.manual_locked === true) ? `<span class="badge" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-weight: 700; padding: 4px 10px; border-radius: 9999px;">🔒 Terkunci Aman</span>` : ''}
                   <span class="badge ${isAi ? "badge-warning" : "badge-neutral"}" style="font-weight: 700; padding: 4px 10px; border-radius: 9999px;">
                     ${isAi ? "✨ Gemini AI" : "✍️ Manual"}
@@ -5606,11 +6125,12 @@
                 </div>
 
                 <div class="vsc-actions">
-                  <button class="btn btn-secondary" onclick="playVideoModal('${escapeHtml(m.media_id)}', '${escapeHtml(m.nama_file)}')" style="display: inline-flex; align-items: center; gap: 4px;" title="Putar pratinjau video di aplikasi">
-                    ▶️ Tonton
+                  <button class="btn btn-secondary" onclick="${previewOnClick}" style="display: inline-flex; align-items: center; gap: 4px;" title="Lihat pratinjau media">
+                    ${previewBtnLabel}
                   </button>
+                  ${extraCardActions}
                   ${schInfo.isFullyPublished ? `
-                    <button class="btn btn-secondary" onclick="openModalSchedule('${escapeHtml(m.media_id)}')" style="border-color: #10b981; color: #065f46; font-weight: 700; background: #ecfdf5;" title="Video sudah terbit lengkap di semua platform (klik untuk melihat rincian)">
+                    <button class="btn btn-secondary" onclick="openModalSchedule('${escapeHtml(m.media_id)}')" style="border-color: #10b981; color: #065f46; font-weight: 700; background: #ecfdf5;" title="Konten sudah terbit lengkap di semua platform (klik untuk melihat rincian)">
                       ✅ Lengkap Terbit
                     </button>
                   ` : `
@@ -5670,11 +6190,41 @@
             `;
           }
 
+          const mType = (m.media_type || 'VIDEO').toUpperCase();
+          let formatBadgeHtml = '';
+          let previewOnClick = '';
+          let previewBtnLabel = '▶️ Tonton';
+          let extraTableActions = '';
+
+          if (mType === 'IMAGE') {
+            formatBadgeHtml = `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:0.68rem;padding:2px 6px;margin-left:4px;font-weight:700;">📸 Foto</span>`;
+            previewOnClick = `openPhotoPreviewModal('${escapeHtml(m.media_id)}')`;
+            previewBtnLabel = '🔍 Pratinjau';
+          } else if (mType === 'CAROUSEL') {
+            let slideCount = 0;
+            try {
+              const items = typeof m.carousel_items === 'string' ? JSON.parse(m.carousel_items) : (m.carousel_items || []);
+              slideCount = items.length;
+            } catch(e){}
+            formatBadgeHtml = `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-size:0.68rem;padding:2px 6px;margin-left:4px;font-weight:700;">📑 Carousel ${slideCount ? `(${slideCount})` : ''}</span>`;
+            previewOnClick = `openCarouselPreviewModal('${escapeHtml(m.media_id)}')`;
+            previewBtnLabel = '📑 Pratinjau';
+            extraTableActions = `
+              <button class="btn btn-secondary btn-sm" onclick="openCarouselBuilderModal('${escapeHtml(m.media_id)}')" style="padding: 4px 8px; font-size: 0.72rem; color: #7e22ce; border-color: #d8b4fe;" title="Edit Susunan Slide">
+                🛠️ Susun
+              </button>
+            `;
+          } else {
+            formatBadgeHtml = `<span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:0.68rem;padding:2px 6px;margin-left:4px;font-weight:700;">🎬 Video</span>`;
+            previewOnClick = `playVideoModal('${escapeHtml(m.media_id)}', '${escapeHtml(m.nama_file)}')`;
+            previewBtnLabel = '▶️ Tonton';
+          }
+
           return `
             <tr style="${schInfo.isFullyPublished ? 'background: #f9fdfa;' : (schInfo.isScheduled ? 'background: #fffdf5;' : '')}">
               <td style="width: 32%; text-align: left; vertical-align: middle;">
                 <div style="font-weight: 700; color: var(--text-main); font-size: 0.88rem; line-height: 1.35; margin-bottom: 5px; word-break: break-word;" title="${escapeHtml(m.nama_file)}">
-                  ${schInfo.isFullyPublished ? '<span style="color: #10b981; margin-right: 4px;">✅</span>' : (schInfo.isScheduled ? '<span style="color: #d97706; margin-right: 4px;">⏰</span>' : '')}${escapeHtml(m.nama_file)}
+                  ${schInfo.isFullyPublished ? '<span style="color: #10b981; margin-right: 4px;">✅</span>' : (schInfo.isScheduled ? '<span style="color: #d97706; margin-right: 4px;">⏰</span>' : '')}${escapeHtml(m.nama_file)} ${formatBadgeHtml}
                 </div>
                 <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                   <span class="font-mono vsc-id">${escapeHtml(m.media_id)}</span>
@@ -5719,11 +6269,12 @@
 
               <td style="width: 20%; text-align: center; vertical-align: middle;">
                 <div style="display: flex; gap: 5px; justify-content: center; align-items: center; flex-wrap: wrap;">
-                  <button class="btn btn-secondary btn-sm" onclick="playVideoModal('${escapeHtml(m.media_id)}', '${escapeHtml(m.nama_file)}')" style="padding: 4px 8px; font-size: 0.72rem;" title="Putar Pratinjau Video">
-                    ▶️ Tonton
+                  <button class="btn btn-secondary btn-sm" onclick="${previewOnClick}" style="padding: 4px 8px; font-size: 0.72rem;" title="Lihat Pratinjau Media">
+                    ${previewBtnLabel}
                   </button>
+                  ${extraTableActions}
                   ${schInfo.isFullyPublished ? `
-                    <button class="btn btn-secondary btn-sm" onclick="openModalSchedule('${escapeHtml(m.media_id)}')" style="display: inline-flex; align-items: center; gap: 3px; padding: 4px 8px; font-size: 0.72rem; font-weight: 700; color: #065f46; border-color: #10b981; background: #ecfdf5;" title="Video sudah terbit lengkap di semua platform (klik untuk melihat rincian)">
+                    <button class="btn btn-secondary btn-sm" onclick="openModalSchedule('${escapeHtml(m.media_id)}')" style="display: inline-flex; align-items: center; gap: 3px; padding: 4px 8px; font-size: 0.72rem; font-weight: 700; color: #065f46; border-color: #10b981; background: #ecfdf5;" title="Konten sudah terbit lengkap di semua platform (klik untuk melihat rincian)">
                       ✅ Terbit Lengkap
                     </button>
                   ` : `
@@ -5892,33 +6443,42 @@
       document.getElementById('scheduleCaption').value = caption;
       document.getElementById('scheduleHashtags').value = hashtags;
 
-      // Inisialisasi Frame / Thumbnail Selector
-      initThumbVideoPlayer();
-      const baseUrl = (window.location.protocol === 'file:' || !window.location.port) ? 'http://localhost:3000' : '';
-      const streamUrl = `${baseUrl}/api/media/stream/${encodeURIComponent(mediaId)}`;
-      const defaultSec = media.cover_offset_ms ? (media.cover_offset_ms / 1000) : 1.8;
-      
-      const slider = document.getElementById('scheduleThumbSlider');
-      if (slider) slider.value = defaultSec;
-      const offsetMs = Math.round(defaultSec * 1000);
-      const offsetInput = document.getElementById('scheduleCoverOffsetMs');
-      if (offsetInput) offsetInput.value = offsetMs;
-      const timeText = document.getElementById('scheduleThumbTimeText');
-      if (timeText) timeText.textContent = `${defaultSec.toFixed(1)}s (${offsetMs} ms)`;
+      // Mode format (VIDEO vs IMAGE / CAROUSEL)
+      const isPhotoOrCarousel = media.media_type === 'IMAGE' || media.media_type === 'CAROUSEL';
+      const thumbFormGroup = document.getElementById('scheduleThumbFormGroup');
+      if (thumbFormGroup) thumbFormGroup.style.display = isPhotoOrCarousel ? 'none' : 'block';
+      const enhancerWrap = document.getElementById('scheduleVideoEnhancerWrap');
+      if (enhancerWrap) enhancerWrap.style.display = isPhotoOrCarousel ? 'none' : 'block';
 
-      const thumbBadge = document.getElementById('scheduleThumbBadge');
-      if (thumbBadge) {
-        thumbBadge.textContent = defaultSec === 1.8 ? '✨ Auto Menjual (1.8s)' : `⏱️ Detik ${defaultSec.toFixed(1)}s`;
-        thumbBadge.style.background = defaultSec === 1.8 ? '#e0e7ff' : '#f1f5f9';
-        thumbBadge.style.color = defaultSec === 1.8 ? '#4338ca' : '#475569';
-      }
+      // Inisialisasi Frame / Thumbnail Selector hanya untuk Video Reels
+      if (!isPhotoOrCarousel) {
+        initThumbVideoPlayer();
+        const baseUrl = (window.location.protocol === 'file:' || !window.location.port) ? 'http://localhost:3000' : '';
+        const streamUrl = `${baseUrl}/api/media/stream/${encodeURIComponent(mediaId)}`;
+        const defaultSec = media.cover_offset_ms ? (media.cover_offset_ms / 1000) : 1.8;
+        
+        const slider = document.getElementById('scheduleThumbSlider');
+        if (slider) slider.value = defaultSec;
+        const offsetMs = Math.round(defaultSec * 1000);
+        const offsetInput = document.getElementById('scheduleCoverOffsetMs');
+        if (offsetInput) offsetInput.value = offsetMs;
+        const timeText = document.getElementById('scheduleThumbTimeText');
+        if (timeText) timeText.textContent = `${defaultSec.toFixed(1)}s (${offsetMs} ms)`;
 
-      const thumbLoader = document.getElementById('scheduleThumbLoading');
-      if (thumbLoader) thumbLoader.style.display = 'flex';
+        const thumbBadge = document.getElementById('scheduleThumbBadge');
+        if (thumbBadge) {
+          thumbBadge.textContent = defaultSec === 1.8 ? '✨ Auto Menjual (1.8s)' : `⏱️ Detik ${defaultSec.toFixed(1)}s`;
+          thumbBadge.style.background = defaultSec === 1.8 ? '#e0e7ff' : '#f1f5f9';
+          thumbBadge.style.color = defaultSec === 1.8 ? '#4338ca' : '#475569';
+        }
 
-      if (thumbVideoEl) {
-        thumbVideoEl.src = streamUrl;
-        thumbVideoEl.load();
+        const thumbLoader = document.getElementById('scheduleThumbLoading');
+        if (thumbLoader) thumbLoader.style.display = 'flex';
+
+        if (thumbVideoEl) {
+          thumbVideoEl.src = streamUrl;
+          thumbVideoEl.load();
+        }
       }
 
       // Filter akun sosmed yang cocok dengan niche video ini (dukung TRUE/true/boolean)
