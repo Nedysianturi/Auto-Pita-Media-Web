@@ -440,15 +440,60 @@ function getLicenseStatus() {
       const verified = verifyLicenseKey(row.license_key, currentHwid);
       if (verified.valid) {
         const isDev = verified.isDeveloper || row.plan === 'DEVELOPER';
+        
+        // Pengecekan Masa Aktif Khusus Lisensi TRIAL
+        if (!isDev && row.plan === 'TRIAL') {
+          const nowMs = Date.now();
+          const expMs = row.expires_at && row.expires_at !== 'PERMANENT' ? new Date(row.expires_at).getTime() : 0;
+          
+          if (expMs && nowMs > expMs) {
+            return {
+              isLicensed: false,
+              isDeveloper: false,
+              isTrial: true,
+              isTrialExpired: true,
+              hwid: currentHwid,
+              licenseKey: row.license_key,
+              plan: 'TRIAL',
+              customerName: row.customer_name || 'Pengguna Trial',
+              activatedAt: row.activated_at,
+              expiresAt: row.expires_at,
+              daysRemaining: 0,
+              status: 'EXPIRED',
+              reason: 'Masa uji coba (Trial 7 Hari) telah berakhir. Harap aktivasi Lisensi Lifetime untuk membuka kembali aplikasi.'
+            };
+          }
+
+          const daysRemaining = expMs ? Math.max(1, Math.ceil((expMs - nowMs) / (24 * 3600 * 1000))) : 7;
+          return {
+            isLicensed: true,
+            isDeveloper: false,
+            isTrial: true,
+            isTrialExpired: false,
+            hwid: currentHwid,
+            licenseKey: row.license_key,
+            plan: 'TRIAL',
+            customerName: row.customer_name || 'Pengguna Trial',
+            activatedAt: row.activated_at,
+            expiresAt: row.expires_at,
+            daysRemaining,
+            status: 'ACTIVE'
+          };
+        }
+
+        // Lisensi DEVELOPER atau LIFETIME (Permanen Selamanya)
         return {
           isLicensed: true,
           isDeveloper: isDev,
+          isTrial: false,
+          isTrialExpired: false,
           hwid: currentHwid,
           licenseKey: row.license_key,
-          plan: isDev ? 'DEVELOPER' : (row.plan || 'PRO'),
+          plan: isDev ? 'DEVELOPER' : 'LIFETIME',
           customerName: row.customer_name || (isDev ? 'Pengembang (Developer Master)' : 'Owner'),
           activatedAt: row.activated_at,
-          expiresAt: row.expires_at || 'PERMANENT',
+          expiresAt: 'PERMANENT',
+          daysRemaining: null,
           status: 'ACTIVE'
         };
       }
@@ -458,12 +503,15 @@ function getLicenseStatus() {
   return {
     isLicensed: false,
     isDeveloper: false,
+    isTrial: false,
+    isTrialExpired: false,
     hwid: currentHwid,
     licenseKey: '',
     plan: 'NONE',
     customerName: '',
     activatedAt: '',
     expiresAt: '',
+    daysRemaining: 0,
     status: 'UNLICENSED'
   };
 }
@@ -4352,14 +4400,23 @@ app.post('/api/action', async (req, res) => {
           throw new Error(verification.reason || 'Kunci lisensi tidak valid untuk komputer ini');
         }
 
+        const plan = verification.plan || 'LIFETIME';
+        let expiresAt = 'PERMANENT';
+        if (plan === 'TRIAL') {
+          // Masa percobaan: 7 hari dari saat aktivasi
+          expiresAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+        }
+
         db.prepare(`
           INSERT OR REPLACE INTO licenses (hwid, license_key, plan, customer_name, status, activated_at, expires_at, last_verified_at)
-          VALUES (?, ?, ?, ?, 'ACTIVE', ?, 'PERMANENT', ?)
-        `).run(currentHwid, key, verification.plan || 'PRO', customerName, isoNow(), isoNow());
+          VALUES (?, ?, ?, ?, 'ACTIVE', ?, ?, ?)
+        `).run(currentHwid, key, plan, customerName, isoNow(), expiresAt, isoNow());
 
         result = {
           success: true,
-          message: 'Aktivasi lisensi berhasil! Aplikasi siap digunakan.',
+          message: plan === 'TRIAL'
+            ? 'Aktivasi Trial (Masa Percobaan 7 Hari) berhasil! Selamat mencoba PitaMedia Studio.'
+            : (plan === 'DEVELOPER' ? 'Selamat datang Pengembang! Mode Developer Master aktif.' : 'Aktivasi Lisensi Lifetime berhasil! Aplikasi Anda aktif selamanya.'),
           license: getLicenseStatus(),
           dashboard: getDashboardData()
         };
@@ -4374,25 +4431,27 @@ app.post('/api/action', async (req, res) => {
       case 'generateBuyerLicense': {
         const payload = args[0] || {};
         const targetHwid = String(payload.targetHwid || '').trim().toUpperCase();
-        const plan = String(payload.plan || 'LIFETIME').trim().toUpperCase();
+        let plan = String(payload.plan || 'LIFETIME').trim().toUpperCase();
+        if (plan !== 'TRIAL') plan = 'LIFETIME'; // Hanya 2 opsi untuk pembeli: TRIAL dan LIFETIME
         const customerName = String(payload.customerName || 'Pembeli').trim();
 
         if (!targetHwid) throw new Error('Machine ID pembeli harus diisi');
 
         const key = generateLicenseKey(targetHwid, plan);
+        const planLabel = plan === 'TRIAL' ? 'TRIAL (Masa Percobaan 7 Hari)' : 'LIFETIME (Akses Permanen Selamanya)';
         const whatsappTemplate = 
-`Halo Kak ${customerName}, terima kasih atas pembelian PitaMedia Studio!
-Berikut adalah Kunci Lisensi Resmi yang terikat ke komputer Anda:
+`Halo Kak ${customerName}, terima kasih telah memilih PitaMedia Studio!
+Berikut adalah Kunci Lisensi Resmi yang terikat khusus ke komputer Anda:
 
 • Machine ID Komputer : ${targetHwid}
-• Tipe Lisensi        : ${plan} (1 Komputer Terkunci)
+• Tipe Lisensi        : ${planLabel}
 • Kunci Lisensi       : ${key}
 
 Petunjuk Aktivasi:
-1. Buka aplikasi PitaMedia Studio di browser.
-2. Tempelkan Kunci Lisensi di atas pada pop-up aktivasi.
+1. Buka aplikasi PitaMedia Studio di browser Anda.
+2. Tempelkan Kunci Lisensi di atas pada kotak jendela aktivasi.
 3. Klik tombol "Aktivasi Sekarang".
-(Catatan: 1 lisensi hanya berlaku untuk komputer dengan Machine ID di atas).`;
+(Catatan: Lisensi ini terikat aman khusus untuk komputer dengan Machine ID di atas).`;
 
         result = {
           success: true,

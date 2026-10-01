@@ -1656,9 +1656,8 @@
           <div style="margin-bottom: 14px;">
             <label class="form-label" style="font-size: 0.75rem; font-weight: 700; color: #4c1d95;">Tipe Paket Lisensi</label>
             <select id="genPlanType" class="form-control" style="font-size: 0.82rem; font-weight: 700;">
-              <option value="LIFETIME">LIFETIME (1 Komputer Permanen - Rekomendasi)</option>
-              <option value="PRO">PRO (Langganan 1 Komputer)</option>
-              <option value="TRIAL">TRIAL (Uji Coba 1 Komputer)</option>
+              <option value="LIFETIME">💎 LIFETIME (Akses Permanen Selamanya - 1 Komputer)</option>
+              <option value="TRIAL">⏳ TRIAL (Masa Uji Coba 7 Hari - 1 Komputer)</option>
             </select>
           </div>
 
@@ -3375,6 +3374,9 @@
       const lic = appData.license || {};
       const isLicensed = Boolean(lic.isLicensed);
       const isDev = Boolean(lic.isDeveloper || lic.plan === 'DEVELOPER');
+      const isTrial = Boolean(lic.isTrial);
+      const isTrialExpired = Boolean(lic.isTrialExpired);
+      const daysLeft = lic.daysRemaining !== null && lic.daysRemaining !== undefined ? lic.daysRemaining : 0;
       const hwid = lic.hwid || '-';
       const key = lic.licenseKey || 'Belum diaktivasi';
       const plan = lic.plan || 'NONE';
@@ -3392,13 +3394,27 @@
           headerBadge.style.boxShadow = '0 2px 8px rgba(124, 58, 237, 0.4)';
           headerDot.style.background = '#fbbf24';
           headerText.textContent = `👑 Developer Master Edition`;
+        } else if (isTrialExpired) {
+          headerBadge.style.background = '#fef2f2';
+          headerBadge.style.color = '#b91c1c';
+          headerBadge.style.border = '1px solid #fecaca';
+          headerBadge.style.boxShadow = 'none';
+          headerDot.style.background = '#ef4444';
+          headerText.textContent = '🔴 Masa Trial 7 Hari Berakhir (Terkunci)';
+        } else if (isTrial) {
+          headerBadge.style.background = '#fffbeb';
+          headerBadge.style.color = '#b45309';
+          headerBadge.style.border = '1px solid #fde68a';
+          headerBadge.style.boxShadow = '0 1px 3px rgba(245, 158, 11, 0.2)';
+          headerDot.style.background = '#f59e0b';
+          headerText.textContent = `⏳ Trial 7 Hari (Sisa ${daysLeft} Hari)`;
         } else if (isLicensed) {
           headerBadge.style.background = '#ecfdf5';
           headerBadge.style.color = '#047857';
           headerBadge.style.border = '1px solid #a7f3d0';
           headerBadge.style.boxShadow = 'none';
           headerDot.style.background = '#10b981';
-          headerText.textContent = `🛡️ Lisensi Pro Aktif (${hwid.slice(0, 10)}...)`;
+          headerText.textContent = `💎 Lisensi Lifetime Aktif`;
         } else {
           headerBadge.style.background = '#fef2f2';
           headerBadge.style.color = '#b91c1c';
@@ -3418,8 +3434,14 @@
 
       if (displayHwid) displayHwid.textContent = hwid;
       if (displayKey) displayKey.textContent = key;
-      if (displayPlan) displayPlan.textContent = isDev ? '👑 DEVELOPER MASTER (Unlimited Authority)' : `${plan} (1-PC Terkunci)`;
       if (displayOwner) displayOwner.textContent = owner;
+
+      if (displayPlan) {
+        if (isDev) displayPlan.textContent = '👑 DEVELOPER MASTER (Akses Penuh Pengembang)';
+        else if (isTrialExpired) displayPlan.textContent = '🔴 TRIAL KEDALUWARSA (Silakan Masukkan Lisensi Lifetime)';
+        else if (isTrial) displayPlan.textContent = `⏳ TRIAL 7 HARI (Sisa ${daysLeft} Hari - Berakhir: ${(lic.expiresAt || '').slice(0, 10)})`;
+        else displayPlan.textContent = '💎 LIFETIME (Akses Permanen Selamanya)';
+      }
 
       if (settingsBadge) {
         if (isDev) {
@@ -3427,11 +3449,21 @@
           settingsBadge.style.color = '#6d28d9';
           settingsBadge.style.border = '1px solid #ddd6fe';
           settingsBadge.textContent = '👑 Developer Master License';
+        } else if (isTrialExpired) {
+          settingsBadge.style.background = '#fef2f2';
+          settingsBadge.style.color = '#b91c1c';
+          settingsBadge.style.border = '1px solid #fecaca';
+          settingsBadge.textContent = '🔴 Trial Berakhir';
+        } else if (isTrial) {
+          settingsBadge.style.background = '#fffbeb';
+          settingsBadge.style.color = '#b45309';
+          settingsBadge.style.border = '1px solid #fde68a';
+          settingsBadge.textContent = `⏳ Trial (Sisa ${daysLeft} Hari)`;
         } else if (isLicensed) {
           settingsBadge.style.background = '#ecfdf5';
           settingsBadge.style.color = '#047857';
           settingsBadge.style.border = '1px solid #a7f3d0';
-          settingsBadge.textContent = '🟢 Terverifikasi Aktif';
+          settingsBadge.textContent = '💎 Terverifikasi Lifetime (Aktif)';
         } else {
           settingsBadge.style.background = '#fef2f2';
           settingsBadge.style.color = '#b91c1c';
