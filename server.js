@@ -1464,9 +1464,9 @@ function cleanStorageTempFiles(forceAll = false) {
   let cleanedFiles = 0;
   let freedBytes = 0;
   const now = Date.now();
-  // Jika manual (forceAll): bersihkan file yang tidak aktif (> 15 detik)
+  // Jika manual (forceAll): bersihkan seluruh file sementara (maxAgeMs = 0)
   // Jika otomatis berkala: bersihkan file yang usianya > 2 jam
-  const maxAgeMs = forceAll ? (15 * 1000) : (2 * 60 * 60 * 1000);
+  const maxAgeMs = forceAll ? 0 : (2 * 60 * 60 * 1000);
 
   try {
     const files = fs.readdirSync(tempDir);

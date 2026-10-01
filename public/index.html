@@ -1072,7 +1072,7 @@
           <span id="internetStatusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
           <span id="internetStatusText">Internet Online</span>
         </span>
-        <button class="btn btn-sm btn-secondary" onclick="cleanStorageAction()" style="border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; color: #334155;" title="Bersihkan file video sementara di folder temp_mixed">
+        <button class="btn btn-sm btn-secondary" onclick="cleanStorageAction(this)" style="border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; color: #334155;" title="Bersihkan file video sementara di folder temp_mixed">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           Bersihkan Cache (<span id="badgeStorageCache">0 MB</span>)
         </button>
@@ -1742,7 +1742,7 @@
 
           <!-- Actions -->
           <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 14px; border-top: 1px solid var(--border-color);">
-            <button type="button" class="btn btn-sm btn-primary" onclick="cleanStorageFromSettings()" style="background: #d97706; border-color: #d97706; display: inline-flex; align-items: center; gap: 5px; font-weight: 700;">
+            <button type="button" class="btn btn-sm btn-primary" onclick="cleanStorageFromSettings(this)" style="background: #d97706; border-color: #d97706; display: inline-flex; align-items: center; gap: 5px; font-weight: 700;">
               🧹 Bersihkan File Sementara Sekarang
             </button>
           </div>
@@ -2904,22 +2904,53 @@
     }
 
     // === STORAGE CLEANER ACTION ===
-    async function cleanStorageAction() {
-      if (!confirm('Bersihkan file video sementara di folder temp_mixed untuk menghemat ruang disk komputer?')) return;
-      try {
-        const resp = await fetch('/api/action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'cleanStorageTemp' })
-        });
-        const data = await resp.json();
-        if (data.error) throw new Error(data.error);
+    async function cleanStorageAction(btn) {
+      if (!confirm('Bersihkan seluruh file video dan audio sementara di folder temp_mixed untuk menghemat ruang disk komputer?')) return;
+      
+      const origText = btn ? btn.innerHTML : null;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="width: 12px; height: 12px; margin-right: 4px;"></span> Membersihkan...';
+      }
+      showToast('🧹 Sedang membersihkan cache file sementara...', 'info', 2500);
 
-        const r = data.result || {};
-        showToast(`✅ Cache dibersihkan! Menghapus ${r.cleanedFiles || 0} file sementara (${r.freedMb || 0} MB dibebaskan).`, 'success');
-        if (r.dashboard) renderDashboard(r.dashboard);
+      try {
+        const res = await callBackend('cleanStorageTemp');
+        if (res && res.error) throw new Error(res.error);
+
+        // Update in-memory appData with new dashboard & storage data
+        if (res.dashboard) {
+          appData = res.dashboard;
+        }
+        if (res.storage && appData) {
+          appData.storage = res.storage;
+        }
+
+        // Instantly re-render header badge & entire dashboard
+        renderAll();
+
+        // Also update settings view numbers if settings view is active
+        if (typeof renderSettingsView === 'function') {
+          renderSettingsView();
+        }
+
+        const cleaned = res.cleanedFiles || 0;
+        const freed = res.freedMb || 0;
+        const currentMb = (appData && appData.storage && appData.storage.tempSizeMb !== undefined) ? appData.storage.tempSizeMb : 0;
+
+        let msg = `🧹 <b>Cache Berhasil Dibersihkan Otomatis!</b><br>`;
+        msg += `• File Dihapus: <b>${cleaned} file sementara</b><br>`;
+        msg += `• Ruang Bebas: <b>${freed} MB</b><br>`;
+        msg += `• Sisa Cache Sekarang: <b>🟢 ${currentMb} MB</b>`;
+
+        showToast(msg, 'success', 5000);
       } catch (err) {
-        showToast('Gagal membersihkan cache: ' + err.message, 'danger');
+        showToast('❌ Gagal membersihkan cache: ' + err.message, 'error', 5000);
+      } finally {
+        if (btn && origText) {
+          btn.disabled = false;
+          btn.innerHTML = origText;
+        }
       }
     }
 
@@ -3325,17 +3356,8 @@
       }
     }
 
-    async function cleanStorageFromSettings() {
-      showToast('Membersihkan file sementara temp_mixed...', 'info');
-      try {
-        const res = await callBackend('cleanStorageTemp');
-        const count = res.deletedCount || 0;
-        const mb = res.freedMb || 0;
-        showToast(`🧹 Berhasil membersihkan ${count} file sementara (${mb} MB ruang dilegakan)!`, 'success');
-        renderSettingsView();
-      } catch (err) {
-        showToast('Gagal membersihkan penyimpanan: ' + err.message, 'error');
-      }
+    async function cleanStorageFromSettings(btn) {
+      return cleanStorageAction(btn);
     }
 
     async function toggleGlobalStopFromSettings() {
